@@ -1,26 +1,30 @@
+## Co se naučit
 
-### Co se naucit
+### 1. Základy příkazové řádky
+Budeš je potřebovat do konce života 😊  
+➡️ [YouTube – Základy command line](https://www.youtube.com/watch?v=uwAqEzhyjtw)
 
-Základy s příkazovou řádkou, budeš potřebovat do konce života 😊
+---
 
-[Youtube](https://www.youtube.com/watch?v=uwAqEzhyjtw)
+### 2. GIT – verzovací systém
+Až zvládneš příkazovou řádku, mrkni na Git:  
+➡️ [YouTube – Úvod do GITu](https://www.youtube.com/watch?v=8JJ101D3knE&t)
 
+---
 
-
-Když tohle budeš mít, tak se mrkni na GIT, co to je atd
-
-[Youtube](https://www.youtube.com/watch?v=8JJ101D3knE&t)
-
-
-
-[VS Code download](https://code.visualstudio.com/download)
-
-
-
-
-Bonus - bootstrap, jak vizuálně vyšperkovat stránky
-
-[Youtube](https://www.youtube.com/watch?v=-qfEOE4vtxE)
+### 3. VS Code
+Jeden z nejlepších editorů:  
+➡️ [Stáhnout VS Code](https://code.visualstudio.com/download)
 
 
-...kdyby cokoliv, volej
+Já osobně ale používám [WebStorm](https://www.jetbrains.com/webstorm) - pro studenty zdatrma, ale to je otázka preference.
+
+---
+
+### Bonus: Bootstrap
+Chceš vizuálně vyšperkovat webové stránky?  
+➡️ [YouTube – Úvod do Bootstrapu](https://www.youtube.com/watch?v=-qfEOE4vtxE)
+
+---
+
+### ✅ Pokud budeš něco potřebovat, klidně zavolej.
