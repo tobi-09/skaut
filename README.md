@@ -9,7 +9,7 @@ Základy s příkazovou řádkou, budeš potřebovat do konce života 😊
 
 Když tohle budeš mít, tak se mrkni na GIT, co to je atd
 
-[Youtube](www.youtube.com/watch?v=8JJ101D3knE&t)
+[Youtube](https://www.youtube.com/watch?v=8JJ101D3knE&t)
 
 
 
