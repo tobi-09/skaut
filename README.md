@@ -17,7 +17,7 @@ Jeden z nejlepších editorů:
 ➡️ [Stáhnout VS Code](https://code.visualstudio.com/download)
 
 
-Já osobně ale používám [WebStorm](https://www.jetbrains.com/webstorm) - pro studenty zdatrma, ale to je otázka preference.
+Já osobně ale používám [WebStorm](https://www.jetbrains.com/webstorm) - pro studenty licence zadarmo, ale to je otázka preference.
 
 ---
 
