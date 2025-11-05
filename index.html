@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Video Mapping — opravené efekty (funkční)</title>
+<title>Video Mapping — opravené efekty (funkční) + Export PNG</title>
 <style>
   :root{--ui-bg:rgba(0,0,0,0.65);--ui-color:#fff}
   html,body{height:100%;margin:0;background:#000;overflow:hidden;font-family:system-ui,Segoe UI,Roboto,Arial}
@@ -50,6 +50,10 @@
     <button id="fullscreen">Fullscreen</button>
   </div>
 
+  <div class="row" style="margin-top:8px">
+    <button id="exportPNG">Export obrysů PNG</button>
+  </div>
+
   <label class="block">Nahrát médium (obraz/video)</label>
   <input id="uploadMedia" type="file" accept="image/*,video/*"/>
 
@@ -92,7 +96,8 @@ const ui = {
   fullscreenBtn: document.getElementById('fullscreen'),
   upload: document.getElementById('uploadMedia'),
   list: document.getElementById('polygonList'),
-  globalIntensity: document.getElementById('globalIntensity')
+  globalIntensity: document.getElementById('globalIntensity'),
+  exportBtn: document.getElementById('exportPNG')
 };
 window.EXAGGERATION = parseFloat(ui.globalIntensity.value) || 1.8;
 ui.globalIntensity.addEventListener('input', ()=> window.EXAGGERATION = parseFloat(ui.globalIntensity.value));
@@ -118,6 +123,7 @@ ui.resetBtn.addEventListener('click', ()=> { if(!confirm('Opravdu RESETovat?')) 
 ui.presentBtn.addEventListener('click', togglePresentation);
 ui.fullscreenBtn.addEventListener('click', ()=> enterFullscreen(videoContainer));
 ui.upload.addEventListener('change', handleUpload);
+ui.exportBtn.addEventListener('click', exportOutlinePNG);
 
 async function enterFullscreen(elem){ try{ if(!elem) elem=document.documentElement; if(elem.requestFullscreen) await elem.requestFullscreen(); else if(elem.webkitRequestFullscreen) elem.webkitRequestFullscreen(); else if(elem.msRequestFullscreen) elem.msRequestFullscreen(); }catch(e){console.warn('fullscreen error',e);} }
 
@@ -607,8 +613,7 @@ function drawPolygon(polygon, isFinal, t){
 
   // marquee
   if(polygon.anim.marquee){
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.save(); ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
     polygon.animOffset = (polygon.animOffset || 0) + 6 * I * (polygon.marquee_power||1);
     ctx.setLineDash([18*I,12*I]); ctx.lineDashOffset = -polygon.animOffset; ctx.lineWidth = 6 * I * (polygon.marquee_power||1);
     ctx.strokeStyle = strokeColor; ctx.globalAlpha = 0.75; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.restore();
@@ -692,6 +697,49 @@ function loop(now){
   rafId = requestAnimationFrame(loop);
 }
 rafId = requestAnimationFrame(loop);
+
+
+/* === Export PNG s bílými obrysy na černém pozadí === */
+function exportOutlinePNG(){
+  // export canvas at device-pixel resolution
+  const exportCanvas = document.createElement('canvas');
+  // match internal (device) pixel size
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  const ectx = exportCanvas.getContext('2d');
+  // use same transform as main canvas so we can draw using CSS px coordinates
+  ectx.setTransform(DPR,0,0,DPR,0,0);
+
+  // black background (draw using CSS px coords)
+  ectx.fillStyle = '#000';
+  ectx.fillRect(0,0,innerWidth,innerHeight);
+
+  // white outlines
+  ectx.strokeStyle = '#fff';
+  ectx.lineWidth = 2; // in CSS px (transform scales by DPR)
+  ectx.lineJoin = 'round';
+  ectx.lineCap = 'round';
+
+  for(const polygon of polygons){
+    if(!polygon || !polygon.points || polygon.points.length < 2) continue;
+    ectx.beginPath();
+    ectx.moveTo(polygon.points[0].x, polygon.points[0].y);
+    for(let i=1;i<polygon.points.length;i++) ectx.lineTo(polygon.points[i].x, polygon.points[i].y);
+    if(polygon.points.length>2) ectx.closePath();
+    ectx.stroke();
+  }
+
+  // create download
+  exportCanvas.toBlob(function(blob){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'polygons_outline.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  }, 'image/png');
+}
 
 </script>
 </body>
