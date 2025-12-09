@@ -52,6 +52,7 @@
 
   <div class="row" style="margin-top:8px">
     <button id="exportPNG">Export obrysů PNG</button>
+    <button id="dispatchingBtn">IZS Dispečing</button>
   </div>
 
   <label class="block">Nahrát médium (obraz/video)</label>
@@ -124,6 +125,7 @@ ui.presentBtn.addEventListener('click', togglePresentation);
 ui.fullscreenBtn.addEventListener('click', ()=> enterFullscreen(videoContainer));
 ui.upload.addEventListener('change', handleUpload);
 ui.exportBtn.addEventListener('click', exportOutlinePNG);
+document.getElementById('dispatchingBtn').addEventListener('click', openDispatching);
 
 async function enterFullscreen(elem){ try{ if(!elem) elem=document.documentElement; if(elem.requestFullscreen) await elem.requestFullscreen(); else if(elem.webkitRequestFullscreen) elem.webkitRequestFullscreen(); else if(elem.msRequestFullscreen) elem.msRequestFullscreen(); }catch(e){console.warn('fullscreen error',e);} }
 
@@ -237,6 +239,8 @@ function handleUpload(e){
 function resetApp(){ polygons=[]; currentPolygon=null; ui.list.innerHTML=''; if(mediaLayer){ try{ if(mediaLayer.tagName==='VIDEO'){ mediaLayer.pause(); mediaLayer.src=''; } mediaLayer.remove(); }catch(e){} mediaLayer=null; } if(lastMediaURL){ try{ URL.revokeObjectURL(lastMediaURL);}catch(e){} lastMediaURL=null;} if(rafId) cancelAnimationFrame(rafId); ctx.clearRect(0,0,canvas.width,canvas.height); rafId = requestAnimationFrame(loop); }
 let presentMode=false;
 async function togglePresentation(){ presentMode=!presentMode; if(presentMode){ ui.root.classList.add('hidden-ui'); try{ await enterFullscreen(videoContainer);}catch(e){} ui.presentBtn.innerText='PRESENT (restore)'; } else { ui.root.classList.remove('hidden-ui'); try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){} ui.presentBtn.innerText='PRESENT'; } }
+
+function openDispatching(){ window.open('izs.dispečing.html', '_blank'); }
 
 /* ========== EFEKTY - spawn/update/draw ========== */
 /* Všechny efekty používají bezpečné beginPath/stroke/fill a respektují polygon[k+'_power'] a polygon.intensity a global EXAGGERATION.
