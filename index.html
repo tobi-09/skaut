@@ -52,7 +52,7 @@
 
   <div class="row" style="margin-top:8px">
     <button id="exportPNG">Export obrysů PNG</button>
-    <button id="dispatchingBtn">IZS Dispečing</button>
+    <button id="dispatchingBtn">IZS Dispecing</button>
   </div>
 
   <label class="block">Nahrát médium (obraz/video)</label>
@@ -240,9 +240,7 @@ function resetApp(){ polygons=[]; currentPolygon=null; ui.list.innerHTML=''; if(
 let presentMode=false;
 async function togglePresentation(){ presentMode=!presentMode; if(presentMode){ ui.root.classList.add('hidden-ui'); try{ await enterFullscreen(videoContainer);}catch(e){} ui.presentBtn.innerText='PRESENT (restore)'; } else { ui.root.classList.remove('hidden-ui'); try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){} ui.presentBtn.innerText='PRESENT'; } }
 
-<a href="https://github.com/tobi-09/skaut/blob/master/izs.dispecing.html" target="_blank">
-  <button>Otevřít</button>
-</a> 
+function openDispatching(){ window.open('izs.dispecing.html', '_blank'); }
 
 /* ========== EFEKTY - spawn/update/draw ========== */
 /* Všechny efekty používají bezpečné beginPath/stroke/fill a respektují polygon[k+'_power'] a polygon.intensity a global EXAGGERATION.
