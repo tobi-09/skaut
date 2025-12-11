@@ -77,6 +77,96 @@
 })();
 </script>
 
+<script type="module">
+  // Import Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
+  // Firebase konfigurace
+  const firebaseConfig = {
+    apiKey: "AIzaSyDMW0Ydr5L_h9Dbh6MWS8MFdWKNioxlE0o",
+    authDomain: "izs-a041c.firebaseapp.com",
+    databaseURL: "https://izs-a041c-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "izs-a041c",
+    storageBucket: "izs-a041c.firebasestorage.app",
+    messagingSenderId: "151380554766",
+    appId: "1:151380554766:web:8330b330ef0ad151f3385f",
+    measurementId: "G-2YL6CKB7YN"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+  
+  console.log('✅ Firebase inicializován');
+
+  // Funkce pro uložení nového případu
+  window.saveCaseToFirebase = async function(caseData) {
+    try {
+      const casesRef = ref(database, 'cases');
+      const newCaseRef = await push(casesRef, {
+        ...caseData,
+        createdAt: new Date().toISOString()
+      });
+      console.log('✅ Případ uložen, ID:', newCaseRef.key);
+      return newCaseRef.key;
+    } catch (error) {
+      console.error('❌ Chyba při ukládání:', error);
+      throw error;
+    }
+  };
+
+  // Funkce pro načtení všech případů
+  window.loadCasesFromFirebase = function(callback) {
+    try {
+      const casesRef = ref(database, 'cases');
+      onValue(casesRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const cases = snapshot.val();
+          console.log('✅ Případy načteny:', cases);
+          callback(cases);
+        } else {
+          console.log('ℹ️ Žádné případy');
+          callback({});
+        }
+      }, (error) => {
+        console.error('❌ Chyba při načítání:', error);
+      });
+    } catch (error) {
+      console.error('❌ Chyba Firebase:', error);
+    }
+  };
+
+  // Funkce pro aktualizaci případu
+  window.updateCaseInFirebase = async function(caseId, updateData) {
+    try {
+      const caseRef = ref(database, `cases/${caseId}`);
+      await update(caseRef, updateData);
+      console.log('✅ Případ aktualizován');
+    } catch (error) {
+      console.error('❌ Chyba při aktualizaci:', error);
+      throw error;
+    }
+  };
+
+  // Funkce pro smazání případu
+  window.deleteCaseFromFirebase = async function(caseId) {
+    try {
+      const caseRef = ref(database, `cases/${caseId}`);
+      await remove(caseRef);
+      console.log('✅ Případ smazán');
+    } catch (error) {
+      console.error('❌ Chyba při mazání:', error);
+      throw error;
+    }
+  };
+
+  // Načtení případů při startu
+  window.loadCasesFromFirebase((cases) => {
+    console.log('Počáteční načtení případů:', Object.keys(cases).length);
+  });
+</script>
+
 <div id="app" style="display:none;">
 <html lang="cs">
 <head>
