@@ -3,7 +3,7 @@
 <!-- LOGIN OVERLAY (FBI) -->
 <div id="login-page" style="display:flex; align-items:center; justify-content:center; height:100vh; background:black; color:white; font-family: 'Courier New', monospace; position:relative; z-index:9999;">
   <div style="background:#111; padding:40px; border:2px solid #0ff; border-radius:8px; width:320px; text-align:center; box-shadow:0 0 20px #0ff;">
-    <h2 style="margin-bottom:20px; letter-spacing:2px;">FBI SECURE LOGIN</h2>
+    <h2 style="margin-bottom:20px; letter-spacing:2px;">FBI ECURE LOGIN</h2>
     <img src="https://www.fbi.gov/++theme++2025-05-16/new-frontpage/img/fbi-logo.png" alt="FBI SECURE LOGIN" width="300" height="60">
     <input type="text" id="isz_login_username" placeholder="Uživatelské jméno" style="width:100%; padding:10px; margin:10px 0; border:1px solid #0ff; border-radius:4px; background:black; color:#0ff;" required>
     <input type="password" id="isz_login_password" placeholder="Heslo" style="width:100%; padding:10px; margin:10px 0; border:1px solid #0ff; border-radius:4px; background:black; color:#0ff;" required>
@@ -1533,7 +1533,7 @@
 const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: 'short' });
 
 
-  document.getElementById("callForm").addEventListener("submit", function(e){
+  document.getElementById("callForm").addEventListener("submit", async function(e){
     e.preventDefault();
 
     const typ = document.getElementById("typPripadu").value;
@@ -1685,6 +1685,33 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
     div.setAttribute('data-actions', JSON.stringify([]));
     // Inicializuj zbývající sekundy pro odpočet
     div.setAttribute('data-remaining-seconds', (casDoPrijezdu * 60));
+
+    // Ulož případ do Firebase
+    (async function() {
+      try {
+        const datumText = new Date().toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" });
+        const caseData = {
+          typ: typ,
+          popis: popis,
+          adresa: adresa,
+          zavaznost: zavaznost,
+          jednotky: jednotky,
+          stav: "Na cestě",
+          casDoPrijezdu: casDoPrijezdu,
+          datum: datumText,
+          coords: selectedCoords || { lat: 0, lon: 0 },
+          createdAt: new Date().toISOString()
+        };
+        
+        if (window.saveCaseToFirebase) {
+          const caseId = await window.saveCaseToFirebase(caseData);
+          div.setAttribute("data-firebase-id", caseId);
+          console.log("OK Pripad ulozen:", caseId);
+        }
+      } catch (error) {
+        console.error("Chyba Firebase:", error);
+      }
+    })();
 
     const stopkyElem = div.querySelector(".cas-prijezdu");
     const stavEl = div.querySelector(".stav-pripadu");
