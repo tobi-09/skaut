@@ -1655,6 +1655,9 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
     div.setAttribute('data-remaining-seconds', (casDoPrijezdu * 60));
 
     // Ulož případ do Firebase
+    const localTempId = 'temp_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+    div.setAttribute('data-local-temp-id', localTempId);
+
     const incidentData = {
       typ: typ,
       popis: popis,
@@ -1669,7 +1672,8 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
       position: selectedCoords || null,
       pool: 'active',
       archived: false,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      localTempId: localTempId
     };
 
     // Ulož pozici do DOM pro případné pozdější úpravy a přidej Firebase ID do DOM když se uloží
@@ -1838,6 +1842,34 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
       }, 1000);
       // uložit interval na element pro případ úprav/rušení
       try { if (incidentDiv) incidentDiv._stopkyInterval = interval; } catch(e) {}
+    }
+
+    // Helper: ensure stopky is restarted with new seconds; clears existing interval
+    function ensureStopkyRunning(element, remainingSeconds) {
+      try {
+        const stopkyElem = element.querySelector('.cas-prijezdu');
+        const stavEl = element.querySelector('.stav-prijezadu') || element.querySelector('.stav-prijezdu');
+        if (!stopkyElem || !stavEl) return;
+        // clear existing interval
+        if (element._stopkyInterval) {
+          try { clearInterval(element._stopkyInterval); } catch(e) {}
+          element._stopkyInterval = null;
+        }
+        // callback when timer reaches zero
+        const onExpire = () => {
+          // set status in DOM
+          try { stavEl.textContent = 'Na místě / řešíme'; } catch(e) {}
+          // push action and update firebase
+          try {
+            const actions = JSON.parse(element.getAttribute('data-actions') || '[]');
+            actions.push({ typ: '⚑ Na místě', cas: new Date().toLocaleString('cs-CZ') });
+            element.setAttribute('data-actions', JSON.stringify(actions));
+            const firebaseId = element.getAttribute('data-firebase-id');
+            if (firebaseId && window.updateIncidentInFirebase) window.updateIncidentInFirebase(firebaseId, { stav: 'Na místě / řešíme', actions: actions }).catch(() => {});
+          } catch(e) {}
+        };
+        startStopky(stopkyElem, Number(remainingSeconds) || 0, stavEl, onExpire, element);
+      } catch(e) {}
     }
     
     
@@ -2638,6 +2670,17 @@ if (document.readyState === 'loading') {
     const incidentList = document.getElementById('incidentList');
     if (!incidentList) return;
 
+    // If the incident has a localTempId, attempt to find a matching local element and attach firebase ID
+    if (data && data.localTempId) {
+      const localCandidate = document.querySelector(`[data-local-temp-id="${data.localTempId}"]`);
+      if (localCandidate) {
+        localCandidate.setAttribute('data-firebase-id', incidentId);
+        try { updateIncidentInDOM(localCandidate, data, incidentId); } catch(e) {}
+        try { localCandidate.removeAttribute('data-local-temp-id'); } catch(e) {}
+        return;
+      }
+    }
+
     const div = document.createElement('div');
     div.classList.add('incident-item');
     div.setAttribute('data-firebase-id', incidentId);
@@ -2694,9 +2737,8 @@ if (document.readyState === 'loading') {
       if (archivList) archivList.prepend(div);
     } else {
       incidentList.prepend(div);
-      const stopkyElem = div.querySelector('.cas-prijezdu');
-      const stavEl = div.querySelector('.stav-pripadu');
-      startStopky(stopkyElem, remainingSeconds, stavEl, () => {}, div);
+      // Ensure countdown is running for active incident
+      try { ensureStopkyRunning(div, remainingSeconds); } catch(e) {}
     }
   }
 
@@ -2725,6 +2767,9 @@ if (document.readyState === 'loading') {
     element.setAttribute('data-actions', JSON.stringify(data.actions || []));
     element.setAttribute('data-remaining-seconds', remainingSeconds);
     try { element.setAttribute('data-position', JSON.stringify(data.position || null)); } catch(e) {}
+
+    // Ensure countdown is running for active items (restart with new remainingSeconds)
+    try { if (!data.archived) ensureStopkyRunning(element, remainingSeconds); } catch(e) {}
 
     // Aktualizuj ikonu
     const ikonaDiv = element.querySelector('.eskalace-ikona');
@@ -2769,7 +2814,7 @@ if (document.readyState === 'loading') {
           // restart stopky for moved back items
           const stopkyElem = element.querySelector('.cas-prijezdu');
           const stavEl = element.querySelector('.stav-pripadu');
-          try { startStopky(stopkyElem, Number(element.getAttribute('data-remaining-seconds')) || 0, stavEl, () => {}, element); } catch(e) {}
+          try { ensureStopkyRunning(element, Number(element.getAttribute('data-remaining-seconds')) || 0); } catch(e) {}
         }
       }
     } catch(e) {}
@@ -2802,7 +2847,8 @@ if (document.readyState === 'loading') {
         position: incidentData.position || null,
         pool: incidentData.pool || 'active',
         archived: incidentData.archived || false,
-        createdAt: incidentData.createdAt || Date.now()
+        createdAt: incidentData.createdAt || Date.now(),
+        localTempId: incidentData.localTempId || null
       };
 
       await set(newIncidentRef, firebaseData);
@@ -3064,6 +3110,7 @@ if (document.readyState === 'loading') {
             if (archivList) archivList.prepend(div);
           } else {
             if (incidentList) incidentList.prepend(div);
+            try { ensureStopkyRunning(div, d.remainingSeconds || 0); } catch(e) {}
           }
         });
       } catch (e) { console.error('REST refreshFromFirebase failed:', e); }
