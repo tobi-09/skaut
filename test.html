@@ -1,282 +1,2209 @@
 <!DOCTYPE html>
+
+<!-- LOGIN OVERLAY (FBI) -->
+<div id="login-page" style="display:flex; align-items:center; justify-content:center; height:100vh; background:black; color:white; font-family: 'Courier New', monospace; position:relative; z-index:9999;">
+  <div style="background:#111; padding:40px; border:2px solid #0ff; border-radius:8px; width:320px; text-align:center; box-shadow:0 0 20px #0ff;">
+    <h2 style="margin-bottom:20px; letter-spacing:2px;">FBI SECURE LOGIN</h2>
+    <img src="https://www.fbi.gov/++theme++2025-05-16/new-frontpage/img/fbi-logo.png" alt="FBI SECURE LOGIN" width="300" height="60">
+    <input type="text" id="isz_login_username" placeholder="Uživatelské jméno" style="width:100%; padding:10px; margin:10px 0; border:1px solid #0ff; border-radius:4px; background:black; color:#0ff;" required>
+    <input type="password" id="isz_login_password" placeholder="Heslo" style="width:100%; padding:10px; margin:10px 0; border:1px solid #0ff; border-radius:4px; background:black; color:#0ff;" required>
+    <button id="isz_login_btn" style="width:100%; padding:10px; background:#0ff; border:none; border-radius:4px; color:black; font-weight:bold; cursor:pointer;">Přihlásit</button>
+    <p id="isz_login_error" style="color:red; display:none; margin-top:10px;">Nesprávné jméno nebo heslo</p>
+  </div>
+</div>
+
+
+<script>
+(function() {
+  // Testovací účty
+  var users = [
+    { username: "dispatcher1", password: "heslo123" },
+    { username: "admin", password: "admin123" },
+    { username: "Tobi", password: "admin" },
+    { username: "tobi", password: "admin" },
+    { username: "Ales", password: "1235" },
+    { username: "guest", password: "guest" }
+  ];
+
+  function doLogin() {
+    var uEl = document.getElementById("isz_login_username");
+    var pEl = document.getElementById("isz_login_password");
+    var err = document.getElementById("isz_login_error");
+    if(!uEl || !pEl) return;
+    var u = (uEl.value || '').trim();
+    var p = (pEl.value || '').trim();
+    var valid = users.find(function(x){ return x.username === u && x.password === p; });
+    if (valid) {
+      var loginPage = document.getElementById("login-page");
+      var app = document.getElementById("app");
+      if (loginPage) loginPage.style.display = "none";
+      if (app) app.style.display = "block";
+      if (err) err.style.display = "none";
+    } else {
+      if (err) err.style.display = "block";
+    }
+  }
+
+  function doLogout() {
+    var app = document.getElementById("app");
+    var loginPage = document.getElementById("login-page");
+    var uEl = document.getElementById("isz_login_username");
+    var pEl = document.getElementById("isz_login_password");
+    if (app) app.style.display = "none";
+    if (loginPage) loginPage.style.display = "flex";
+    if (uEl) uEl.value = '';
+    if (pEl) pEl.value = '';
+  }
+
+  // Publikujeme funkce i na window kvůli inline volání (pokud by bylo potřeba)
+  window.login = doLogin;
+  window.logout = doLogout;
+
+  // Při načtení navážeme klik na tlačítko i Enter v polích
+  function bindLoginUI() {
+    var btn = document.getElementById("isz_login_btn");
+    var uEl = document.getElementById("isz_login_username");
+    var pEl = document.getElementById("isz_login_password");
+    if (btn) btn.addEventListener("click", doLogin);
+    function enterHandler(e){ if(e.key === 'Enter') doLogin(); }
+    if (uEl) uEl.addEventListener('keydown', enterHandler);
+    if (pEl) pEl.addEventListener('keydown', enterHandler);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindLoginUI);
+  } else {
+    bindLoginUI();
+  }
+})();
+</script>
+
+<div id="app" style="display:none;">
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Správa případů</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: bold;
-        }
-        
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-        
-        button {
-            background: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.3s;
-        }
-        
-        button:hover {
-            background: #0056b3;
-        }
-        
-        .cases-list {
-            margin-top: 30px;
-        }
-        
-        .case-item {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            background: #f9f9f9;
-        }
-        
-        .case-title {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .case-description {
-            color: #666;
-            margin-bottom: 10px;
-        }
-        
-        .case-date {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 10px;
-        }
-        
-        .delete-btn {
-            background: #dc3545;
-            padding: 5px 10px;
-            font-size: 12px;
-        }
-        
-        .delete-btn:hover {
-            background: #c82333;
-        }
-        
-        .loading {
-            text-align: center;
-            color: #666;
-            margin: 20px 0;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISZ Dispečink </title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f4; }
+    header { background: #004d33; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+    nav { background: #006644; padding: 10px; display: flex; flex-wrap: wrap; gap: 10px; }
+    nav button {
+      background: white; border: none; padding: 10px 15px;
+      border-radius: 4px; cursor: pointer; font-weight: bold;
+    }
+    nav button.active { background: #004d33; color: white; }
+    .container { padding: 20px; }
+    .panel { display: none; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+    /* První pomoc styl */
+    .uraz h3 { 
+      cursor: pointer; 
+      margin: 10px 0 5px; 
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: white;
+      user-select: none;
+    }
+    .popis { 
+      display: none; 
+      font-size: 14px; 
+      color: #333; 
+      margin-bottom: 20px; 
+      white-space: pre-line;
+      padding-left: 12px;
+      border-left: 4px solid #ccc;
+    }
+
+   /* Vysoká závažnost - červená */
+.bezvedomi { background-color: #d9534f; }    /* bezvědomí */
+.krvaceni { background-color: #d9534f; }     /* silné krvácení */
+.mrtvice { background-color: #d9534f; }      /* mrtvice */
+.srdce { background-color: #d9534f; }        /* srdeční selhání */
+.cukrovka { background-color: #d9534f; }     /* cukrovka (akutní stav) */
+
+/* Střední závažnost - oranžová */
+.duseni { background-color: #f0ad4e; }       /* dušení */
+.popaleniny { background-color: #f0ad4e; }   /* popáleniny */
+.lamani { background-color: #f0ad4e; }       /* zlomeniny */
+.krece { background-color: #f0ad4e; }        /* křeče */
+.elektricky { background-color: #f0ad4e; }   /* elektrický šok */
+.astma { background-color: #f0ad4e; }         /* astma */
+
+/* Nízká závažnost - zelená */
+.alergie { background-color: #5cb85c; }      /* alergie */
+.bolest { background-color: #5cb85c; }       /* bolest */
+.podchlazeni { background-color: #5cb85c; }  /* podchlazení */
+.otrava { background-color: #5cb85c; }       /* otrava (mírná) */
+
+/* Ostatní zásahy IZS - tmavě modrá (#0d0a66) */
+.pozar { background-color: #0d0a66; }          /* požár */
+.dopravka { background-color: #0d0a66; }       /* dopravní nehoda */
+.technicka { background-color: #0d0a66; }      /* technická pomoc */
+.chemie { background-color: #0d0a66; }         /* únik nebezpečných látek */
+.vyska { background-color: #0d0a66; }          /* záchrana z výšky/hloubky */
+.hromadne { background-color: #0d0a66; }       /* hromadné neštěstí */
+.porod { background-color: #0d0a66; }          /* porod */
+.psychiatrie { background-color: #0d0a66; }    /* psychiatrická krizová situace */
+.pachatel { background-color: #0d0a66; }       /* dopadení pachatele */
+.pohresovani { background-color: #0d0a66; }    /* hledání pohřešované osoby */
+.domaci { background-color: #0d0a66; }         /* domácí násilí */
+.lavina { background-color: #0d0a66; }         /* lavina */
+.ztraceny { background-color: #0d0a66; }       /* ztracený turista */
+
+    /* Incident list stylování */
+    .incident-item { padding: 10px 15px; border-left: 6px solid gray; margin-bottom: 10px; background: #f9f9f9; border-radius: 5px; }
+    .low { border-color: green; }
+    .medium { border-color: orange; }
+    .high { border-color: red; }
+    
+    /* Eskalace ikony */
+    .eskalace-ikona {
+      font-size: 18px;
+      font-weight: bold;
+      min-width: 30px;
+      text-align: right;
+    }
+    .eskalace-ikona.stupen1::before { content: "🔴 !"; color: red; }
+    .eskalace-ikona.stupen2::before { content: "🟠 !!"; color: orange; }
+    .eskalace-ikona.stupen3::before { content: "🔴 !!!"; color: darkred; }
+
+    label, input, select, textarea {
+      display: block; width: 100%; margin-top: 10px;
+      font-size: 14px;
+    }
+    input, select, textarea {
+      padding: 8px; border-radius: 4px; border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    button.submit-btn {
+      background: #0070c9; color: white; padding: 10px;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    button.submit-btn:hover { background: #004d33; }
+
+    /* Archiv */
+    #panel-archiv .archiv-list .incident-item {
+      border-left-color: #888;
+      background: #e9e9e9;
+    }
+
+    /* Autocomplete návrhy */
+    #autocomplete-list {
+      border: 1px solid #ccc;
+      max-height: 150px;
+      overflow-y: auto;
+      background: white;
+      position: absolute;
+      z-index: 9999;
+      width: calc(100% - 18px);
+      box-sizing: border-box;
+      margin-top: -10px;
+      border-radius: 0 0 6px 6px;
+    }
+    .autocomplete-suggestion {
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+    .autocomplete-suggestion.rescue-suggestion {
+      background: linear-gradient(90deg, #fffef8, #f7fbff);
+      border-left: 4px solid #1976d2;
+      font-weight:600;
+      color:#1a1a1a;
+    }
+    .autocomplete-suggestion:hover {
+      background-color: #ddd;
+    }
+
+    /* Rescue autocomplete (separate container) */
+    #rescue-autocomplete-list {
+      border: 1px solid #ccc;
+      max-height: 220px;
+      overflow-y: auto;
+      background: white;
+      z-index: 9999;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 6px;
+      border-radius: 6px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    #rescue-autocomplete-list .autocomplete-suggestion { padding:8px 10px; }
+
+    /* Mapa v panelu */
+    #map {
+      height: 300px; 
+      width: 100%; 
+      margin-top: 10px;
+      border: 1px solid #ccc; 
+      border-radius: 6px;
+    }
+
+    /* Dark Mode */
+    body.dark-mode {
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    body.dark-mode header {
+      background: #0d3d2d;
+    }
+    body.dark-mode nav {
+      background: #0a3027;
+    }
+    body.dark-mode nav button {
+      background: #333;
+      color: #e0e0e0;
+      border: 1px solid #555;
+    }
+    body.dark-mode nav button.active {
+      background: #004d33;
+      color: white;
+    }
+    body.dark-mode .panel {
+      background: #2a2a2a;
+      color: #e0e0e0;
+    }
+    body.dark-mode .incident-item {
+      background: #3a3a3a;
+      color: #e0e0e0;
+    }
+    body.dark-mode #panel-archiv .archiv-list .incident-item {
+      background: #2a2a2a;
+    }
+    body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+      background: #333;
+      color: #e0e0e0;
+      border-color: #555;
+    }
+    body.dark-mode button.submit-btn {
+      background: #0070c9;
+    }
+    body.dark-mode button.submit-btn:hover {
+      background: #0056a3;
+    }
+    body.dark-mode .popis {
+      color: #b0b0b0;
+      border-left-color: #555;
+    }
+    body.dark-mode .uraz h3 {
+      color: white;
+    }
+    body.dark-mode #autocomplete-list {
+      background: #333;
+      border-color: #555;
+      color: #e0e0e0;
+    }
+    body.dark-mode .autocomplete-suggestion:hover {
+      background-color: #444;
+    }
+    /* --- Vlastní styl pro panel Statistiky --- */
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(250,250,250,0.8));
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .stat-card .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111;
+    }
+    .stat-card .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .stats-main { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
+    .severity-list { display: flex; flex-direction: column; gap: 10px; }
+    .severity-row { display:flex; align-items:center; gap:10px; }
+    .severity-label { width:90px; font-weight:600; font-size:14px; }
+    .severity-count { width:40px; text-align:right; font-weight:700; }
+    .bar { flex:1; height:14px; background:#eee; border-radius:8px; overflow:hidden; }
+    .bar-fill { height:100%; width:0%; transition: width 600ms ease; }
+    .bar-fill.high { background: #d9534f; }
+    .bar-fill.medium { background: #f0ad4e; }
+    .bar-fill.low { background: #5cb85c; }
+
+    .type-list { display:flex; flex-direction:column; gap:8px; font-size:13px; }
+    .type-item { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:8px; border-radius:6px; background: #fafafa; border:1px solid #f0f0f0; }
+    .type-badge { padding:4px 8px; border-radius:999px; font-size:12px; color:#fff; font-weight:700; }
+    .type-badge[data-type="Požár"]{ background:#0d0a66; }
+    .type-badge[data-type="Dopravní nehoda"]{ background:#d16914; }
+    .type-badge[data-type="Zdravotnický zásah"]{ background:#1976d2; }
+    .type-item .meta { color:#666; font-size:12px; }
+    /* --- Form styling for New Case --- */
+    .form-grid { display:grid; grid-template-columns: 1fr 420px; gap:18px; align-items:start; }
+    .form-card { background: #fff; padding:16px; border-radius:10px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); border:1px solid rgba(0,0,0,0.04); }
+    .map-card { background:#fff; padding:12px; border-radius:10px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); border:1px solid rgba(0,0,0,0.04); }
+    .field-row { display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+    .field { flex:1; }
+    .field-label { display:block; font-weight:700; font-size:13px; margin-bottom:6px; }
+    .help-text { font-size:12px; color:#666; margin-top:4px; }
+    input[type="text"], textarea, select { width:100%; padding:10px; border-radius:8px; border:1px solid #dcdcdc; background:#fff; }
+    textarea { min-height:90px; resize:vertical; }
+    select[multiple] { min-height:220px; }
+    .submit-row { display:flex; gap:10px; margin-top:12px; align-items:center; }
+    .btn-primary.full { flex:1; }
+    /* --- Vlastní styl pro panel Nastavení --- */
+    .settings-grid { display:grid; grid-template-columns: 1fr 320px; gap:18px; align-items:start; }
+    .setting-card { background: #fff; border-radius:10px; padding:12px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); border:1px solid rgba(0,0,0,0.04); }
+    .setting-card h4 { margin:0 0 8px 0; font-size:15px; }
+    .setting-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px dashed #f0f0f0; }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-desc { color:#666; font-size:13px; }
+
+    /* Toggle switch */
+    .switch { position:relative; display:inline-block; width:52px; height:28px; }
+    .switch input{ opacity:0; width:0; height:0; }
+    .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#ccc; transition:.2s; border-radius:34px; }
+    .slider:before { position:absolute; content:""; height:22px; width:22px; left:3px; bottom:3px; background:white; transition:.2s; border-radius:50%; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    .switch input:checked + .slider { background:#4caf50; }
+    .switch input:checked + .slider:before { transform: translateX(24px); }
+
+    /* Metronom indikátor */
+    .metronom-indicator { width:10px; height:10px; border-radius:50%; background:#bdbdbd; display:inline-block; margin-right:8px; box-shadow: 0 0 0 rgba(0,0,0,0.12); transition: transform .12s linear, background .12s ease, box-shadow .12s ease; }
+    .metronom-indicator.idle { animation: metronome-breathe 2000ms infinite ease-in-out; opacity:0.65; }
+    .metronom-indicator.running { background:#4caf50; animation: metronome-beat 545ms infinite linear; box-shadow: 0 0 12px rgba(76,175,80,0.28); opacity:1; }
+
+    @keyframes metronome-breathe {
+      0% { transform: scale(1); box-shadow: 0 0 0 rgba(0,0,0,0); }
+      50% { transform: scale(1.15); box-shadow: 0 0 6px rgba(0,0,0,0.06); }
+      100% { transform: scale(1); box-shadow: 0 0 0 rgba(0,0,0,0); }
+    }
+
+    @keyframes metronome-beat {
+      0% { transform: scale(1); box-shadow: 0 0 0 rgba(76,175,80,0.12); }
+      40% { transform: scale(1.6); box-shadow: 0 0 18px rgba(76,175,80,0.22); }
+      100% { transform: scale(1); box-shadow: 0 0 0 rgba(76,175,80,0.12); }
+    }
+
+    /* Buttons */
+    .btn { display:inline-block; padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
+    .btn-primary { background:#1976d2; color:#fff; }
+    .btn-danger { background:#c62828; color:#fff; }
+    .btn-ghost { background:transparent; border:1px solid #ddd; color:#333; }
+
+    /* Range and number inputs styling */
+    input[type="range"] { width:100%; }
+    input[type="number"] { width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; }
+
+    /* Universal hover / focus visualization for clickable elements */
+    button, .btn, nav button, .fs-btn, .btn-primary, .btn-danger, .btn-ghost, label.switch, .metronom-toggle, .nav-link, .incident-item button {
+      cursor: pointer;
+      transition: transform .08s ease, box-shadow .12s ease, background-color .12s ease, opacity .12s ease;
+    }
+
+    /* Button hover subtle lift */
+    button:hover, .btn:hover, nav button:hover, .fs-btn:hover, .btn-ghost:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+
+    /* Focus-visible for keyboard users */
+    button:focus, .btn:focus, nav button:focus, .fs-btn:focus, label.switch:focus-within {
+      outline: 3px solid rgba(25,118,210,0.12);
+      outline-offset: 3px;
+    }
+
+    /* Switch hover/active feedback */
+    label.switch:hover .slider { filter: brightness(0.98); }
+    label.switch:active .slider:before { transform: scale(0.95); }
+
+    /* Incident item hover highlight */
+    .incident-item { transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+    .incident-item:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); border-left-color: rgba(0,0,0,0.12); }
+
+    /* Make the metronom indicator slightly brighter on hover */
+    .metronom-indicator:hover { transform: scale(1.2); filter: brightness(1.05); }
+
+    /* Dark mode adjustments */
+    body.dark-mode .setting-card { background: #2b2b2b; border-color: rgba(255,255,255,0.04); }
+    body.dark-mode .setting-desc { color:#cfcfcf; }
+    body.dark-mode .btn-ghost { border-color: #444; color:#e0e0e0; }
+  </style>
+
+<style>
+  .fs-btn {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    cursor: pointer;
+    opacity: .9;
+    transition: opacity .2s ease, transform .15s ease, background .2s ease;
+  }
+  .fs-btn:hover { opacity: 1; background: rgba(0, 0, 0, 0.8); }
+  .fs-btn:active { transform: translateY(1px) scale(.99); }
+  .fs-btn.hidden { display: none; }
+  .fs-btn svg { width: 18px; height: 18px; flex: 0 0 18px; }
+</style>
+
 </head>
 <body>
-    <div class="container">
-        <h1>Správa případů</h1>
-        
-        <form id="caseForm">
-            <h2>Přidat nový případ</h2>
-            
-            <div class="form-group">
-                <label for="caseTitle">Název případu</label>
-                <input type="text" id="caseTitle" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="caseDescription">Popis</label>
-                <textarea id="caseDescription" required></textarea>
-            </div>
-            
-            <button type="submit">Uložit případ</button>
-        </form>
-        
-        <div class="cases-list">
-            <h2>Seznám případů</h2>
-            <div id="casesList" class="loading">Načítání...</div>
+<header>
+  <h1>IZS Dispečink 112</h1>
+  <div style="margin-left:auto; display:flex; align-items:center; gap:15px;">
+    <span>Datum: <span id="date"></span> | Čas: <span id="time"></span></span>
+    <button id="dark-mode-btn" style="background:#2b2b2b; color:#f1f1f1; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold;" onclick="toggleDarkMode()" title="Přepnout tmavý režim">Tmavý režim</button>
+<button style="margin-left:15px; background:#c62828; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" onclick="logout()">Odhlásit</button></header>
+
+<nav>
+  <button onclick="showPanel('novy')" class="active">Vytvořit nový případ</button>
+  <button onclick="showPanel('zasahy')">Seznam zásahů</button>
+  <button onclick="showPanel('statistiky')">Statistiky</button>
+  <button onclick="showPanel('nastaveni')">Nastavení</button>
+  <button onclick="showPanel('archiv')">Archiv</button>
+
+  <button onclick="showPanel('prvnipomoc')">První pomoc krok po kroku</button>
+</nav>
+
+<div class="container">
+
+  <!-- Panel: Nový případ -->
+  <div id="panel-novy" class="panel" style="display: block; position: relative;">
+    <h2>Zadat nový případ</h2>
+    <div class="form-grid">
+      <div class="form-card">
+        <form id="callForm" autocomplete="off">
+      <label>Typ případu</label>
+      <select id="typPripadu" required>
+        <option value="">-- Vyberte typ --</option>
+        <option value="Dopravní nehoda">Dopravní nehoda</option>
+        <option value="Požár">Požár</option>
+        <option value="Zdravotnický zásah">Zdravotnický zásah</option>
+        <option value="Technická pomoc">Technická pomoc</option>
+        <option value="Kriminalita / Násilí">Kriminalita / Násilí</option>
+        <option value="Přírodní katastrofy a živly">Přírodní katastrofy a živly</option>
+        <option value="Únik nebezpečných látek">Únik nebezpečných látek</option>
+        <option value="Evakuace a prevence">Evakuace a prevence</option>
+        <option value="Ztracené osoby / pátrání">Ztracené osoby / pátrání</option>
+        <option value="Další mimořádné události">Další mimořádné události</option>
+        <option value="test">test</option>
+      </select>
+
+      <label>Popis</label>
+      <textarea id="popisPripadu" rows="4" required></textarea>
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="min-width:200px;">
+          <label>Adresa</label>
+          <input type="text" id="adresaPripadu" placeholder="Ulice, č.p., město..." required/>
+          <div id="autocomplete-list"></div>
         </div>
+
+        <div style="min-width:200px;">
+          <label>Bod záchrany</label>
+          <input type="text" id="rescueInput" placeholder="Kód nebo název (AA 001)" />
+          <div id="rescue-autocomplete-list"></div>
+        </div>
+      </div>
+
+      <label>Závažnost</label>
+      <select id="zavaznostPripadu" required>
+        <option value="">-- Vyberte závažnost --</option>
+        <option value="Nízká">Nízká</option>
+        <option value="Střední">Střední</option>
+        <option value="Vysoká">Vysoká</option>
+      </select>
+
+      <label>Vyjezdové jednotky (vyberte více):</label>
+      <select id="jednotkyPripadu" multiple size="15" required>
+        <optgroup label="🚑 Zdravotnická záchranná služba">
+          <!-- doplň vlastní jednotky -->
+             <option value="RZP">RZP – Rychlá zdravotnická pomoc</option>
+    <option value="RLP">RLP – Rychlá lékařská pomoc</option>
+    <option value="RV">RV – Rendez-vous</option>
+    <option value="Novorozenecká sanitka">Novorozenecká sanitka</option>
+    <option value="Převozová sanitka">Převozová sanitka</option>
+    <option value="Fénix">Evakuační speciál Fénix</option>
+    <option value="Modul Golem">Modul Golem</option>
+    <option value="Atego">Terénní speciál Atego</option>
+    <option value="Polaris">Čtyřkolka Polaris Ranger</option>
+    <option value="LZS">LZS – Letecká záchranka</option>
+        </optgroup>
+        <optgroup label="🚒 Hasičský záchranný sbor">
+     <option value="CAS20">CAS 20 – střední cisterna</option>
+    <option value="CAS30">CAS 30 – těžká cisterna</option>
+    <option value="CAS32">CAS 32 – starší cisterna</option>
+    <option value="RZA">RZA – rychlý zásahový automobil</option>
+    <option value="TA">TA – technický automobil</option>
+    <option value="DA">DA – dopravní automobil</option>
+    <option value="AZ">AZ – automobilový žebřík</option>
+    <option value="AP">AP – výšková plošina</option>
+        </optgroup>
+        <optgroup label="🚓 Policie ČR">
+          <!-- doplň vlastní jednotky -->
+              <option value="Hlídka">Hlídka – osobní vůz</option>
+    <option value="Motorka">Motocyklista PČR</option>
+    <option value="Dopravní">Dopravní jednotka</option>
+    <option value="URNA">URNA – zásahová jednotka</option>
+    <option value="AKT">AKT – Antikonfliktní tým</option>
+    <option value="Transport">Převoz vězněných osob</option>
+    <option value="MobilniCentrum">Mobilní centrum PČR</option>
+    <option value="Psovod">Kynologické vozidlo</option>
+    <option value="VrtulnikPCR">Letecká služba Policie</option>
+        </optgroup>
+        <optgroup label="🌄 Ostatní jednotky">
+          <!-- doplň vlastní jednotky -->
+              <option value="HorskaSluzba">Horská služba</option>
+    <option value="VodniZachrana">Vodní záchranná služba</option>
+    <option value="Skutr">Sněžný skútr</option>
+    <option value="Rescue">Rescue tým – offroad</option>
+    <option value="PolniNemocnice">Polní nemocnice – AČR</option>
+    <option value="Dron">Dron – průzkum</option>
+        </optgroup>
+      </select>
+
+      <div id="countsContainer" style="margin-top:1em;"></div>
+
+          <button type="submit" class="btn btn-primary full">Odeslat případ</button>
+        </form>
+      </div>
+      <div class="map-card">
+        <div id="map" style="height:420px; width:100%; border-radius:8px; overflow:hidden;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Seznam zásahů -->
+  <div id="panel-zasahy" class="panel">
+    <h2>Seznam zásahů</h2>
+    <div id="incidentList">Žádné záznamy.</div>
+  </div>
+
+  <!-- Panel: Statistiky -->
+  <div id="panel-statistiky" class="panel">
+    <h2>Statistiky</h2>
+    <div class="stats-summary">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">Celkem případů</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-active">0</div>
+        <div class="stat-label">Aktivní</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-resolved">0</div>
+        <div class="stat-label">Vyřešeno</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-archived">0</div>
+        <div class="stat-label">Archivováno</div>
+      </div>
     </div>
 
-    <script type="module">
-        console.log('=== INICIALIZACE FIREBASE ===');
-        
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-        import { getDatabase, ref, push, onValue, remove, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+    <div class="stats-main">
+      <div class="stats-left">
+        <h3>Podle závažnosti</h3>
+        <div class="severity-list">
+          <div class="severity-row">
+            <span class="severity-label high">Vysoká</span>
+            <div class="bar"><div id="bar-high" class="bar-fill high"></div></div>
+            <span class="severity-count" id="stat-high">0</span>
+          </div>
+          <div class="severity-row">
+            <span class="severity-label medium">Střední</span>
+            <div class="bar"><div id="bar-medium" class="bar-fill medium"></div></div>
+            <span class="severity-count" id="stat-medium">0</span>
+          </div>
+          <div class="severity-row">
+            <span class="severity-label low">Nízká</span>
+            <div class="bar"><div id="bar-low" class="bar-fill low"></div></div>
+            <span class="severity-count" id="stat-low">0</span>
+          </div>
+        </div>
+      </div>
 
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDMW0Ydr5L_h9Dbh6MWS8MFdWKNioxlE0o",
-            authDomain: "izs-a041c.firebaseapp.com",
-            databaseURL: "https://izs-a041c-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "izs-a041c",
-            storageBucket: "izs-a041c.firebasestorage.app",
-            messagingSenderId: "151380554766",
-            appId: "1:151380554766:web:8330b330ef0ad151f3385f",
-            measurementId: "G-2YL6CKB7YN"
-        };
+      <div class="stats-right">
+        <h3>Přehled typů</h3>
+        <div id="stat-by-type" class="type-list">Zde se budou zobrazovat statistiky po vytvoření prvního případu.</div>
+      </div>
+    </div>
+  </div>
 
-        console.log('Firebase konfigurace:', firebaseConfig);
+  <!-- Panel: Nastavení -->
+  <div id="panel-nastaveni" class="panel">
+    <h2>Nastavení</h2>
+    <div class="settings-grid">
+      <div class="setting-card">
+        <h4>Vzhled a zvuk</h4>
+        <div class="setting-row">
+          <div>
+            <div style="font-weight:700;">Tmavý režim</div>
+            <div class="setting-desc">Přepne rozhraní do tmavého režimu</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-darkmode" onchange="handleDarkModeSetting()">
+            <span class="slider"></span>
+          </label>
+        </div>
 
-        // Initialize Firebase
-        let app, database;
-        try {
-            app = initializeApp(firebaseConfig);
-            database = getDatabase(app);
-            console.log('✅ Firebase inicializován');
-            
-            // Test připojení
-            get(ref(database, 'cases')).then(() => {
-                console.log('✅ Připojení k databázi OK');
-            }).catch(err => {
-                console.error('❌ Chyba připojení:', err.code, err.message);
-            });
-        } catch (error) {
-            console.error('❌ Chyba inicializace Firebase:', error);
-            document.getElementById('casesList').innerHTML = `<p style="color: red;">❌ Chyba inicializace: ${error.message}</p>`;
+        <div class="setting-row">
+          <div>
+            <div style="font-weight:700;">Zvukové upozornění</div>
+            <div class="setting-desc">Povolit krátké zvuky při nových událostech</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-sound" onchange="handleSoundSetting()">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div style="font-weight:700;">Metronom</div>
+            <div class="setting-desc">Zvukový metronom pro KPR (pokud povoleno)</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-metronome" onchange="handleMetronomeSetting()">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <h4 style="margin-top:12px;">Preference</h4>
+        <div class="setting-row">
+          <div style="flex:1;">
+            <div style="font-weight:700;">Velikost textu</div>
+            <div class="setting-desc">Upraví velikost písma v rozhraní</div>
+          </div>
+          <div style="flex:1;">
+            <input type="range" id="setting-font-size" min="80" max="150" value="100" onchange="handleFontSizeSetting()">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div style="font-weight:700;">Interval aktualizace</div>
+            <div class="setting-desc">Interval v sekundách pro automatické aktualizace</div>
+          </div>
+          <div style="width:120px;">
+            <input type="number" id="setting-refresh" min="5" max="60" value="30" onchange="handleRefreshSetting()">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div style="font-weight:700;">Čas do archivace</div>
+            <div class="setting-desc">Čas v minutách po kterém bude případ archivován</div>
+          </div>
+          <div style="width:120px;">
+            <input type="number" id="setting-archive-time" min="5" max="120" value="60" onchange="handleArchiveTimeSetting()">
+          </div>
+        </div>
+
+        <h4 style="margin-top:12px;">Export a záloha</h4>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-primary" onclick="exportSettings()">📥 Exportovat nastavení</button>
+          <button class="btn btn-danger" onclick="clearSettings()">🗑️ Obnovit výchozí</button>
+        </div>
+
+        <p style="margin-top:12px; font-size:12px; color:#666;"> <strong>ISZ Dispečink v1.0.0</strong><br>Poslední aktualizace: 8. prosince 2025</p>
+      </div>
+
+      <div class="setting-card">
+        <h4>Rychlé volby</h4>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+          <button class="btn btn-ghost" onclick="document.getElementById('setting-sound').checked = !document.getElementById('setting-sound').checked; handleSoundSetting();">Přepnout zvuky</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('setting-metronome').checked = !document.getElementById('setting-metronome').checked; handleMetronomeSetting();">Přepnout metronom</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('setting-darkmode').checked = !document.getElementById('setting-darkmode').checked; handleDarkModeSetting();">Přepnout tmavý režim</button>
+        </div>
+
+        <h4 style="margin-top:14px;">Nápověda</h4>
+        <div class="setting-desc">Změny se ukládají lokálně do prohlížeče. Exportujte nastavení pro zálohu.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Archiv -->
+  <div id="panel-archiv" class="panel">
+    <h2>Archiv</h2>
+    <div id="archiv-list" class="archiv-list" style="margin-top:10px;">
+      <!-- Zde se přesouvají vyřešené případy -->
+    </div>
+  </div>
+<script>
+  let metronomInterval;
+  let metronomAudio;
+
+  function startMetronom() {
+    if (metronomInterval) return; // už běží
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioContext();
+
+    function playClick() {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.frequency.value = 1000;
+      osc.type = 'square';
+
+      gainNode.gain.setValueAtTime(1, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.05);
+    }
+
+    metronomInterval = setInterval(playClick, 545);
+    playClick();
+    // Označit přepínače jako zapnuté
+    try { setAllMetronomSwitches(true); } catch(e) {}
+  }
+
+  function stopMetronom() {
+    clearInterval(metronomInterval);
+    metronomInterval = null;
+    try { setAllMetronomSwitches(false); } catch(e) {}
+  }
+
+  function setAllMetronomSwitches(checked) {
+    try {
+      document.querySelectorAll('.metronom-toggle').forEach(i => { i.checked = !!checked; });
+      // také synchronizuj vizuální indikátory
+      document.querySelectorAll('.metronom-indicator').forEach(ind => {
+        if(checked) {
+          ind.classList.remove('idle');
+          ind.classList.add('running');
+        } else {
+          ind.classList.remove('running');
+          ind.classList.add('idle');
         }
+      });
+    } catch(e) {}
+  }
 
-        // Získání referencí na prvky
-        const form = document.getElementById('caseForm');
-        const titleInput = document.getElementById('caseTitle');
-        const descriptionInput = document.getElementById('caseDescription');
-        const casesList = document.getElementById('casesList');
+  function togglePopis(element) {
+    const popis = element.nextElementSibling;
+    popis.style.display = popis.style.display === "block" ? "none" : "block";
+  }
+</script>
+  <!-- Panel: První pomoc krok po kroku -->
+  <div id="panel-prvnipomoc" class="panel">
+    <h2>První pomoc krok po kroku</h2>
+    <!-- obsah prvni pomoci -->
+     <!-- 🟥 Vysoká závažnost - červená -->
+  <div class="uraz">
+<div class="uraz">
+  <h3 class="bezvedomi" onclick="togglePopis(this)">Bezvědomí</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Osoba nereaguje na oslovení ani dotek.<br><br>
+    <strong>Postup:</strong><br>
+    – Zajistit okolí, zkontrolovat vědomí.<br>
+    – Otevřít dýchací cesty, zkontrolovat dýchání.<br>
+    – Dýchá → zotavovací poloha, sledování.<br>
+    – Nedýchá → okamžitě zahájit masáž srdce (100–120/min).
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-top:8px;">
+        <span class="metronom-indicator idle" aria-hidden="true"></span>
+        <div style="font-weight:700;">Metronom</div>
+        <label class="switch" title="Přepnout metronom">
+          <input type="checkbox" class="metronom-toggle" onchange="(function(e){ const chk=e.target; if(chk.checked) startMetronom(); else stopMetronom(); setAllMetronomSwitches(chk.checked); })(event)">
+          <span class="slider"></span>
+        </label>
+      </div>
+  </div>
+</div>
 
-        // Přidání nového případu
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            console.log('📝 Pokus uložit případ...');
+<div class="uraz">
+  <h3 class="krvaceni" onclick="togglePopis(this)">Silné krvácení</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Viditelné silné krvácení, možný šok.<br><br>
+    <strong>Postup:</strong><br>
+    – Přímý tlak na ránu, sterilní krytí.<br>
+    – Zaškrcení nad ranou (pokud nelze zastavit tlakem).<br>
+    – Klid, poloha proti šoku, sledovat vědomí.
+  </div>
+</div>
 
-            const newCase = {
-                title: titleInput.value,
-                description: descriptionInput.value,
-                date: new Date().toLocaleString('cs-CZ')
-            };
+<div class="uraz">
+  <h3 class="mrtvice" onclick="togglePopis(this)">Cévní mozková příhoda</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Pokles koutku, slabost jedné strany, porucha řeči.<br><br>
+    <strong>Postup:</strong><br>
+    – Klid, poloha s hlavou výše.<br>
+    – Nepodávat nic ústy.<br>
+    – Sledovat dýchání, vědomí.
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-top:8px;">
+        <span class="metronom-indicator idle" aria-hidden="true"></span>
+        <div style="font-weight:700;">Metronom</div>
+        <label class="switch" title="Přepnout metronom">
+          <input type="checkbox" class="metronom-toggle" onchange="(function(e){ const chk=e.target; if(chk.checked) startMetronom(); else stopMetronom(); setAllMetronomSwitches(chk.checked); })(event)">
+          <span class="slider"></span>
+        </label>
+      </div>
+  </div>
+</div>
 
-            console.log('Data k uložení:', newCase);
+<div class="uraz">
+  <h3 class="srdce" onclick="togglePopis(this)">Srdeční selhání / dušnost</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Dušnost, promodralé rty, pocení.<br><br>
+    <strong>Postup:</strong><br>
+    – Polosed, klid.<br>
+    – Uvolnit oděv, čerstvý vzduch.<br>
+    – Monitorace stavu.
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-top:8px;">
+        <span class="metronom-indicator idle" aria-hidden="true"></span>
+        <div style="font-weight:700;">Metronom</div>
+        <label class="switch" title="Přepnout metronom">
+          <input type="checkbox" class="metronom-toggle" onchange="(function(e){ const chk=e.target; if(chk.checked) startMetronom(); else stopMetronom(); setAllMetronomSwitches(chk.checked); })(event)">
+          <span class="slider"></span>
+        </label>
+      </div>
+  </div>
+</div>
 
-            try {
-                const result = await push(ref(database, 'cases'), newCase);
-                console.log('✅ Případ uložen, ID:', result.key);
-                titleInput.value = '';
-                descriptionInput.value = '';
-                alert('✅ Případ úspěšně uložen!');
-            } catch (error) {
-                console.error('❌ Chyba při ukládání:', error.code, error.message);
-                alert(`❌ Chyba: ${error.message}`);
-            }
+<div class="uraz">
+  <h3 class="cukrovka" onclick="togglePopis(this)">Diabetický stav</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Zmatenost, pot, mdloby, agresivita.<br><br>
+    <strong>Postup:</strong><br>
+    – Pokud při vědomí → podat cukr (sladký nápoj).<br>
+    – Pokud bezvědomí → stabilizovat, nesladit.<br>
+    – Sledovat vědomí.
+  </div>
+  </div>
+
+  <!-- 🟧 Střední závažnost - oranžová -->
+  <div class="uraz">
+<h3 class="duseni" onclick="togglePopis(this)">Dušení</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Neschopnost mluvit, lapání po dechu, držení za krk.<br><br>
+    <strong>Postup:</strong><br>
+    – 5 úderů mezi lopatky + 5 Heimlichův manévr.<br>
+    – Opakovat do uvolnění dýchacích cest.<br>
+    – Při ztrátě vědomí zahájit KPR.
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-top:8px;">
+        <span class="metronom-indicator idle" aria-hidden="true"></span>
+        <div style="font-weight:700;">Metronom</div>
+        <label class="switch" title="Přepnout metronom">
+          <input type="checkbox" class="metronom-toggle" onchange="(function(e){ const chk=e.target; if(chk.checked) startMetronom(); else stopMetronom(); setAllMetronomSwitches(chk.checked); })(event)">
+          <span class="slider"></span>
+        </label>
+      </div>
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="popaleniny" onclick="togglePopis(this)">Popáleniny</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Červená kůže, puchýře, bolest.<br><br>
+    <strong>Postup:</strong><br>
+    – Chladit vlažnou vodou 10–20 minut.<br>
+    – Zakrýt sterilním materiálem.<br>
+    – Nepropichovat puchýře, neodstraňovat přilepené části.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="lamani" onclick="togglePopis(this)">Zlomeniny</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Deformace, bolest, otok, nemožnost pohybu.<br><br>
+    <strong>Postup:</strong><br>
+    – Znehybnit končetinu (dlaha, improvizace).<br>
+    – Nekorigovat polohu.<br>
+    – Klid, sledování příznaků šoku.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="krece" onclick="togglePopis(this)">Křeče</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Neovladatelné záškuby, pěna u úst, krátká ztráta vědomí.<br><br>
+    <strong>Postup:</strong><br>
+    – Zajistit bezpečný prostor kolem.<br>
+    – Nepřidržovat končetiny.<br>
+    – Po záchvatu zotavovací poloha.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="elektricky" onclick="togglePopis(this)">Úraz elektřinou</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Popáleniny, bezvědomí, nepravidelné dýchání.<br><br>
+    <strong>Postup:</strong><br>
+    – Zajistit přerušení proudu.<br>
+    – Zhodnotit vědomí a dýchání.<br>
+    – Podle potřeby KPR, popáleniny chladit.
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-top:8px;">
+        <span class="metronom-indicator idle" aria-hidden="true"></span>
+        <div style="font-weight:700;">Metronom</div>
+        <label class="switch" title="Přepnout metronom">
+          <input type="checkbox" class="metronom-toggle" onchange="(function(e){ const chk=e.target; if(chk.checked) startMetronom(); else stopMetronom(); setAllMetronomSwitches(chk.checked); })(event)">
+          <span class="slider"></span>
+        </label>
+      </div>
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="astma" onclick="togglePopis(this)">Astmatický záchvat</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Pískoty při výdechu, úzkost, dýchací obtíže.<br><br>
+    <strong>Postup:</strong><br>
+    – Poloha v sedě.<br>
+    – Pomoci s podáním inhalátoru.<br>
+    – Klid a sledování stavu.
+  </div>
+  </div>
+
+  <!-- 🟩 Nízká závažnost - zelená -->
+  <div class="uraz">
+<h3 class="alergie" onclick="togglePopis(this)">Alergická reakce</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Otok obličeje, vyrážka, dušnost.<br><br>
+    <strong>Postup:</strong><br>
+    – Poloha v polosedě.<br>
+    – Připraven autoinjektor (pokud má).<br>
+    – Sledování dýchání a stavu vědomí.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="bolest" onclick="togglePopis(this)">Bolest na hrudi</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Tlak, svírání, bolest vystřelující do levé ruky.<br><br>
+    <strong>Postup:</strong><br>
+    – Klid, poloha v polosedě.<br>
+    – Uvolnit oděv.<br>
+    – Klidné dýchání, sledování stavu.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="podchlazeni" onclick="togglePopis(this)">Podchlazení</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Třes, zmatenost, bledost, zpomalené reakce.<br><br>
+    <strong>Postup:</strong><br>
+    – Přesun do tepla.<br>
+    – Svlečení mokrého oblečení, přikrytí.<br>
+    – Teplé nápoje pokud při vědomí.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="otrava" onclick="togglePopis(this)">Otravy</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Nevolnost, zvracení, mdloby, podráždění.<br><br>
+    <strong>Postup:</strong><br>
+    – Zjistit látku, zabezpečit vzduch.<br>
+    – Nepodávat nic ústy, nevyvolávat zvracení.<br>
+    – Vyčkat příjezdu posádky, sledovat vědomí.
+  </div>
+<!-- 📂 Ostatní zásahy IZS -->
+<h2>Ostatní zásahy IZS</h2>
+
+<!-- 🟥 Hasiči -->
+<div class="uraz">
+  <h3 class="pozar" onclick="togglePopis(this)">Požár</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Viditelné plameny, kouř, zápach spáleniny.<br><br>
+    <strong>Postup:</strong><br>
+    – Okamžitě opustit nebezpečný prostor.<br>
+    – Volat 150 nebo 112.<br>
+    – Pokud lze bezpečně, použít hasicí přístroj.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="dopravka" onclick="togglePopis(this)">Dopravní nehoda</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Srážka vozidel, poškozená vozidla, zranění osob.<br><br>
+    <strong>Postup:</strong><br>
+    – Zabezpečit místo nehody (výstražný trojúhelník, výstražná světla).<br>
+    – Poskytnout první pomoc.<br>
+    – Volat 150, 155 nebo 158 dle situace.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="technicka" onclick="togglePopis(this)">Technická pomoc</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Zatopený sklep, strom přes cestu, zamčené dveře s osobou uvnitř.<br><br>
+    <strong>Postup:</strong><br>
+    – Ohlásit situaci na 150 nebo 112.<br>
+    – Zajistit bezpečnost okolí.<br>
+    – Vyčkat příjezdu hasičů.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="chemie" onclick="togglePopis(this)">Únik nebezpečných látek</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Zápach plynu, rozlitá chemikálie, kouř z neznámého zdroje.<br><br>
+    <strong>Postup:</strong><br>
+    – Okamžitě opustit prostor.<br>
+    – Nezapalovat oheň, nevypínat/zapínat elektřinu.<br>
+    – Volat 150 nebo 112.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="vyska" onclick="togglePopis(this)">Záchrana z výšky / hloubky</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Osoba uvízlá na střeše, ve studni, na stromě.<br><br>
+    <strong>Postup:</strong><br>
+    – Zajistit bezpečnost místa.<br>
+    – Nepokoušet se o vlastní záchranu bez vybavení.<br>
+    – Volat 150.
+  </div>
+</div>
+
+<!-- 🟥 Zdravotnická záchranná služba -->
+<div class="uraz">
+  <h3 class="hromadne" onclick="togglePopis(this)">Hromadné neštěstí</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Více zraněných osob, např. nehoda autobusu, výbuch.<br><br>
+    <strong>Postup:</strong><br>
+    – Zajistit vlastní bezpečnost.<br>
+    – Volat 155 nebo 112, popsat počet zraněných.<br>
+    – Pomáhat podle možností.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="porod" onclick="togglePopis(this)">Porod</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Pravidelné kontrakce, odtok plodové vody.<br><br>
+    <strong>Postup:</strong><br>
+    – Volat 155.<br>
+    – Připravit čisté prostředí.<br>
+    – Řídit se pokyny operátora.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="psychiatrie" onclick="togglePopis(this)">Psychiatrická krizová situace</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Ohrožování sebe nebo okolí, extrémní rozrušení.<br><br>
+    <strong>Postup:</strong><br>
+    – Zajistit bezpečný odstup.<br>
+    – Volat 155 nebo 158.<br>
+    – Nesnažit se fyzicky omezit bez pomoci odborníků.
+  </div>
+</div>
+
+<!-- 🟥 Policie -->
+<div class="uraz">
+  <h3 class="pachatel" onclick="togglePopis(this)">Dopadení pachatele</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Osoba podezřelá z trestného činu, na útěku.<br><br>
+    <strong>Postup:</strong><br>
+    – Nezasahovat vlastní silou.<br>
+    – Volat 158.<br>
+    – Poskytnout popis a směr pohybu.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="pohresovani" onclick="togglePopis(this)">Hledání pohřešované osoby</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Nezvěstná osoba, dítě, senior.<br><br>
+    <strong>Postup:</strong><br>
+    – Volat 158.<br>
+    – Poskytnout poslední známé místo a popis.<br>
+    – Zůstat k dispozici pro další informace.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="domaci" onclick="togglePopis(this)">Domácí násilí</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Fyzické nebo psychické napadání v domácnosti.<br><br>
+    <strong>Postup:</strong><br>
+    – Volat 158.<br>
+    – Nezasahovat přímo, pokud to ohrožuje vás.<br>
+    – Poskytnout bezpečný úkryt, pokud je to možné.
+  </div>
+</div>
+
+<!-- 🟥 Horská služba -->
+<div class="uraz">
+  <h3 class="lavina" onclick="togglePopis(this)">Lavina</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Masa sněhu strhávající osoby, zasypání.<br><br>
+    <strong>Postup:</strong><br>
+    – Volat 1210 nebo 112.<br>
+    – Označit poslední místo, kde byla osoba viděna.<br>
+    – Začít pátrání, pokud je to bezpečné.
+  </div>
+</div>
+
+<div class="uraz">
+  <h3 class="ztraceny" onclick="togglePopis(this)">Ztracený turista</h3>
+  <div class="popis">
+    <strong>Jak to vypadá:</strong><br>
+    Osoba neví, kde je, nemůže najít cestu zpět.<br><br>
+    <strong>Postup:</strong><br>
+    – Udržovat kontakt telefonem.<br>
+    – Volat 1210 nebo 112.<br>
+    – Poskytnout informace o místě a vybavení.
+  </div>
+</div>
+
+    
+  </div>
+</div>
+
+<!-- Mapové skripty -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Datum a čas v hlavičce
+  document.getElementById("date").innerText = new Date().toLocaleDateString();
+  function updateTime() {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    document.getElementById("time").innerText = `${hours}:${minutes}:${seconds}`;
+  }
+  function togglePopis(el) {
+    const next = el.nextElementSibling;
+    next.style.display = next.style.display === "block" ? "none" : "block";
+  }
+  updateTime();
+  setInterval(updateTime, 1000);
+
+  // Přepínání panelů
+  const panels = ["novy", "zasahy", "statistiky", "nastaveni", "archiv", "prvnipomoc"];
+  function showPanel(id) {
+    panels.forEach(p => {
+      document.getElementById("panel-" + p).style.display = (p === id) ? "block" : "none";
+      const btn = document.querySelector(`nav button[onclick="showPanel('${p}')"]`);
+      if (btn) btn.classList.toggle("active", p === id);
+    });
+
+    // Když se otevře panel statistik, aktualizuj data
+    if(id === "statistiky") {
+      updateStats();
+    }
+
+    // Když se otevře panel nastavení, aktualizuj checkboxy
+    if(id === "nastaveni") {
+      updateSettingsUI();
+    }
+
+    // Při přepnutí na novy panel znovu nastavit velikost mapy
+    if(id === "novy" && map) {
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
+    }
+  }
+
+  // Map setup — vytvořena jen jednou, ale viditelná jen v novém případu
+  const map = L.map('map').setView([49.8, 15.5], 8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  let marker = null;
+
+  // Autocomplete adresy
+  const input = document.getElementById('adresaPripadu');
+  const suggestionsContainer = document.getElementById('autocomplete-list');
+
+  let selectedCoords = null;
+
+  // Rescue points (body záchrany) — výchozí seznam, lze přepsat v localStorage
+  const defaultRescuePoints = [
+    { code: 'AA 001', name: 'AA 001', address: 'Praha', lat: 50.0829913892, lon: 14.6844544444 },
+    { code: 'AA 002', name: 'AA 002', address: 'Praha', lat: 50.0895705555, lon: 14.6984893333 },
+    { code: 'AA 003', name: 'AA 003', address: 'Praha', lat: 50.1006305556, lon: 14.2995086111 },
+    { code: 'AA 004', name: 'AA 004', address: 'Praha', lat: 50.0973494444, lon: 14.3041005556 },
+    { code: 'AA 005', name: 'AA 005', address: 'Praha', lat: 50.0935652777, lon: 14.3202688889 },
+    { code: 'AA 006', name: 'AA 006', address: 'Praha', lat: 50.1061322222, lon: 14.3265780556 },
+    { code: 'AA 007', name: 'AA 007', address: 'Praha', lat: 50.0682041667, lon: 14.3217986111 },
+    { code: 'AA 008', name: 'AA 008', address: 'Praha', lat: 50.0636763889, lon: 14.3538941667 },
+    { code: 'AA 009', name: 'AA 009', address: 'Praha', lat: 50.0226786111, lon: 14.38623 },
+    { code: 'AA 010', name: 'AA 010', address: 'Praha', lat: 50.0389769444, lon: 14.3604333333 },
+    { code: 'AA 011', name: 'AA 011', address: 'Praha', lat: 50.0392288889, lon: 14.3536886111 },
+    { code: 'AA 012', name: 'AA 012', address: 'Praha', lat: 50.0211577778, lon: 14.4726788889 },
+    { code: 'AA 013', name: 'AA 013', address: 'Praha', lat: 50.0197188889, lon: 14.4723283333 },
+    { code: 'AA 014', name: 'AA 014', address: 'Praha', lat: 50.0264980556, lon: 14.4870430556 },
+    { code: 'AA 015', name: 'AA 015', address: 'Praha', lat: 50.029625, lon: 14.4778641667 },
+    { code: 'AA 016', name: 'AA 016', address: 'Praha', lat: 50.0351522222, lon: 14.4677602778 },
+    { code: 'AA 017', name: 'AA 017', address: 'Praha', lat: 50.0340247222, lon: 14.4588047222 },
+    { code: 'AA 018', name: 'AA 018', address: 'Praha', lat: 50.04055, lon: 14.5278897223 },
+    { code: 'AA 019', name: 'AA 019', address: 'Praha', lat: 50.0409177778, lon: 14.5197816667 },
+    { code: 'AA 020', name: 'AA 020', address: 'Praha', lat: 50.0421038889, lon: 14.5476397222 },
+    { code: 'AA 021', name: 'AA 021', address: 'Praha', lat: 50.0462177778, lon: 14.5392188889 },
+    { code: 'AA 022', name: 'AA 022', address: 'Praha', lat: 50.0850822222, lon: 14.6111672222 },
+    { code: 'AA 023', name: 'AA 023', address: 'Praha', lat: 50.0952977777, lon: 14.6098102778 },
+    { code: 'AA 024', name: 'AA 024', address: 'Praha', lat: 50.0921627777, lon: 14.6428569444 },
+    { code: 'AA 025', name: 'AA 025', address: 'Praha', lat: 50.094215, lon: 14.6600080556 },
+    { code: 'AA 026', name: 'AA 026', address: 'Praha', lat: 50.1012133333, lon: 14.5426919444 },
+    { code: 'AA 027', name: 'AA 027', address: 'Praha', lat: 50.1303069445, lon: 14.4416688889 },
+    { code: 'AA 028', name: 'AA 028', address: 'Praha', lat: 50.1302472223, lon: 14.4395494444 },
+    { code: 'AA 029', name: 'AA 029', address: 'Praha', lat: 50.1353475, lon: 14.4581369444 },
+    { code: 'AA 0DO', name: 'AA 0DO', address: 'Praha', lat: 50.07054553, lon: 14.41506361 },
+  ];
+
+  function loadRescuePoints() {
+    try {
+      const raw = localStorage.getItem('rescuePoints');
+      if (!raw) return defaultRescuePoints;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return defaultRescuePoints;
+      return parsed.concat(defaultRescuePoints.filter(d => !parsed.find(p => p.code === d.code)));
+    } catch (e) {
+      return defaultRescuePoints;
+    }
+  }
+
+  let rescuePoints = loadRescuePoints();
+
+  input.addEventListener('input', () => {
+    const query = input.value.trim();
+    suggestionsContainer.innerHTML = '';
+
+    if (query.length < 3) return;
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&limit=5`)
+      .then(res => res.json())
+      .then(results => {
+        suggestionsContainer.innerHTML = '';
+        results.forEach(place => {
+          const div = document.createElement('div');
+          div.classList.add('autocomplete-suggestion');
+          div.textContent = place.display_name;
+          div.dataset.lat = place.lat;
+          div.dataset.lon = place.lon;
+          suggestionsContainer.appendChild(div);
         });
+      })
+      .catch(() => {
+        suggestionsContainer.innerHTML = '';
+      });
+  });
 
-        // Funkce pro bezpečné vložení HTML
-        function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
+  // Rescue (separate) autocomplete
+  const rescueInput = document.getElementById('rescueInput');
+  const rescueContainer = document.getElementById('rescue-autocomplete-list');
+
+  // Dynamically toggle address 'required' when rescue code is used
+  function updateAddressRequirement() {
+    const addrEl = document.getElementById('adresaPripadu');
+    if (!addrEl) return;
+    if (rescueInput && rescueInput.value && rescueInput.value.trim()) {
+      addrEl.removeAttribute('required');
+    } else {
+      addrEl.setAttribute('required', 'required');
+    }
+  }
+  // Initialize
+  updateAddressRequirement();
+
+  rescueInput.addEventListener('input', () => {
+    const q = (rescueInput.value || '').trim().toLowerCase();
+    rescueContainer.innerHTML = '';
+    // update address required state
+    updateAddressRequirement();
+    if (!q) return;
+    const matches = rescuePoints.filter(r =>
+      (r.code && r.code.toLowerCase().includes(q)) ||
+      (r.name && r.name.toLowerCase().includes(q)) ||
+      (r.address && r.address.toLowerCase().includes(q))
+    ).slice(0, 10);
+
+    matches.forEach(r => {
+      const div = document.createElement('div');
+      div.classList.add('autocomplete-suggestion', 'rescue-suggestion');
+      div.textContent = `${r.code} — ${r.name} — ${r.address}`;
+      div.dataset.lat = r.lat;
+      div.dataset.lon = r.lon;
+      div.dataset.code = r.code;
+      rescueContainer.appendChild(div);
+    });
+  });
+
+  // Click handler for rescue suggestions
+  rescueContainer.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('autocomplete-suggestion')) {
+      const lat = parseFloat(e.target.dataset.lat);
+      const lon = parseFloat(e.target.dataset.lon);
+      const code = e.target.dataset.code || '';
+      rescueInput.value = code;
+      selectedCoords = { lat, lon };
+      rescueContainer.innerHTML = '';
+      // when a rescue is chosen, we no longer require address
+      document.getElementById('adresaPripadu').value = `${code} — ${e.target.textContent.split('—').slice(-1)[0].trim()}`;
+      updateAddressRequirement();
+      map.setView([lat, lon], 15);
+      if (marker) marker.setLatLng([lat, lon]); else marker = L.marker([lat, lon]).addTo(map);
+    }
+  });
+
+  suggestionsContainer.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('autocomplete-suggestion')) {
+      input.value = e.target.textContent;
+      selectedCoords = {
+        lat: parseFloat(e.target.dataset.lat),
+        lon: parseFloat(e.target.dataset.lon)
+      };
+      suggestionsContainer.innerHTML = '';
+
+      map.setView([selectedCoords.lat, selectedCoords.lon], 15);
+      if(marker) {
+        marker.setLatLng([selectedCoords.lat, selectedCoords.lon]);
+      } else {
+        marker = L.marker([selectedCoords.lat, selectedCoords.lon]).addTo(map);
+      }
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target !== input && e.target.parentNode !== suggestionsContainer) {
+      suggestionsContainer.innerHTML = '';
+    }
+  });
+
+  // Počet jednotek (přidávání počtu vozidel)
+  const maxValues = {
+    CAS20: 400, CAS30: 250, CAS32: 120, RZA: 120, TA: 60, DA: 60, AZ: 60, AP: 60,
+    RZP: 350, RLP: 120, RV: 60, Novorozenecká_sanitka: 25, Převozová_sanitka: 120,
+    Fénix: 8, Modul_Golem: 8, Atego: 8, Polaris: 15, LZS: 12,
+    Hlídka: 1100, Motorka: 120, Dopravní: 250, URNA: 60, AKT: 25, Transport: 60,
+    MobilniCentrum: 15, Psovod: 60, VrtulnikPCR: 8,
+    HorskaSluzba: 120, VodniZachrana: 60, Skutr: 25, Rescue: 25, PolniNemocnice: 8, Dron: 15
+  };
+
+  const jednotkySelect = document.getElementById('jednotkyPripadu');
+  const container = document.getElementById('countsContainer');
+
+  jednotkySelect.addEventListener('change', () => {
+    container.innerHTML = '';
+    [...jednotkySelect.selectedOptions].forEach(opt => {
+      const key = opt.value;
+      const max = maxValues[key] || 5;
+      const div = document.createElement('div');
+      div.innerHTML = `
+        <label>${opt.text} – počet vozidel (1–${max}):</label>
+        <select name="count_${key}" required>
+          ${Array.from({length: max}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('')}
+        </select>
+      `;
+      container.appendChild(div);
+    });
+  });
+
+  // Přidání případu do seznamu zásahů
+  const incidentList = document.getElementById("incidentList");
+  const now = new Date();
+const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: 'short' });
+
+
+  document.getElementById("callForm").addEventListener("submit", function(e){
+    e.preventDefault();
+
+    const typ = document.getElementById("typPripadu").value;
+    const popis = document.getElementById("popisPripadu").value.trim();
+    let adresa = document.getElementById("adresaPripadu").value.trim();
+    const rescueVal = (document.getElementById('rescueInput')?.value || '').trim();
+    const zavaznost = document.getElementById("zavaznostPripadu").value;
+    const jednotky = Array.from(jednotkySelect.selectedOptions).map(opt => opt.value);
+
+    if(!typ || !popis || !zavaznost || jednotky.length === 0) {
+      alert("Vyplňte prosím všechna povinná pole a vyberte vyjezdové jednotky.");
+      return;
+    }
+
+    // Pokud nebyla zadána adresa, umožnit použití rescue kódu (AA 001 atd.)
+    if (!adresa) {
+      if (rescueVal) {
+        // Najdi rescue point podle kódu nebo jména (case-insensitive, ignoruj mezery v kódu)
+        const norm = s => (s || '').toString().toLowerCase();
+        const normCode = s => norm(s).replace(/\s+/g, '');
+        const qNorm = normCode(rescueVal);
+        const rp = rescuePoints.find(r => normCode(r.code) === qNorm || norm(r.name) === norm(rescueVal) || norm(r.address).includes(norm(rescueVal)) );
+        if (rp) {
+          selectedCoords = { lat: rp.lat, lon: rp.lon };
+          adresa = `${rp.code} — ${rp.address}`;
+          document.getElementById('adresaPripadu').value = adresa;
+        } else {
+          alert('Neplatný bod záchrany. Zadejte platný kód nebo vyberte adresu.');
+          return;
         }
+      } else {
+        alert('Vyplňte prosím adresu nebo vyberte bod záchrany.');
+        return;
+      }
+    }
 
-        // Smazání případu
-        window.deleteCase = async (caseId) => {
-            if (confirm('Opravdu chcete smazat tento případ?')) {
-                try {
-                    console.log('🗑️ Mazání případu:', caseId);
-                    await remove(ref(database, `cases/${caseId}`));
-                    console.log('✅ Případ smazán');
-                    alert('✅ Případ smazán');
-                } catch (error) {
-                    console.error('❌ Chyba při mazání:', error.code, error.message);
-                    alert(`❌ Chyba: ${error.message}`);
-                }
-            }
-        };
+    if (!selectedCoords) {
+      alert("Prosím vyberte adresu ze seznamu návrhů nebo vyberte bod záchrany.");
+      return;
+    }
 
-        // Načítání a zobrazování případů
-        function loadCases() {
-            console.log('📥 Načítání případů...');
-            const casesRef = ref(database, 'cases');
-            
-            onValue(casesRef, (snapshot) => {
-                console.log('📦 Data přijata z Firebase');
-                casesList.innerHTML = '';
-                
-                if (snapshot.exists()) {
-                    const cases = snapshot.val();
-                    console.log('✅ Počet případů:', Object.keys(cases).length, cases);
-                    
-                    Object.entries(cases).forEach(([key, caseData]) => {
-                        const caseElement = document.createElement('div');
-                        caseElement.className = 'case-item';
-                        caseElement.innerHTML = `
-                            <div class="case-title">${escapeHtml(caseData.title)}</div>
-                            <div class="case-description">${escapeHtml(caseData.description)}</div>
-                            <div class="case-date">${caseData.date}</div>
-                            <button class="delete-btn" onclick="deleteCase('${key}')">Smazat</button>
-                        `;
-                        casesList.appendChild(caseElement);
-                    });
-                } else {
-                    console.log('ℹ️ Žádné případy v databázi');
-                    casesList.innerHTML = '<p style="color: #999;">Zatím žádné případy... Přidejte první případ formulárem výše.</p>';
-                }
-            }, (error) => {
-                console.error('❌ Chyba Firebase:', error.code, error.message);
-                casesList.innerHTML = `<p style="color: red;"><strong>❌ CHYBA:</strong> ${error.code}<br/>${error.message}<br/><small>Zkontrolujte Firebase pravidla a konzoli (F12)</small></p>`;
-            });
+    // Kontrola zda se jedná o úpravu existujícího případ
+    if (window.editingIncident && window.editingIncident.div) {
+      // Aktualizuj existující případ
+      const div = window.editingIncident.div;
+      const stavSpan = div.querySelector('.stav-pripadu');
+      const ikonaDiv = div.querySelector('.eskalace-ikona');
+      const eskalacniBtn = div.querySelector('.stupen-btn');
+      // zachovej zbývající sekundy pokud jsou
+      let remainingSeconds = parseInt(div.getAttribute('data-remaining-seconds'));
+      if (!Number.isFinite(remainingSeconds) || remainingSeconds <= 0) {
+        const text = div.querySelector('.cas-prijezdu')?.textContent || '';
+        const m = text.match(/(\d+):(\d{2})/);
+        if (m) remainingSeconds = parseInt(m[1]) * 60 + parseInt(m[2]);
+      }
+      if (!Number.isFinite(remainingSeconds) || remainingSeconds <= 0) remainingSeconds = casDoPrijezdu * 60;
+      
+      // zastav starý interval (pokud existuje)
+      if(div && div._stopkyInterval) {
+        try { clearInterval(div._stopkyInterval); } catch(e) {}
+        div._stopkyInterval = null;
+      }
+
+      // Aktualizuj obsah
+      div.innerHTML = `
+      <div style="position: relative;">
+        <div style="position: absolute; top: 0; right: 0;" class="eskalace-ikona"></div>
+        <strong>${typ} (${zavaznost})</strong><br>
+        Adresa: ${adresa}<br>
+        Jednotky: ${jednotky.join(", ")}<br>
+        Popis: ${popis}<br>
+        
+        <em>Čas do příjezdu FR : <span class="cas-prijezdu">${formatTimeFromSeconds(remainingSeconds)}</span></em><br>
+        <em>Stav: <span class="stav-pripadu">${stavSpan ? stavSpan.textContent : 'Na cestě'}</span></em><br>
+        datum: ${div.textContent.includes('datum:') ? div.textContent.split('datum:')[1].trim().substring(0, 20) : new Date().toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: 'short' })}
+      </div>
+      <div style="margin-top:10px;">
+        <button class="ukoncit" onclick="presunDoArchivuOkamzite(this)">Úspěšně ukončit</button>
+        <button class="odvolat" onclick="odvolat(this)">Odvolat</button>
+        <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>
+        <button class="stupen-btn" onclick="eskalovaniStupen(this)" data-stupen="${eskalacniBtn ? eskalacniBtn.getAttribute('data-stupen') : 0}">| stupeň</button>
+        <button class="upravit" onclick="zobrazUpravy(this)">Upravit</button>
+      </div>
+      `;
+      
+      // po aktualizaci zachovej data-remaining-seconds
+      div.setAttribute('data-remaining-seconds', remainingSeconds);
+      // restartuj stopky pro upravený případ
+      const newStopkyElem = div.querySelector('.cas-prijezdu');
+      const newStavEl = div.querySelector('.stav-pripadu');
+      try {
+        startStopky(newStopkyElem, remainingSeconds, newStavEl, () => presunDoArchivuOkamzite(div), div);
+      } catch(e) {}
+      alert('Případ byl úspěšně aktualizován!');
+      
+      // Vymaž editingIncident
+      window.editingIncident = null;
+      
+      // Reset formuláře
+      e.target.reset();
+      container.innerHTML = '';
+      selectedCoords = null;
+
+      if(marker) {
+        map.removeLayer(marker);
+        marker = null;
+      }
+      return;
+    }
+
+    // Normální vytvoření nového případ
+    const div = document.createElement("div");
+    div.classList.add("incident-item");
+    if(zavaznost === "Vysoká") div.classList.add("high");
+    else if(zavaznost === "Střední") div.classList.add("medium");
+    else div.classList.add("low");
+
+    const casDoPrijezdu = Math.floor(Math.random() * 7) + 1; // náhodný čas 1-7 minut
+    function ukoncit() {
+        stavEl.textContent = "Vyřešeno";
+        presunDoArchivu();
+    }
+
+    div.innerHTML = `
+      <div style="position: relative;">
+        <div style="position: absolute; top: 0; right: 0;" class="eskalace-ikona"></div>
+        <strong>${typ} (${zavaznost})</strong><br>
+        Adresa: ${adresa}<br>
+        Jednotky: ${jednotky.join(", ")}<br>
+        Popis: ${popis}<br>
+        
+        <em>Čas do příjezdu FR : <span class="cas-prijezdu">${casDoPrijezdu}:00</span></em><br>
+        <em>Stav: <span class="stav-pripadu">Na cestě</span></em><br>
+        datum: ${datumText}
+      </div>
+      <div style="margin-top:10px;">
+        <button class="ukoncit" onclick="presunDoArchivuOkamzite(this)">Úspěšně ukončit</button>
+        <button class="odvolat" onclick="odvolat(this)">Odvolat</button>
+        <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>
+        <button class="stupen-btn" onclick="eskalovaniStupen(this)" data-stupen="0">| stupeň</button>
+        <button class="upravit" onclick="zobrazUpravy(this)">Upravit</button>
+      </div>
+      
+    `;
+
+    incidentList.prepend(div);
+    
+    // Inicializuj data-actions pro sledování akcí
+    div.setAttribute('data-actions', JSON.stringify([]));
+    // Inicializuj zbývající sekundy pro odpočet
+    div.setAttribute('data-remaining-seconds', (casDoPrijezdu * 60));
+
+    const stopkyElem = div.querySelector(".cas-prijezdu");
+    const stavEl = div.querySelector(".stav-pripadu");
+
+    function presunDoArchivu() {
+      const casVyreseno = (Math.floor(Math.random() * 0) + 1) * 60000;
+      setTimeout(() => {
+        stavEl.textContent = "Vyřešeno";
+        const archivPanel = document.getElementById("panel-archiv");
+        let archivList = archivPanel.querySelector(".archiv-list");
+        if(!archivList) {
+          archivList = document.createElement("div");
+          archivList.classList.add("archiv-list");
+          archivPanel.appendChild(archivList);
         }
+        archivList.prepend(div);
+      }, casVyreseno);
+    }
+    
+    
+    function uspech(event) {
+      const casVyreseno = (Math.floor(Math.random() * 0) + 1) * 0;
+      setTimeout(() => {
+        stavEl.textContent = "Vyřešeno";
+        const archivPanel = document.getElementById("panel-archiv");
+        let archivList = archivPanel.querySelector(".archiv-list");
+        if(!archivList) {
+          archivList = document.createElement("div");
+          archivList.classList.add("archiv-list");
+          archivPanel.appendChild(archivList);
+        }
+        archivList.prepend(div);
+      }, casVyreseno);
+    }
 
-        // Načtení případů při spuštění
-        console.log('⏳ Spouštím loadCases...');
-        loadCases();
-        console.log('=== INICIALIZACE HOTOVA ===');
-    </script>
-</body>
-</html>
+    function formatTimeFromSeconds(totalSeconds) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function startStopky(elem, initialSeconds, stavEl, presunCallback, incidentDiv) {
+      let totalSeconds = Number(initialSeconds) || 0;
+
+      // Ensure data attribute exists
+      if (incidentDiv && incidentDiv.setAttribute) {
+        incidentDiv.setAttribute('data-remaining-seconds', totalSeconds);
+      }
+
+      const interval = setInterval(() => {
+        if (totalSeconds <= 0) {
+          elem.textContent = "0:00";
+          stavEl.textContent = "Na místě / řešíme";
+          clearInterval(interval);
+          try { presunCallback(); } catch(e) {}
+          return;
+        }
+        totalSeconds--;
+        if (incidentDiv && incidentDiv.setAttribute) {
+          incidentDiv.setAttribute('data-remaining-seconds', totalSeconds);
+        }
+        elem.textContent = formatTimeFromSeconds(totalSeconds);
+      }, 1000);
+      // uložit interval na element pro případ úprav/rušení
+      try { if (incidentDiv) incidentDiv._stopkyInterval = interval; } catch(e) {}
+    }
+    
+    
+
+
+
+    startStopky(stopkyElem, casDoPrijezdu * 60, stavEl, presunDoArchivu, div);
+
+    // Reset formuláře
+    e.target.reset();
+    container.innerHTML = '';
+    selectedCoords = null;
+
+    if(marker) {
+      map.removeLayer(marker);
+      marker = null;
+    }
+  });
+  
+  
+
+</script>
+
+<script>
+// Funkce pro tlačítka
+function presunDoArchivuOkamzite(button) {
+  const incidentDiv = button.closest('.incident-item');
+  if (!incidentDiv) return;
+  
+  // Přidej akci do data-actions
+  try {
+    const actions = JSON.parse(incidentDiv.getAttribute('data-actions') || '[]');
+    actions.push({
+      typ: '✓ Úspěšně ukončeno',
+      cas: new Date().toLocaleString('cs-CZ')
+    });
+    incidentDiv.setAttribute('data-actions', JSON.stringify(actions));
+  } catch(e) {}
+  
+  // Vytvoř archivní element bez tlačítek
+  const archivDiv = document.createElement('div');
+  archivDiv.classList.add('incident-item');
+  if(incidentDiv.classList.contains('high')) archivDiv.classList.add('high');
+  else if(incidentDiv.classList.contains('medium')) archivDiv.classList.add('medium');
+  else archivDiv.classList.add('low');
+  
+  // Zkopíruj obsah bez tlačítek
+  const infoDiv = incidentDiv.querySelector('div[style*="position: relative"]');
+  if(infoDiv) {
+    archivDiv.innerHTML = `
+      <div style="position: relative;">
+        <div style="position: absolute; top: 0; right: 0; color: #4caf50; font-weight: bold; font-size: 24px;">✓</div>
+        ${infoDiv.innerHTML}
+      </div>
+      <div style="margin-top: 10px; padding: 10px; background-color: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px;">
+        <strong>📋 Historie akcí:</strong>
+        <div style="margin-top: 5px; font-size: 0.9em;" id="archiv-log"></div>
+      </div>
+    `;
+    
+    // Vyrenderuj actions
+    const archivLog = archivDiv.querySelector('#archiv-log');
+    if(archivLog) {
+      try {
+        const actions = JSON.parse(incidentDiv.getAttribute('data-actions'));
+        archivLog.innerHTML = actions.map(a => 
+          `<div style="padding: 3px 0;">• ${a.typ} (${a.cas})</div>`
+        ).join('');
+      } catch(e) {}
+    }
+  }
+  
+  // Přidej do archivu
+  const archivPanel = document.getElementById('panel-archiv');
+  if (archivPanel) {
+    archivPanel.style.display = 'block';
+    const archivList = archivPanel.querySelector('#archiv-list');
+    if (archivList) {
+      archivList.insertBefore(archivDiv, archivList.firstChild);
+    }
+  }
+  
+  // Odeber z aktivních
+  incidentDiv.remove();
+}
+
+function odvolat(button) {
+  if(!confirm('Opravdu chcete odvolat tento případ?')) return;
+  
+  const incidentDiv = button.closest('.incident-item');
+  if (!incidentDiv) return;
+  
+  const stavSpan = incidentDiv.querySelector('.stav-pripadu');
+  if (stavSpan) {
+    stavSpan.textContent = 'Odvolano';
+  }
+  
+  // Přidej akci do data-actions
+  try {
+    const actions = JSON.parse(incidentDiv.getAttribute('data-actions') || '[]');
+    actions.push({
+      typ: '⊘ Odvoláno',
+      cas: new Date().toLocaleString('cs-CZ')
+    });
+    incidentDiv.setAttribute('data-actions', JSON.stringify(actions));
+  } catch(e) {}
+  
+  // Vytvoř archivní element bez tlačítek
+  const archivDiv = document.createElement('div');
+  archivDiv.classList.add('incident-item');
+  if(incidentDiv.classList.contains('high')) archivDiv.classList.add('high');
+  else if(incidentDiv.classList.contains('medium')) archivDiv.classList.add('medium');
+  else archivDiv.classList.add('low');
+  
+  const infoDiv = incidentDiv.querySelector('div[style*="position: relative"]');
+  if(infoDiv) {
+    archivDiv.innerHTML = `
+      <div style="position: relative;">
+        <div style="position: absolute; top: 0; right: 0; color: #ff9800; font-weight: bold; font-size: 24px;">⊘</div>
+        ${infoDiv.innerHTML}
+      </div>
+      <div style="margin-top: 10px; padding: 10px; background-color: #fff3e0; border-left: 4px solid #ff9800; border-radius: 4px;">
+        <strong>📋 Historie akcí:</strong>
+        <div style="margin-top: 5px; font-size: 0.9em;" id="archiv-log"></div>
+      </div>
+    `;
+    
+    const archivLog = archivDiv.querySelector('#archiv-log');
+    if(archivLog) {
+      try {
+        const actions = JSON.parse(incidentDiv.getAttribute('data-actions'));
+        archivLog.innerHTML = actions.map(a => 
+          `<div style="padding: 3px 0;">• ${a.typ} (${a.cas})</div>`
+        ).join('');
+      } catch(e) {}
+    }
+  }
+  
+  const archivPanel = document.getElementById('panel-archiv');
+  if (archivPanel) {
+    archivPanel.style.display = 'block';
+    const archivList = archivPanel.querySelector('#archiv-list');
+    if (archivList) {
+      archivList.insertBefore(archivDiv, archivList.firstChild);
+    }
+  }
+  
+  incidentDiv.remove();
+}
+
+function zobrazAlert() {
+  alert('Toto je jednoduché upozornění!');
+}
+
+function eskalovaniStupen(button) {
+  const incidentDiv = button.closest('.incident-item');
+  if (!incidentDiv) return;
+  
+  const ikonaDiv = incidentDiv.querySelector('.eskalace-ikona');
+  let currentStupen = parseInt(button.getAttribute('data-stupen')) || 0;
+  
+  // Cyklus: 0 → 1 → 2 → 3 → 0 (3 stupně)
+  currentStupen = (currentStupen + 1) % 3;
+  
+  button.setAttribute('data-stupen', currentStupen);
+  
+  const ikony = ['|', '||', '|||'];
+  const labels = ['I. stupeň', 'II. stupeň', 'III. stupeň (kritický)'];
+  const barvy = ['#ffc107', '#ff9800', '#f44336'];
+  
+  button.textContent = ikony[currentStupen];
+  button.style.backgroundColor = barvy[currentStupen];
+  button.style.color = 'white';
+  
+  // Aktualizuj ikonu v pravém horním rohu
+  if (ikonaDiv) {
+    ikonaDiv.textContent = ikony[currentStupen];
+    ikonaDiv.style.fontSize = '24px';
+    ikonaDiv.style.fontWeight = 'bold';
+    ikonaDiv.style.color = barvy[currentStupen];
+  }
+  
+  // Přidej akci do data-actions
+  try {
+    const actions = JSON.parse(incidentDiv.getAttribute('data-actions') || '[]');
+    actions.push({
+      typ: `⚠ ${labels[currentStupen]} aktivován`,
+      cas: new Date().toLocaleString('cs-CZ')
+    });
+    incidentDiv.setAttribute('data-actions', JSON.stringify(actions));
+  } catch(e) {}
+  
+  // Zobraz upozornění
+  alert(`Eskalace aktivována: ${labels[currentStupen]}`);
+}
+
+function zobrazIstupen(button) {
+  const incidentDiv = button.closest('.incident-item');
+  alert('I. stupeň aktivován pro případ.\n\nPopis:\n- Jednotky jsou na cestě\n- Aktivován standby režim');
+}
+
+function zobrazDruhyStupen(button) {
+  const incidentDiv = button.closest('.incident-item');
+  alert('Zásah eskalován na II. stupeň!\n\nAkce:\n- Přidány další jednotky\n- Zvýšena priorita\n- Aktivován koordinační tým');
+}
+
+function zobrazTretiStupen(button) {
+  const incidentDiv = button.closest('.incident-item');
+  alert('KRITICKÝ! Zásah eskalován na III. stupeň!\n\nNouzové opatření:\n- Všechny dostupné jednotky\n- Přerušení ostatních služeb\n- Aktivován krizový štáb');
+}
+
+function zobrazUpravy(button) {
+  const incidentDiv = button.closest('.incident-item');
+  if (!incidentDiv) return;
+  
+  // Extrahuj data z případ
+  const strongText = incidentDiv.querySelector('strong').textContent;
+  const typ = strongText.split('(')[0].trim();
+  const zavaznost = strongText.split('(')[1].replace(')', '').trim();
+  
+  const textContent = incidentDiv.textContent;
+  const adresa = textContent.split('Adresa:')[1].split('Jednotky:')[0].trim();
+  const jednotkyText = textContent.split('Jednotky:')[1].split('Popis:')[0].trim();
+  const popis = textContent.split('Popis:')[1].split('Čas')[0].trim();
+  
+  // Předvyplň formulář
+  document.getElementById('typPripadu').value = typ;
+  document.getElementById('popisPripadu').value = popis;
+  document.getElementById('adresaPripadu').value = adresa;
+  document.getElementById('zavaznostPripadu').value = zavaznost;
+  
+  // Parsuj jednotky a vyber je
+  const jednotkyArray = jednotkyText.split(', ').map(j => j.trim());
+  const jednotkySelect = document.getElementById('jednotkyPripadu');
+  
+  // Zruš předchozí výběr
+  Array.from(jednotkySelect.options).forEach(opt => opt.selected = false);
+  
+  // Vyber nové jednotky
+  Array.from(jednotkySelect.options).forEach(opt => {
+    if (jednotkyArray.includes(opt.value)) {
+      opt.selected = true;
+    }
+  });
+  
+  // Spustit change event aby se aktualizoval počet vozidel
+  jednotkySelect.dispatchEvent(new Event('change'));
+  
+  // Přejdi na panel "Vytvořit nový případ"
+  showPanel('novy');
+  
+  // Scroll na formulář
+  setTimeout(() => {
+    document.getElementById('callForm').scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+  
+  // Ulož referenci na editovaný případ pro později
+  window.editingIncident = {
+    div: incidentDiv,
+    originalHTML: incidentDiv.innerHTML
+  };
+  
+  alert('Případ je připraven k úpravě. Po úpravě klikněte na "Odeslat případ".');
+}
+
+// ===== FUNKCE PRO STATISTIKY =====
+function updateStats() {
+  const incidents = document.querySelectorAll('#incidentList .incident-item');
+  const archived = document.querySelectorAll('#panel-archiv #archiv-list .incident-item');
+
+  const total = incidents.length + archived.length;
+  const active = incidents.length;
+  const resolved = archived.length;
+
+  let highCount = 0, mediumCount = 0, lowCount = 0;
+
+  // Počítej z aktivních i archivovaných
+  [...incidents].forEach(inc => {
+    if (inc.classList.contains('high')) highCount++;
+    else if (inc.classList.contains('medium')) mediumCount++;
+    else if (inc.classList.contains('low')) lowCount++;
+  });
+  [...archived].forEach(inc => {
+    if (inc.classList.contains('high')) highCount++;
+    else if (inc.classList.contains('medium')) mediumCount++;
+    else if (inc.classList.contains('low')) lowCount++;
+  });
+
+  // Malá pomocná funkce pro animaci čísel
+  function animateValue(el, start, end, duration) {
+    if (!el) return;
+    start = Number(start) || 0;
+    end = Number(end) || 0;
+    const range = end - start;
+    const startTime = performance.now();
+    function step(now) {
+      const progress = Math.min((now - startTime) / duration, 1);
+      el.textContent = Math.floor(start + range * progress);
+      if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = end;
+    }
+    requestAnimationFrame(step);
+  }
+
+  // Aktualizace karet s animací
+  animateValue(document.getElementById('stat-total'), document.getElementById('stat-total').textContent || 0, total, 600);
+  animateValue(document.getElementById('stat-active'), document.getElementById('stat-active').textContent || 0, active, 600);
+  animateValue(document.getElementById('stat-resolved'), document.getElementById('stat-resolved').textContent || 0, resolved, 600);
+  animateValue(document.getElementById('stat-archived'), document.getElementById('stat-archived').textContent || 0, resolved, 600);
+
+  // Naplnění pruhů podle relativního podílu
+  const totalForBars = Math.max(total, 1);
+  const pctHigh = Math.round((highCount / totalForBars) * 100);
+  const pctMedium = Math.round((mediumCount / totalForBars) * 100);
+  const pctLow = Math.round((lowCount / totalForBars) * 100);
+
+  const barHigh = document.getElementById('bar-high');
+  const barMid = document.getElementById('bar-medium');
+  const barLow = document.getElementById('bar-low');
+  if (barHigh) barHigh.style.width = pctHigh + '%';
+  if (barMid) barMid.style.width = pctMedium + '%';
+  if (barLow) barLow.style.width = pctLow + '%';
+
+  // Animované čítače vedle pruhů
+  animateValue(document.getElementById('stat-high'), document.getElementById('stat-high').textContent || 0, highCount, 600);
+  animateValue(document.getElementById('stat-medium'), document.getElementById('stat-medium').textContent || 0, mediumCount, 600);
+  animateValue(document.getElementById('stat-low'), document.getElementById('stat-low').textContent || 0, lowCount, 600);
+
+  // Přehled typů — spočítat nejčastější typy
+  const typeCounts = {};
+  function collectTypes(nodeList) {
+    [...nodeList].forEach(n => {
+      const strong = n.querySelector('strong');
+      if (!strong) return;
+      const text = (strong.textContent || '').trim();
+      const typ = text.split('(')[0].trim();
+      if (!typ) return;
+      typeCounts[typ] = (typeCounts[typ] || 0) + 1;
+    });
+  }
+  collectTypes(incidents);
+  collectTypes(archived);
+
+  const container = document.getElementById('stat-by-type');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const types = Object.keys(typeCounts).sort((a, b) => typeCounts[b] - typeCounts[a]);
+  if (types.length === 0) {
+    container.textContent = 'Zde se budou zobrazovat statistiky po vytvoření prvního případu.';
+    return;
+  }
+
+  types.forEach(t => {
+    const count = typeCounts[t];
+    const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+    const item = document.createElement('div');
+    item.className = 'type-item';
+
+    const left = document.createElement('div');
+    left.style.display = 'flex';
+    left.style.alignItems = 'center';
+    left.style.gap = '10px';
+
+    const badge = document.createElement('div');
+    badge.className = 'type-badge';
+    badge.dataset.type = t;
+    badge.textContent = (t || '?').slice(0,2).toUpperCase();
+
+    const name = document.createElement('div');
+    name.textContent = t;
+
+    left.appendChild(badge);
+    left.appendChild(name);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `${count} (${percent}%)`;
+
+    item.appendChild(left);
+    item.appendChild(meta);
+    container.appendChild(item);
+  });
+}
+
+// ===== FUNKCE PRO NASTAVENÍ =====
+function updateSettingsUI() {
+  const isDarkMode = localStorage.getItem('darkMode') === 'true';
+  document.getElementById('setting-darkmode').checked = isDarkMode;
+}
+
+function handleDarkModeSetting() {
+  const checkbox = document.getElementById('setting-darkmode');
+  document.body.classList.toggle('dark-mode', checkbox.checked);
+  localStorage.setItem('darkMode', checkbox.checked ? 'true' : 'false');
+}
+
+function handleSoundSetting() {
+  const checkbox = document.getElementById('setting-sound');
+  localStorage.setItem('soundEnabled', checkbox.checked ? 'true' : 'false');
+}
+
+function handleMetronomeSetting() {
+  const checkbox = document.getElementById('setting-metronome');
+  localStorage.setItem('metronomEnabled', checkbox.checked ? 'true' : 'false');
+}
+
+function handleFontSizeSetting() {
+  const size = document.getElementById('setting-font-size').value;
+  document.body.style.fontSize = (size / 100) + 'em';
+  localStorage.setItem('fontSize', size);
+}
+
+function handleRefreshSetting() {
+  const value = document.getElementById('setting-refresh').value;
+  localStorage.setItem('refreshInterval', value);
+}
+
+function handleArchiveTimeSetting() {
+  const value = document.getElementById('setting-archive-time').value;
+  localStorage.setItem('archiveTime', value);
+}
+
+function exportSettings() {
+  const settings = {
+    darkMode: localStorage.getItem('darkMode'),
+    soundEnabled: localStorage.getItem('soundEnabled'),
+    metronomEnabled: localStorage.getItem('metronomEnabled'),
+    fontSize: localStorage.getItem('fontSize'),
+    exportDate: new Date().toLocaleString('cs-CZ')
+  };
+  
+  const dataStr = JSON.stringify(settings, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `isz-nastaveni-${Date.now()}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearSettings() {
+  if(confirm('Opravdu chcete obnovit všechna nastavení na výchozí hodnoty?')) {
+    localStorage.removeItem('darkMode');
+    localStorage.removeItem('soundEnabled');
+    localStorage.removeItem('metronomEnabled');
+    localStorage.removeItem('fontSize');
+    document.body.classList.remove('dark-mode');
+    document.body.style.fontSize = '1em';
+    updateSettingsUI();
+    alert('Nastavení byla obnovena na výchozí hodnoty.');
+  }
+}
+
+// Obnovit nastavení font size z localStorage
+const savedFontSize = localStorage.getItem('fontSize');
+if(savedFontSize) {
+  document.body.style.fontSize = (savedFontSize / 100) + 'em';
+  document.getElementById('setting-font-size').value = savedFontSize;
+}
+
+</script>
+;
+</div>
+
+  <button id="fs-btn" class="fs-btn" aria-label="Zvětšit na celou obrazovku" title="Zvětšit na celou obrazovku">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/>
+    </svg>
+    Celá obrazovka
+  </button>
+
+<script>
+// Dark Mode Toggle
+function toggleDarkMode() {
+  const body = document.body;
+  const isDarkMode = body.classList.toggle('dark-mode');
+  localStorage.setItem('darkMode', isDarkMode ? 'true' : 'false');
+  updateDarkModeButton();
+}
+
+// Aktualizuj tlačítko dark mode
+function updateDarkModeButton() {
+  const btn = document.getElementById('dark-mode-btn');
+  if(!btn) return;
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  if(isDarkMode) {
+      // světlý režim - profesionální neutrální barvy
+      btn.style.background = '#f0f0f0';
+      btn.style.color = '#222';
+      btn.textContent = 'Světlý režim';
+    } else {
+      // tmavý režim - tlumené tmavé pozadí a světlý text
+      btn.style.background = '#2b2b2b';
+      btn.style.color = '#f1f1f1';
+      btn.textContent = 'Tmavý režim';
+  }
+}
+
+// Obnovit dark mode stav z localStorage při načtení
+function initDarkMode() {
+  const isDarkMode = localStorage.getItem('darkMode') === 'true';
+  if (isDarkMode) {
+    document.body.classList.add('dark-mode');
+  }
+  updateDarkModeButton();
+}
+
+// Zavolej init když je DOM připraven
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDarkMode);
+} else {
+  initDarkMode();
+}
+</script>
+
+<script>
+(function(){
+  const btn = document.getElementById('fs-btn');
+  const root = document.documentElement;
+  async function enterFullscreen() {
+    if (root.requestFullscreen) return root.requestFullscreen();
+    if (root.webkitRequestFullscreen) return root.webkitRequestFullscreen();
+    if (root.msRequestFullscreen) return root.msRequestFullscreen();
+    throw new Error('Fullscreen API není podporována tímto prohlížečem.');
+  }
+  function isFullscreen() {
+    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+  }
+  btn.addEventListener('click', async () => {
+    try {
+      await enterFullscreen();
+      btn.classList.add('hidden');
+    } catch (err) {
+      console.error(err);
+    }
+  }, { passive: true });
+  ['fullscreenchange','webkitfullscreenchange','MSFullscreenChange'].forEach(evt => {
+    document.addEventListener(evt, () => {
+      if (!isFullscreen()) btn.classList.remove('hidden');
+    });
+  });
+})();
+</script>
