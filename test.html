@@ -5,7 +5,7 @@
 <!-- LOGIN OVERLAY (FBI) -->
 <div id="login-page" style="display:flex; align-items:center; justify-content:center; height:100vh; background:black; color:white; font-family: 'Courier New', monospace; position:relative; z-index:9999;">
   <div style="background:#111; padding:40px; border:2px solid #0ff; border-radius:8px; width:320px; text-align:center; box-shadow:0 0 20px #0ff;">
-    <h2 style="margin-bottom:20px; letter-spacing:2px;">FBI SECURE OGIN</h2>
+    <h2 style="margin-bottom:20px; letter-spacing:2px;">FBI SECURE LOGIN</h2>
     <img src="https://www.fbi.gov/++theme++2025-05-16/new-frontpage/img/fbi-logo.png" alt="FBI SECURE LOGIN" width="300" height="60">
     <input type="text" id="isz_login_username" placeholder="Uživatelské jméno" style="width:100%; padding:10px; margin:10px 0; border:1px solid #0ff; border-radius:4px; background:black; color:#0ff;" required>
     <input type="password" id="isz_login_password" placeholder="Heslo" style="width:100%; padding:10px; margin:10px 0; border:1px solid #0ff; border-radius:4px; background:black; color:#0ff;" required>
@@ -1861,6 +1861,31 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
 
 </script>
 
+<script type="module">
+ // Import the functions you need from the SDKs you need
+ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+ import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+ // TODO: Add SDKs for Firebase products that you want to use
+ // https://firebase.google.com/docs/web/setup#available-libraries
+
+ // Your web app's Firebase configuration
+ // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+ const firebaseConfig = {
+  apiKey: "AIzaSyDMW0Ydr5L_h9Dbh6MWS8MFdWKNioxlE0o",
+  authDomain: "izs-a041c.firebaseapp.com",
+  databaseURL: "https://izs-a041c-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "izs-a041c",
+  storageBucket: "izs-a041c.firebasestorage.app",
+  messagingSenderId: "151380554766",
+  appId: "1:151380554766:web:8330b330ef0ad151f3385f",
+ measurementId: "G-2YL6CKB7YN"
+ };
+
+ // Initialize Firebase
+ const app = initializeApp(firebaseConfig);
+ const analytics = getAnalytics(app);
+</script>
+
 <script>
 // Funkce pro tlačítka
 function presunDoArchivuOkamzite(button) {
@@ -2571,7 +2596,6 @@ if (document.readyState === 'loading') {
           return;
         }
 
-        // Vycisti aktuální seznam a nahraď Firebase daty
         const incidentList = document.getElementById('incidentList');
         const archivPanel = document.getElementById('panel-archiv');
         let archivList = archivPanel ? archivPanel.querySelector('.archiv-list') : null;
@@ -2581,106 +2605,85 @@ if (document.readyState === 'loading') {
           archivPanel.appendChild(archivList);
         }
         if (!incidentList) return;
-        // Clear both active and archived lists so we fully re-render from Firebase
+        
         incidentList.innerHTML = '';
         if (archivList) archivList.innerHTML = '';
 
-        // Procházej Firebase data a vytvoř DOM podle archivačního stavu
         Object.keys(data).forEach(incidentId => {
           const incidentData = data[incidentId];
           createIncidentFromFirebase(incidentData, incidentId);
         });
       });
-            const div = document.createElement('div');
-            div.classList.add('incident-item');
-            div.setAttribute('data-firebase-id', incidentId);
+    } catch (error) {
+      console.error('Chyba při načítání případů z Firebase:', error);
+    }
+  }
 
-            const zavaznost = data.zavaznost || 'Nízká';
-            if (zavaznost === 'Vysoká') div.classList.add('high');
-            else if (zavaznost === 'Střední') div.classList.add('medium');
-            else div.classList.add('low');
+  // Vytvoř incident v DOM z Firebase dat
+  function createIncidentFromFirebase(data, incidentId) {
+    const incidentList = document.getElementById('incidentList');
+    if (!incidentList) return;
 
-            const jednotky = Array.isArray(data.jednotky) ? data.jednotky.join(', ') : data.jednotky;
-            const datumText = data.datum || new Date().toLocaleString('cs-CZ');
-            let remainingSeconds = data.remainingSeconds || 0;
+    const div = document.createElement('div');
+    div.classList.add('incident-item');
+    div.setAttribute('data-firebase-id', incidentId);
 
-            // Build action buttons depending on archived state
-            function actionsHtml(isArchived) {
-              if (isArchived) {
-                return `
-                  <button class="smazat" onclick="deleteArchived(this)">Smazat</button>
-                  <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>
-                `;
-              }
-              return `
-                <button class="ukoncit" onclick="presunDoArchivuOkamzite(this)">Úspěšně ukončit</button>
-                <button class="odvolat" onclick="odvolat(this)">Odvolat</button>
-                <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>
-                <button class="stupen-btn" onclick="eskalovaniStupen(this)" data-stupen="${data.stupen || 0}">| stupeň</button>
-                <button class="upravit" onclick="zobrazUpravy(this)">Upravit</button>
-              `;
-            }
+    const zavaznost = data.zavaznost || 'Nízká';
+    if (zavaznost === 'Vysoká') div.classList.add('high');
+    else if (zavaznost === 'Střední') div.classList.add('medium');
+    else div.classList.add('low');
 
-            div.innerHTML = `
-              <div style="position: relative;">
-                <div style="position: absolute; top: 0; right: 0;" class="eskalace-ikona"></div>
-                <strong>${data.typ} (${zavaznost})</strong><br>
-                Adresa: ${data.adresa}<br>
-                Jednotky: ${jednotky}<br>
-                Popis: ${data.popis}<br>
-        
-                <em>Čas do příjezdu FR : <span class="cas-prijezdu">${formatTimeFromSeconds(remainingSeconds)}</span></em><br>
-                <em>Stav: <span class="stav-pripadu">${data.stav || 'Na cestě'}</span></em><br>
-                datum: ${datumText}
-              </div>
-              <div style="margin-top:10px;" class="actions-row">
-                ${actionsHtml(Boolean(data.archived))}
-              </div>
-              ${data.archived ? `<div class="archive-log" style="margin-top:10px; padding:10px; background:#fff; border-left:4px solid #eee; border-radius:4px;">
-                  <strong>Historie akcí:</strong>
-                  <div style="margin-top:6px; font-size:.95em;">${(data.actions || []).map(a => `• ${a.typ} (${a.cas})`).join('<br>')}</div>
-                </div>` : ''}
-            `;
+    const jednotky = Array.isArray(data.jednotky) ? data.jednotky.join(', ') : data.jednotky;
+    const datumText = data.datum || new Date().toLocaleString('cs-CZ');
+    let remainingSeconds = data.remainingSeconds || 0;
 
-            div.setAttribute('data-actions', JSON.stringify(data.actions || []));
-            div.setAttribute('data-remaining-seconds', remainingSeconds);
-            div.setAttribute('data-position', JSON.stringify(data.position || null));
+    function actionsHtml(isArchived) {
+      if (isArchived) {
+        return `<button class="smazat" onclick="deleteArchived(this)">Smazat</button><button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>`;
+      }
+      return `<button class="ukoncit" onclick="presunDoArchivuOkamzite(this)">Úspěšně ukončit</button><button class="odvolat" onclick="odvolat(this)">Odvolat</button><button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button><button class="stupen-btn" onclick="eskalovaniStupen(this)" data-stupen="${data.stupen || 0}">| stupeň</button><button class="upravit" onclick="zobrazUpravy(this)">Upravit</button>`;
+    }
 
-            // Nastav eskalaci ikonu
-            const ikonaDiv = div.querySelector('.eskalace-ikona');
-            if (ikonaDiv && data.stupen) {
-              const ikony = ['|', '||', '|||'];
-              ikonaDiv.textContent = ikony[Math.min(data.stupen - 1, 2)] || '|';
-            }
+    div.innerHTML = `
+      <div style="position: relative;">
+        <div style="position: absolute; top: 0; right: 0;" class="eskalace-ikona"></div>
+        <strong>${data.typ} (${zavaznost})</strong><br>
+        Adresa: ${data.adresa}<br>
+        Jednotky: ${jednotky}<br>
+        Popis: ${data.popis}<br>
+        <em>Čas do příjezdu FR : <span class="cas-prijezdu">${formatTimeFromSeconds(remainingSeconds)}</span></em><br>
+        <em>Stav: <span class="stav-pripadu">${data.stav || 'Na cestě'}</span></em><br>
+        datum: ${datumText}
+      </div>
+      <div style="margin-top:10px;" class="actions-row">${actionsHtml(Boolean(data.archived))}</div>
+      ${data.archived ? `<div class="archive-log" style="margin-top:10px; padding:10px; background:#fff; border-left:4px solid #eee; border-radius:4px;"><strong>Historie akcí:</strong><div style="margin-top:6px; font-size:.95em;">${(data.actions || []).map(a => `• ${a.typ} (${a.cas})`).join('<br>')}</div></div>` : ''}
+    `;
 
-            // Append to archive or active list
-            if (data.archived) {
-              const archivPanel = document.getElementById('panel-archiv');
-              let archivList = archivPanel ? archivPanel.querySelector('.archiv-list') : null;
-              if (!archivList && archivPanel) {
-                archivList = document.createElement('div');
-                archivList.classList.add('archiv-list');
-                archivPanel.appendChild(archivList);
-              }
-              if (archivList) archivList.prepend(div);
-            } else {
-              incidentList.prepend(div);
-              // Spusť stopky pro aktivní případy
-              const stopkyElem = div.querySelector('.cas-prijezdu');
-              const stavEl = div.querySelector('.stav-pripadu');
-              startStopky(stopkyElem, remainingSeconds, stavEl, () => {}, div);
-            }
+    div.setAttribute('data-actions', JSON.stringify(data.actions || []));
+    div.setAttribute('data-remaining-seconds', remainingSeconds);
+    div.setAttribute('data-position', JSON.stringify(data.position || null));
+
+    const ikonaDiv = div.querySelector('.eskalace-ikona');
     if (ikonaDiv && data.stupen) {
       const ikony = ['|', '||', '|||'];
       ikonaDiv.textContent = ikony[Math.min(data.stupen - 1, 2)] || '|';
     }
 
-    incidentList.appendChild(div);
-
-    // Spusť stopky
-    const stopkyElem = div.querySelector('.cas-prijezdu');
-    const stavEl = div.querySelector('.stav-pripadu');
-    startStopky(stopkyElem, remainingSeconds, stavEl, () => {}, div);
+    if (data.archived) {
+      const archivPanel = document.getElementById('panel-archiv');
+      let archivList = archivPanel ? archivPanel.querySelector('.archiv-list') : null;
+      if (!archivList && archivPanel) {
+        archivList = document.createElement('div');
+        archivList.classList.add('archiv-list');
+        archivPanel.appendChild(archivList);
+      }
+      if (archivList) archivList.prepend(div);
+    } else {
+      incidentList.prepend(div);
+      const stopkyElem = div.querySelector('.cas-prijezdu');
+      const stavEl = div.querySelector('.stav-pripadu');
+      startStopky(stopkyElem, remainingSeconds, stavEl, () => {}, div);
+    }
   }
 
   // Aktualizuj incident v DOM
@@ -2957,6 +2960,102 @@ if (document.readyState === 'loading') {
     setTimeout(refreshFromFirebase, 200);
   }
 
+</script>
+
+<!-- Fallback: REST-based Firebase handlers if SDK/module failed -->
+<script>
+(function(){
+  const FB_DB_URL = 'https://izs-a041c-default-rtdb.europe-west1.firebasedatabase.app';
+
+  function sdkAvailable(){ return Boolean(window.firebaseDB && window.firebaseDB.database); }
+
+  // Check if functions are missing or SDK unavailable, then provide REST versions
+  if (!window.saveIncidentToFirebase || !sdkAvailable()) {
+    console.warn('Firebase SDK not available or functions missing — enabling REST fallback');
+
+    window.saveIncidentToFirebase = async function(incidentData) {
+      try {
+        const res = await fetch(FB_DB_URL + '/incidents.json', {
+          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(incidentData)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const j = await res.json();
+        console.log('REST save OK, ID:', j.name);
+        return j.name || j.id || null;
+      } catch (e) { console.error('REST save failed:', e); return null; }
+    };
+
+    window.updateIncidentInFirebase = async function(firebaseId, incidentData) {
+      try {
+        const res = await fetch(`${FB_DB_URL}/incidents/${firebaseId}.json`, {
+          method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(incidentData)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return true;
+      } catch (e) { console.error('REST update failed:', e); return false; }
+    };
+
+    window.removeIncidentFromFirebase = async function(firebaseId) {
+      try {
+        const res = await fetch(`${FB_DB_URL}/incidents/${firebaseId}.json`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return true;
+      } catch (e) { console.error('REST delete failed:', e); return false; }
+    };
+
+    window.saveStatisticsToFirebase = async function(stats) {
+      try {
+        const res = await fetch(FB_DB_URL + '/statistics.json', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({}, stats, { updatedAt: Date.now() })) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return true;
+      } catch (e) { console.error('REST stats failed:', e); return false; }
+    };
+
+    window.subscribeToStatistics = function(callback) {
+      fetch(FB_DB_URL + '/statistics.json').then(r=>r.json()).then(d=>{ try{ callback(d); }catch(e){} }).catch(e=>console.error(e));
+      const id = setInterval(()=> fetch(FB_DB_URL + '/statistics.json').then(r=>r.json()).then(d=>{ try{ callback(d); }catch(e){} }).catch(()=>{}), 30000);
+      return () => clearInterval(id);
+    };
+
+    window.refreshFromFirebase = async function() {
+      try {
+        const res = await fetch(FB_DB_URL + '/incidents.json');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const incidentList = document.getElementById('incidentList');
+        const archivPanel = document.getElementById('panel-archiv');
+        let archivList = archivPanel ? archivPanel.querySelector('.archiv-list') : null;
+        if (incidentList) incidentList.innerHTML = '';
+        if (archivList) archivList.innerHTML = '';
+        if (!data) return;
+        
+        Object.keys(data).forEach(id => {
+          const d = data[id] || {};
+          const div = document.createElement('div');
+          div.classList.add('incident-item');
+          if (d.zavaznost === 'Vysoká') div.classList.add('high');
+          else if (d.zavaznost === 'Střední') div.classList.add('medium');
+          else div.classList.add('low');
+          div.setAttribute('data-firebase-id', id);
+          div.setAttribute('data-actions', JSON.stringify(d.actions || []));
+          div.setAttribute('data-remaining-seconds', d.remainingSeconds || 0);
+          div.setAttribute('data-position', JSON.stringify(d.position || null));
+          const jednotky = Array.isArray(d.jednotky) ? d.jednotky.join(', ') : d.jednotky || '';
+          const datumText = d.datum || new Date().toLocaleString('cs-CZ');
+          const mins = Math.floor((d.remainingSeconds||0)/60), secs = (d.remainingSeconds||0)%60;
+          const actionsHtml = d.archived ? (`<button class="smazat" onclick="deleteArchived(this)">Smazat</button> <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>`) : (`<button class="ukoncit" onclick="presunDoArchivuOkamzite(this)">Úspěšně ukončit</button> <button class="odvolat" onclick="odvolat(this)">Odvolat</button> <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button> <button class="stupen-btn" onclick="eskalovaniStupen(this)" data-stupen="${d.stupen||0}">| stupeň</button> <button class="upravit" onclick="zobrazUpravy(this)">Upravit</button>`);
+          div.innerHTML = '<div style="position: relative;"><div style="position: absolute; top: 0; right: 0;" class="eskalace-ikona"></div><strong>' + (d.typ||'') + ' (' + (d.zavaznost||'Nízká') + ')</strong><br>Adresa: ' + (d.adresa||'') + '<br>Jednotky: ' + jednotky + '<br>Popis: ' + (d.popis||'') + '<br><em>Čas do příjezdu FR : <span class="cas-prijezdu">' + mins + ':' + String(secs).padStart(2,'0') + '</span></em><br><em>Stav: <span class="stav-pripadu">' + (d.stav||'Na cestě') + '</span></em><br>datum: ' + datumText + '</div><div style="margin-top:10px;" class="actions-row">' + actionsHtml + '</div>';
+          if (d.archived) {
+            if (!archivList && archivPanel) { archivList = document.createElement('div'); archivList.classList.add('archiv-list'); archivPanel.appendChild(archivList); }
+            if (archivList) archivList.prepend(div);
+          } else {
+            if (incidentList) incidentList.prepend(div);
+          }
+        });
+      } catch (e) { console.error('REST refreshFromFirebase failed:', e); }
+    };
+  }
+})();
 </script>     
 
 
