@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 
 <!-- LOGIN OVERLAY (FBI) -->
@@ -22,7 +24,8 @@
     { username: "Tobi", password: "admin" },
     { username: "tobi", password: "admin" },
     { username: "Ales", password: "1235" },
-    { username: "guest", password: "guest" }
+    { username: "guest", password: "guest" },
+    { username: "hana", password: "rosslerova" },
   ];
 
   function doLogin() {
@@ -727,6 +730,10 @@
           <button class="btn btn-ghost" onclick="document.getElementById('setting-sound').checked = !document.getElementById('setting-sound').checked; handleSoundSetting();">Přepnout zvuky</button>
           <button class="btn btn-ghost" onclick="document.getElementById('setting-metronome').checked = !document.getElementById('setting-metronome').checked; handleMetronomeSetting();">Přepnout metronom</button>
           <button class="btn btn-ghost" onclick="document.getElementById('setting-darkmode').checked = !document.getElementById('setting-darkmode').checked; handleDarkModeSetting();">Přepnout tmavý režim</button>
+        </div>
+
+        <div style="margin-top:10px;">
+          <button class="btn btn-primary" onclick="(async function(){ try{ if(window.refreshFromFirebase) { await window.refreshFromFirebase(); alert('Aktualizace Firebase dokončena.'); } else alert('Funkce refresh není dostupná.'); } catch(e){ console.error(e); alert('Chyba při aktualizaci, zkuste konzoli.'); } })()">🔄 Aktualizovat z Firebase</button>
         </div>
 
         <h4 style="margin-top:14px;">Nápověda</h4>
@@ -1539,6 +1546,55 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
       try {
         startStopky(newStopkyElem, remainingSeconds, newStavEl, () => presunDoArchivuOkamzite(div), div);
       } catch(e) {}
+      
+      // Aktualizuj Firebase - čekej na Firebase ID pokud ještě není přiřazen
+      function doFirebaseUpdate() {
+        const firebaseId = div.getAttribute('data-firebase-id');
+        if (firebaseId && window.updateIncidentInFirebase) {
+          try {
+            const actions = JSON.parse(div.getAttribute('data-actions') || '[]');
+            // preserve or update position
+            let existingPos = null;
+            try { existingPos = JSON.parse(div.getAttribute('data-position') || 'null'); } catch(e) { existingPos = null; }
+            const posToSave = selectedCoords || existingPos || null;
+            const updatedData = {
+              typ: typ,
+              popis: popis,
+              adresa: adresa,
+              zavaznost: zavaznost,
+              jednotky: jednotky,
+              remainingSeconds: remainingSeconds,
+              actions: actions,
+              position: posToSave,
+              updatedAt: Date.now()
+            };
+            window.updateIncidentInFirebase(firebaseId, updatedData);
+            console.log('Upravený případ aktualizován v Firebase');
+          } catch(e) {
+            console.error('Chyba při aktualizaci upraveného případu:', e);
+          }
+        }
+      }
+      
+      // Pokud Firebase ID ještě není, čekej na něj
+      const firebaseId = div.getAttribute('data-firebase-id');
+      if (!firebaseId) {
+        let waited = 0;
+        const waitInterval = setInterval(() => {
+          const id = div.getAttribute('data-firebase-id');
+          if (id) {
+            clearInterval(waitInterval);
+            doFirebaseUpdate();
+          }
+          waited += 100;
+          if (waited > 5000) {
+            clearInterval(waitInterval);
+          }
+        }, 100);
+      } else {
+        doFirebaseUpdate();
+      }
+      
       alert('Případ byl úspěšně aktualizován!');
       
       // Vymaž editingIncident
@@ -1598,13 +1654,105 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
     // Inicializuj zbývající sekundy pro odpočet
     div.setAttribute('data-remaining-seconds', (casDoPrijezdu * 60));
 
+    // Ulož případ do Firebase
+    const incidentData = {
+      typ: typ,
+      popis: popis,
+      adresa: adresa,
+      zavaznost: zavaznost,
+      jednotky: jednotky,
+      datum: datumText,
+      stav: 'Na cestě',
+      remainingSeconds: casDoPrijezdu * 60,
+      stupen: 0,
+      actions: [],
+      position: selectedCoords || null,
+      pool: 'active',
+      archived: false,
+      createdAt: Date.now()
+    };
+
+    // Ulož pozici do DOM pro případné pozdější úpravy a přidej Firebase ID do DOM když se uloží
+    div.setAttribute('data-position', JSON.stringify(selectedCoords || null));
+    if (window.saveIncidentToFirebase) {
+      window.saveIncidentToFirebase(incidentData).then(firebaseId => {
+        div.setAttribute('data-firebase-id', firebaseId);
+        console.log('Případ uložen do Firebase:', firebaseId);
+      });
+    }
+
     const stopkyElem = div.querySelector(".cas-prijezdu");
     const stavEl = div.querySelector(".stav-pripadu");
 
     function presunDoArchivu() {
+      // Tato funkce se volá když skončí čas (z stopek)
+      // Aktualizuj Firebase - čekaj na Firebase ID pokud ještě není přiřazen
+      function doFirebaseUpdate() {
+        const firebaseId = div.getAttribute('data-firebase-id');
+        if (firebaseId && window.updateIncidentInFirebase) {
+          try {
+            const actions = JSON.parse(div.getAttribute('data-actions') || '[]');
+            window.updateIncidentInFirebase(firebaseId, {
+              stav: 'Na místě / řešíme',
+              actions: actions
+            });
+          } catch(e) {
+            console.error('Chyba Firebase update:', e);
+          }
+        }
+      }
+      
+      // Pokud Firebase ID ještě není, čekej na něj
+      const firebaseId = div.getAttribute('data-firebase-id');
+      if (!firebaseId) {
+        let waited = 0;
+        const waitInterval = setInterval(() => {
+          const id = div.getAttribute('data-firebase-id');
+          if (id) {
+            clearInterval(waitInterval);
+            doFirebaseUpdate();
+          }
+          waited += 100;
+          if (waited > 5000) {
+            clearInterval(waitInterval);
+          }
+        }, 100);
+      } else {
+        doFirebaseUpdate();
+      }
+      
       const casVyreseno = (Math.floor(Math.random() * 0) + 1) * 60000;
       setTimeout(() => {
         stavEl.textContent = "Vyřešeno";
+        // Aktualizuj Firebase, označ jako archivovaný
+        (function(){
+          function doArchiveUpdate() {
+            const firebaseId = div.getAttribute('data-firebase-id');
+            if (firebaseId && window.updateIncidentInFirebase) {
+              try {
+                const actions = JSON.parse(div.getAttribute('data-actions') || '[]');
+                window.updateIncidentInFirebase(firebaseId, {
+                  stav: 'Vyřešeno',
+                  actions: actions,
+                  archived: true,
+                  archivedAt: Date.now(),
+                  pool: 'archived'
+                });
+              } catch(e) { console.error('Chyba při archivaci v Firebase:', e); }
+            }
+          }
+          const id = div.getAttribute('data-firebase-id');
+          if (!id) {
+            let waited = 0;
+            const waitInterval = setInterval(() => {
+              const fid = div.getAttribute('data-firebase-id');
+              if (fid) { clearInterval(waitInterval); doArchiveUpdate(); }
+              waited += 100;
+              if (waited > 5000) { clearInterval(waitInterval); doArchiveUpdate(); }
+            }, 100);
+          } else { doArchiveUpdate(); }
+        })();
+
         const archivPanel = document.getElementById("panel-archiv");
         let archivList = archivPanel.querySelector(".archiv-list");
         if(!archivList) {
@@ -1621,6 +1769,34 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
       const casVyreseno = (Math.floor(Math.random() * 0) + 1) * 0;
       setTimeout(() => {
         stavEl.textContent = "Vyřešeno";
+        (function(){
+          function doArchiveUpdate() {
+            const firebaseId = div.getAttribute('data-firebase-id');
+            if (firebaseId && window.updateIncidentInFirebase) {
+              try {
+                const actions = JSON.parse(div.getAttribute('data-actions') || '[]');
+                window.updateIncidentInFirebase(firebaseId, {
+                  stav: 'Vyřešeno',
+                  actions: actions,
+                  archived: true,
+                  archivedAt: Date.now(),
+                  pool: 'archived'
+                });
+              } catch(e) { console.error('Chyba při archivaci v Firebase:', e); }
+            }
+          }
+          const id = div.getAttribute('data-firebase-id');
+          if (!id) {
+            let waited = 0;
+            const waitInterval = setInterval(() => {
+              const fid = div.getAttribute('data-firebase-id');
+              if (fid) { clearInterval(waitInterval); doArchiveUpdate(); }
+              waited += 100;
+              if (waited > 5000) { clearInterval(waitInterval); doArchiveUpdate(); }
+            }, 100);
+          } else { doArchiveUpdate(); }
+        })();
+
         const archivPanel = document.getElementById("panel-archiv");
         let archivList = archivPanel.querySelector(".archiv-list");
         if(!archivList) {
@@ -1688,7 +1864,7 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
 <script>
 // Funkce pro tlačítka
 function presunDoArchivuOkamzite(button) {
-  const incidentDiv = button.closest('.incident-item');
+  const incidentDiv = button.closest ? button.closest('.incident-item') : button;
   if (!incidentDiv) return;
   
   // Přidej akci do data-actions
@@ -1700,6 +1876,43 @@ function presunDoArchivuOkamzite(button) {
     });
     incidentDiv.setAttribute('data-actions', JSON.stringify(actions));
   } catch(e) {}
+  
+  // Aktualizuj stav v Firebase - čekaj na Firebase ID pokud ještě není přiřazen
+  function doFirebaseUpdate() {
+    const firebaseId = incidentDiv.getAttribute('data-firebase-id');
+    if (firebaseId && window.updateIncidentInFirebase) {
+      const actions = JSON.parse(incidentDiv.getAttribute('data-actions'));
+      window.updateIncidentInFirebase(firebaseId, {
+        stav: 'Vyřešeno',
+        actions: actions,
+        archived: true,
+        archivedAt: Date.now(),
+        pool: 'archived'
+      }).catch(e => console.error('Chyba Firebase update:', e));
+    }
+  }
+  
+  // Pokud Firebase ID ještě není, čekej na něj
+  const firebaseId = incidentDiv.getAttribute('data-firebase-id');
+  if (!firebaseId) {
+    // Čekej max 5 sekund na Firebase ID
+    let waited = 0;
+    const waitInterval = setInterval(() => {
+      const id = incidentDiv.getAttribute('data-firebase-id');
+      if (id) {
+        clearInterval(waitInterval);
+        doFirebaseUpdate();
+      }
+      waited += 100;
+      if (waited > 5000) {
+        clearInterval(waitInterval);
+        console.warn('Firebase ID nebyl přiřazen včas');
+        doFirebaseUpdate();
+      }
+    }, 100);
+  } else {
+    doFirebaseUpdate();
+  }
   
   // Vytvoř archivní element bez tlačítek
   const archivDiv = document.createElement('div');
@@ -1769,6 +1982,40 @@ function odvolat(button) {
     incidentDiv.setAttribute('data-actions', JSON.stringify(actions));
   } catch(e) {}
   
+  // Aktualizuj stav v Firebase - čekaj na Firebase ID pokud ještě není přiřazen
+  function doFirebaseUpdate() {
+    const firebaseId = incidentDiv.getAttribute('data-firebase-id');
+    if (firebaseId && window.updateIncidentInFirebase) {
+      const actions = JSON.parse(incidentDiv.getAttribute('data-actions'));
+      window.updateIncidentInFirebase(firebaseId, {
+        stav: 'Odvolano',
+        actions: actions,
+        archived: true,
+        archivedAt: Date.now(),
+        pool: 'archived'
+      }).catch(e => console.error('Chyba Firebase update:', e));
+    }
+  }
+  
+  // Pokud Firebase ID ještě není, čekej na něj
+  const firebaseId = incidentDiv.getAttribute('data-firebase-id');
+  if (!firebaseId) {
+    let waited = 0;
+    const waitInterval = setInterval(() => {
+      const id = incidentDiv.getAttribute('data-firebase-id');
+      if (id) {
+        clearInterval(waitInterval);
+        doFirebaseUpdate();
+      }
+      waited += 100;
+      if (waited > 5000) {
+        clearInterval(waitInterval);
+      }
+    }, 100);
+  } else {
+    doFirebaseUpdate();
+  }
+  
   // Vytvoř archivní element bez tlačítek
   const archivDiv = document.createElement('div');
   archivDiv.classList.add('incident-item');
@@ -1816,6 +2063,25 @@ function zobrazAlert() {
   alert('Toto je jednoduché upozornění!');
 }
 
+// Smazat archivovaný případ (volá se z tlačítka v archivu)
+async function deleteArchived(button) {
+  const incidentDiv = button.closest('.incident-item');
+  if (!incidentDiv) return;
+  if (!confirm('Opravdu chcete trvale smazat tento archivovaný případ?')) return;
+  const firebaseId = incidentDiv.getAttribute('data-firebase-id');
+  try {
+    if (firebaseId && window.removeIncidentFromFirebase) {
+      await window.removeIncidentFromFirebase(firebaseId);
+    }
+  } catch(e) {
+    console.error('Chyba při mazání z Firebase:', e);
+    alert('Chyba při mazání. Podívejte se do konzole.');
+    return;
+  }
+  // Odeber z DOM
+  try { if (incidentDiv.parentNode) incidentDiv.parentNode.removeChild(incidentDiv); } catch(e) {}
+}
+
 function eskalovaniStupen(button) {
   const incidentDiv = button.closest('.incident-item');
   if (!incidentDiv) return;
@@ -1853,6 +2119,43 @@ function eskalovaniStupen(button) {
     });
     incidentDiv.setAttribute('data-actions', JSON.stringify(actions));
   } catch(e) {}
+  
+  // Aktualizuj Firebase - čekaj na Firebase ID pokud ještě není přiřazen
+  function doFirebaseUpdate() {
+    const firebaseId = incidentDiv.getAttribute('data-firebase-id');
+    if (firebaseId && window.updateIncidentInFirebase) {
+      try {
+        const actions = JSON.parse(incidentDiv.getAttribute('data-actions'));
+        const incidentData = {
+          stupen: currentStupen,
+          actions: actions
+        };
+        window.updateIncidentInFirebase(firebaseId, incidentData);
+        console.log('Eskalace aktualizována v Firebase');
+      } catch(e) {
+        console.error('Chyba při aktualizaci eskalace:', e);
+      }
+    }
+  }
+  
+  // Pokud Firebase ID ještě není, čekej na něj
+  const firebaseId = incidentDiv.getAttribute('data-firebase-id');
+  if (!firebaseId) {
+    let waited = 0;
+    const waitInterval = setInterval(() => {
+      const id = incidentDiv.getAttribute('data-firebase-id');
+      if (id) {
+        clearInterval(waitInterval);
+        doFirebaseUpdate();
+      }
+      waited += 100;
+      if (waited > 5000) {
+        clearInterval(waitInterval);
+      }
+    }, 100);
+  } else {
+    doFirebaseUpdate();
+  }
   
   // Zobraz upozornění
   alert(`Eskalace aktivována: ${labels[currentStupen]}`);
@@ -2045,6 +2348,21 @@ function updateStats() {
     item.appendChild(meta);
     container.appendChild(item);
   });
+
+  // Ulož statistiky do Firebase
+  if (window.saveStatisticsToFirebase) {
+    const statsData = {
+      total: total,
+      active: active,
+      resolved: resolved,
+      archived: resolved,
+      highCount: highCount,
+      mediumCount: mediumCount,
+      lowCount: lowCount,
+      typeCounts: typeCounts
+    };
+    window.saveStatisticsToFirebase(statsData);
+  }
 }
 
 // ===== FUNKCE PRO NASTAVENÍ =====
@@ -2124,6 +2442,36 @@ if(savedFontSize) {
   document.getElementById('setting-font-size').value = savedFontSize;
 }
 
+// Automatická aktualizace statistik z Firebase v reálném čase
+function initializeFirebaseStatsSync() {
+  // Naslouchej změnám statistik
+  if (window.subscribeToStatistics) {
+    window.subscribeToStatistics((stats) => {
+      if (stats) {
+        console.log('Statistiky aktualizovány z Firebase:', stats);
+        // Při příštím otevření panelu statistiky se načtou z Firebase
+      }
+    });
+  }
+
+  // Pravidelně aktualizuj statistiky (každých 30 sekund) pokud je panel otevřený
+  setInterval(() => {
+    const statsPanel = document.getElementById('panel-statistiky');
+    if (statsPanel && statsPanel.style.display === 'block') {
+      updateStats();
+    }
+  }, 30000);
+}
+
+// Spusť inicializaci když je aplikace připravena
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initializeFirebaseStatsSync, 2000);
+  });
+} else {
+  setTimeout(initializeFirebaseStatsSync, 2000);
+}
+
 </script>
 ;
 </div>
@@ -2178,6 +2526,439 @@ if (document.readyState === 'loading') {
   initDarkMode();
 }
 </script>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+  import { getDatabase, ref, push, update, remove, onValue, set } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDMW0Ydr5L_h9Dbh6MWS8MFdWKNioxlE0o",
+    authDomain: "izs-a041c.firebaseapp.com",
+    databaseURL: "https://izs-a041c-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "izs-a041c",
+    storageBucket: "izs-a041c.firebasestorage.app",
+    messagingSenderId: "151380554766",
+    appId: "1:151380554766:web:8330b330ef0ad151f3385f",
+    measurementId: "G-2YL6CKB7YN"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const database = getDatabase(app);
+
+  // Publikuj funkcí do window pro globální přístup
+  window.firebaseDB = {
+    database: database,
+    ref: ref,
+    push: push,
+    update: update,
+    remove: remove,
+    onValue: onValue,
+    set: set
+  };
+
+  // Řeš a načítej případy z Firebase při startu
+  async function loadIncidentsFromFirebase() {
+    try {
+      const incidentsRef = ref(database, 'incidents');
+      onValue(incidentsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+          console.log('Žádné případy v Firebase');
+          return;
+        }
+
+        // Vycisti aktuální seznam a nahraď Firebase daty
+        const incidentList = document.getElementById('incidentList');
+        const archivPanel = document.getElementById('panel-archiv');
+        let archivList = archivPanel ? archivPanel.querySelector('.archiv-list') : null;
+        if (archivPanel && !archivList) {
+          archivList = document.createElement('div');
+          archivList.classList.add('archiv-list');
+          archivPanel.appendChild(archivList);
+        }
+        if (!incidentList) return;
+        // Clear both active and archived lists so we fully re-render from Firebase
+        incidentList.innerHTML = '';
+        if (archivList) archivList.innerHTML = '';
+
+        // Procházej Firebase data a vytvoř DOM podle archivačního stavu
+        Object.keys(data).forEach(incidentId => {
+          const incidentData = data[incidentId];
+          createIncidentFromFirebase(incidentData, incidentId);
+        });
+      });
+            const div = document.createElement('div');
+            div.classList.add('incident-item');
+            div.setAttribute('data-firebase-id', incidentId);
+
+            const zavaznost = data.zavaznost || 'Nízká';
+            if (zavaznost === 'Vysoká') div.classList.add('high');
+            else if (zavaznost === 'Střední') div.classList.add('medium');
+            else div.classList.add('low');
+
+            const jednotky = Array.isArray(data.jednotky) ? data.jednotky.join(', ') : data.jednotky;
+            const datumText = data.datum || new Date().toLocaleString('cs-CZ');
+            let remainingSeconds = data.remainingSeconds || 0;
+
+            // Build action buttons depending on archived state
+            function actionsHtml(isArchived) {
+              if (isArchived) {
+                return `
+                  <button class="smazat" onclick="deleteArchived(this)">Smazat</button>
+                  <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>
+                `;
+              }
+              return `
+                <button class="ukoncit" onclick="presunDoArchivuOkamzite(this)">Úspěšně ukončit</button>
+                <button class="odvolat" onclick="odvolat(this)">Odvolat</button>
+                <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>
+                <button class="stupen-btn" onclick="eskalovaniStupen(this)" data-stupen="${data.stupen || 0}">| stupeň</button>
+                <button class="upravit" onclick="zobrazUpravy(this)">Upravit</button>
+              `;
+            }
+
+            div.innerHTML = `
+              <div style="position: relative;">
+                <div style="position: absolute; top: 0; right: 0;" class="eskalace-ikona"></div>
+                <strong>${data.typ} (${zavaznost})</strong><br>
+                Adresa: ${data.adresa}<br>
+                Jednotky: ${jednotky}<br>
+                Popis: ${data.popis}<br>
+        
+                <em>Čas do příjezdu FR : <span class="cas-prijezdu">${formatTimeFromSeconds(remainingSeconds)}</span></em><br>
+                <em>Stav: <span class="stav-pripadu">${data.stav || 'Na cestě'}</span></em><br>
+                datum: ${datumText}
+              </div>
+              <div style="margin-top:10px;" class="actions-row">
+                ${actionsHtml(Boolean(data.archived))}
+              </div>
+              ${data.archived ? `<div class="archive-log" style="margin-top:10px; padding:10px; background:#fff; border-left:4px solid #eee; border-radius:4px;">
+                  <strong>Historie akcí:</strong>
+                  <div style="margin-top:6px; font-size:.95em;">${(data.actions || []).map(a => `• ${a.typ} (${a.cas})`).join('<br>')}</div>
+                </div>` : ''}
+            `;
+
+            div.setAttribute('data-actions', JSON.stringify(data.actions || []));
+            div.setAttribute('data-remaining-seconds', remainingSeconds);
+            div.setAttribute('data-position', JSON.stringify(data.position || null));
+
+            // Nastav eskalaci ikonu
+            const ikonaDiv = div.querySelector('.eskalace-ikona');
+            if (ikonaDiv && data.stupen) {
+              const ikony = ['|', '||', '|||'];
+              ikonaDiv.textContent = ikony[Math.min(data.stupen - 1, 2)] || '|';
+            }
+
+            // Append to archive or active list
+            if (data.archived) {
+              const archivPanel = document.getElementById('panel-archiv');
+              let archivList = archivPanel ? archivPanel.querySelector('.archiv-list') : null;
+              if (!archivList && archivPanel) {
+                archivList = document.createElement('div');
+                archivList.classList.add('archiv-list');
+                archivPanel.appendChild(archivList);
+              }
+              if (archivList) archivList.prepend(div);
+            } else {
+              incidentList.prepend(div);
+              // Spusť stopky pro aktivní případy
+              const stopkyElem = div.querySelector('.cas-prijezdu');
+              const stavEl = div.querySelector('.stav-pripadu');
+              startStopky(stopkyElem, remainingSeconds, stavEl, () => {}, div);
+            }
+    if (ikonaDiv && data.stupen) {
+      const ikony = ['|', '||', '|||'];
+      ikonaDiv.textContent = ikony[Math.min(data.stupen - 1, 2)] || '|';
+    }
+
+    incidentList.appendChild(div);
+
+    // Spusť stopky
+    const stopkyElem = div.querySelector('.cas-prijezdu');
+    const stavEl = div.querySelector('.stav-pripadu');
+    startStopky(stopkyElem, remainingSeconds, stavEl, () => {}, div);
+  }
+
+  // Aktualizuj incident v DOM
+  function updateIncidentInDOM(element, data, incidentId) {
+    const zavaznost = data.zavaznost || 'Nízká';
+    const jednotky = Array.isArray(data.jednotky) ? data.jednotky.join(', ') : data.jednotky;
+    const datumText = data.datum || new Date().toLocaleString('cs-CZ');
+    let remainingSeconds = data.remainingSeconds || parseInt(element.getAttribute('data-remaining-seconds')) || 0;
+
+    const infoDiv = element.querySelector('div[style*="position: relative"]');
+    if (infoDiv) {
+      infoDiv.innerHTML = `
+        <div style="position: absolute; top: 0; right: 0;" class="eskalace-ikona"></div>
+        <strong>${data.typ} (${zavaznost})</strong><br>
+        Adresa: ${data.adresa}<br>
+        Jednotky: ${jednotky}<br>
+        Popis: ${data.popis}<br>
+        
+        <em>Čas do příjezdu FR : <span class="cas-prijezdu">${formatTimeFromSeconds(remainingSeconds)}</span></em><br>
+        <em>Stav: <span class="stav-pripadu">${data.stav || 'Na cestě'}</span></em><br>
+        datum: ${datumText}
+      `;
+    }
+
+    element.setAttribute('data-actions', JSON.stringify(data.actions || []));
+    element.setAttribute('data-remaining-seconds', remainingSeconds);
+    try { element.setAttribute('data-position', JSON.stringify(data.position || null)); } catch(e) {}
+
+    // Aktualizuj ikonu
+    const ikonaDiv = element.querySelector('.eskalace-ikona');
+    if (ikonaDiv && data.stupen !== undefined) {
+      const ikony = ['|', '||', '|||'];
+      ikonaDiv.textContent = ikony[Math.min(data.stupen - 1, 2)] || '|';
+    }
+
+    // Re-render action buttons and move element between active/archive lists
+    const actionsRow = element.querySelector('.actions-row') || element.querySelector('div[style*="margin-top:10px"]');
+    if (actionsRow) {
+      if (data.archived) {
+        actionsRow.innerHTML = `
+          <button class="smazat" onclick="deleteArchived(this)">Smazat</button>
+          <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>
+        `;
+      } else {
+        actionsRow.innerHTML = `
+          <button class="ukoncit" onclick="presunDoArchivuOkamzite(this)">Úspěšně ukončit</button>
+          <button class="odvolat" onclick="odvolat(this)">Odvolat</button>
+          <button class="alert-btn" onclick="zobrazAlert()">Ukázat alert</button>
+          <button class="stupen-btn" onclick="eskalovaniStupen(this)" data-stupen="${data.stupen || 0}">| stupeň</button>
+          <button class="upravit" onclick="zobrazUpravy(this)">Upravit</button>
+        `;
+      }
+    }
+
+    // Move element between lists if needed
+    try {
+      const incidentList = document.getElementById('incidentList');
+      const archivPanel = document.getElementById('panel-archiv');
+      const archivList = archivPanel ? archivPanel.querySelector('.archiv-list') : null;
+      if (data.archived) {
+        if (archivList && element.parentNode !== archivList) {
+          if (element.parentNode) element.parentNode.removeChild(element);
+          archivList.prepend(element);
+        }
+      } else {
+        if (incidentList && element.parentNode !== incidentList) {
+          if (element.parentNode) element.parentNode.removeChild(element);
+          incidentList.prepend(element);
+          // restart stopky for moved back items
+          const stopkyElem = element.querySelector('.cas-prijezdu');
+          const stavEl = element.querySelector('.stav-pripadu');
+          try { startStopky(stopkyElem, Number(element.getAttribute('data-remaining-seconds')) || 0, stavEl, () => {}, element); } catch(e) {}
+        }
+      }
+    } catch(e) {}
+  }
+
+  function formatTimeFromSeconds(totalSeconds) {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // Ulož nový případ do Firebase
+  window.saveIncidentToFirebase = async function(incidentData) {
+    try {
+      if (!window.firebaseDB || !window.firebaseDB.database) throw new Error('Firebase není inicializováno');
+      const incidentsRef = ref(window.firebaseDB.database, 'incidents');
+      const newIncidentRef = push(incidentsRef);
+      
+      const firebaseData = {
+        typ: incidentData.typ,
+        popis: incidentData.popis,
+        adresa: incidentData.adresa,
+        zavaznost: incidentData.zavaznost,
+        jednotky: incidentData.jednotky,
+        datum: incidentData.datum || new Date().toLocaleString('cs-CZ'),
+        stav: incidentData.stav || 'Na cestě',
+        remainingSeconds: incidentData.remainingSeconds || 0,
+        stupen: incidentData.stupen || 0,
+        actions: incidentData.actions || [],
+        position: incidentData.position || null,
+        pool: incidentData.pool || 'active',
+        archived: incidentData.archived || false,
+        createdAt: incidentData.createdAt || Date.now()
+      };
+
+      await set(newIncidentRef, firebaseData);
+      console.log('Případ uložen do Firebase s ID:', newIncidentRef.key);
+      return newIncidentRef.key;
+    } catch (error) {
+      console.error('Chyba při ukládání případu do Firebase:', error);
+      // Uživatelštější hláška pro běžnou chybu oprávnění
+      try {
+        if (error && error.code && error.code.toUpperCase().includes('PERMISSION')) {
+          alert('Ukládání do Firebase selhalo: oprávnění odmítnuto. Zkontrolujte Firebase rules nebo přihlášení.');
+        } else {
+          alert('Chyba při ukládání do Firebase. Zkontrolujte konzoli pro detaily.');
+        }
+      } catch(e) {}
+      return null;
+    }
+  };
+
+  // Aktualizuj případ v Firebase
+  window.updateIncidentInFirebase = async function(firebaseId, incidentData) {
+    try {
+      const incidentRef = ref(window.firebaseDB.database, 'incidents/' + firebaseId);
+      const updates = Object.assign({},
+        // only include fields that are provided to avoid overwriting with undefined
+        incidentData.typ !== undefined ? { typ: incidentData.typ } : {},
+        incidentData.popis !== undefined ? { popis: incidentData.popis } : {},
+        incidentData.adresa !== undefined ? { adresa: incidentData.adresa } : {},
+        incidentData.zavaznost !== undefined ? { zavaznost: incidentData.zavaznost } : {},
+        incidentData.jednotky !== undefined ? { jednotky: incidentData.jednotky } : {},
+        incidentData.stav !== undefined ? { stav: incidentData.stav } : {},
+        incidentData.remainingSeconds !== undefined ? { remainingSeconds: incidentData.remainingSeconds } : {},
+        incidentData.stupen !== undefined ? { stupen: incidentData.stupen } : {},
+        incidentData.actions !== undefined ? { actions: incidentData.actions } : {},
+        incidentData.position !== undefined ? { position: incidentData.position } : {},
+        incidentData.pool !== undefined ? { pool: incidentData.pool } : {},
+        incidentData.archived !== undefined ? { archived: incidentData.archived } : {},
+        incidentData.archivedAt !== undefined ? { archivedAt: incidentData.archivedAt } : {},
+        { updatedAt: Date.now() }
+      );
+
+      await update(incidentRef, updates);
+      console.log('Případ aktualizován v Firebase');
+      return true;
+    } catch (error) {
+      console.error('Chyba při aktualizaci případu:', error);
+      try {
+        if (error && error.code && error.code.toUpperCase().includes('PERMISSION')) {
+          alert('Aktualizace v Firebase selhala: oprávnění odmítnuto.');
+        }
+      } catch(e) {}
+      return false;
+    }
+  };
+
+  // Smaž případ z Firebase
+  window.removeIncidentFromFirebase = async function(firebaseId) {
+    try {
+      if (!window.firebaseDB || !window.firebaseDB.database) throw new Error('Firebase není inicializováno');
+      const incidentRef = ref(window.firebaseDB.database, 'incidents/' + firebaseId);
+      await remove(incidentRef);
+      console.log('Případ smazán z Firebase');
+      return true;
+    } catch (error) {
+      console.error('Chyba při mazání případu:', error);
+      try {
+        if (error && error.code && error.code.toUpperCase().includes('PERMISSION')) {
+          alert('Mazání z Firebase selhalo: oprávnění odmítnuto.');
+        }
+      } catch(e) {}
+      return false;
+    }
+  };
+
+  // Diagnostika: rychlý test zápisu do Firebase
+  window.testFirebaseWrite = async function() {
+    try {
+      if (!window.firebaseDB || !window.firebaseDB.database) throw new Error('Firebase není inicializováno');
+      const testRef = ref(window.firebaseDB.database, 'diagnostics/test');
+      await set(testRef, { ok: true, ts: Date.now() });
+      alert('Test zápisu do Firebase proběhl úspěšně.');
+      return true;
+    } catch (err) {
+      console.error('Test zápisu selhal:', err);
+      alert('Test zápisu do Firebase selhal. Zkontrolujte konzoli a Firebase rules.');
+      return false;
+    }
+  };
+
+  // Ulož statistiku do Firebase
+  window.saveStatisticsToFirebase = async function(stats) {
+    try {
+      const statsRef = ref(window.firebaseDB.database, 'statistics');
+      await set(statsRef, {
+        total: stats.total,
+        active: stats.active,
+        resolved: stats.resolved,
+        archived: stats.archived,
+        highCount: stats.highCount,
+        mediumCount: stats.mediumCount,
+        lowCount: stats.lowCount,
+        typeCounts: stats.typeCounts || {},
+        updatedAt: Date.now()
+      });
+      console.log('Statistiky uloženy do Firebase');
+    } catch (error) {
+      console.error('Chyba při ukládání statistik:', error);
+    }
+  };
+
+  // Načítej statistiky z Firebase a slucho změny
+  window.subscribeToStatistics = function(callback) {
+    try {
+      const statsRef = ref(window.firebaseDB.database, 'statistics');
+      onValue(statsRef, (snapshot) => {
+        const stats = snapshot.val();
+        if (callback) callback(stats);
+      });
+    } catch (error) {
+      console.error('Chyba při načítání statistik:', error);
+    }
+  };
+
+  // Ensure Firebase is ready before attempting to load data
+  function ensureFirebaseReady(timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      function check() {
+        if (window.firebaseDB && window.firebaseDB.database) return resolve(true);
+        if (Date.now() - start > timeoutMs) return reject(new Error('Firebase not initialized'));
+        setTimeout(check, 100);
+      }
+      check();
+    });
+  }
+
+  // Refresh function exposed for manual triggers (also used on startup)
+  async function refreshFromFirebase() {
+    try {
+      await ensureFirebaseReady();
+      const incidentList = document.getElementById('incidentList');
+      if (incidentList) incidentList.innerHTML = '';
+      loadIncidentsFromFirebase();
+      if (typeof initializeFirebaseStatsSync === 'function') initializeFirebaseStatsSync();
+      console.log('Firebase refresh completed');
+    } catch (err) {
+      console.warn('Unable to refresh from Firebase on startup:', err);
+    }
+  }
+
+  // Expose refresh globally so other code (e.g. after login) can trigger it
+  window.refreshFromFirebase = refreshFromFirebase;
+
+  // Called by login flow in other variants of the app — ensure we refresh after login
+  window.initUIAfterLogin = async function() {
+    try {
+      if (typeof window.refreshFromFirebase === 'function') {
+        await window.refreshFromFirebase();
+      }
+    } catch(e) {
+      console.warn('initUIAfterLogin: refreshFromFirebase failed', e);
+    }
+  };
+
+  // Call on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(refreshFromFirebase, 200); });
+  } else {
+    setTimeout(refreshFromFirebase, 200);
+  }
+
+</script>     
+
 
 <script>
 (function(){
