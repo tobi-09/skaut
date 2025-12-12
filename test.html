@@ -2605,13 +2605,27 @@ if (document.readyState === 'loading') {
           archivPanel.appendChild(archivList);
         }
         if (!incidentList) return;
-        
-        incidentList.innerHTML = '';
-        if (archivList) archivList.innerHTML = '';
 
+        // Místo vymazání seznamu: aktualizuj nebo přidej jednotlivé incidenty
         Object.keys(data).forEach(incidentId => {
           const incidentData = data[incidentId];
-          createIncidentFromFirebase(incidentData, incidentId);
+          const existingElement = document.querySelector(`[data-firebase-id="${incidentId}"]`);
+          
+          if (existingElement) {
+            // Aktualizuj existující incident
+            updateIncidentInDOM(existingElement, incidentData, incidentId);
+          } else {
+            // Přidej nový incident
+            createIncidentFromFirebase(incidentData, incidentId);
+          }
+        });
+        
+        // Odeber incidenty, které už nejsou v Firebase (byly smazány)
+        document.querySelectorAll('[data-firebase-id]').forEach(elem => {
+          const fbId = elem.getAttribute('data-firebase-id');
+          if (!data[fbId]) {
+            elem.remove();
+          }
         });
       });
     } catch (error) {
