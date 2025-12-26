@@ -107,6 +107,55 @@
       color: white;
       user-select: none;
     }
+    /* Responzivita pro mobilní zařízení */
+@media (max-width: 768px) {
+  /* Hlavička - srovnání prvků pod sebe */
+  header {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+    padding: 15px;
+  }
+  
+  header div {
+    margin-left: 0 !important;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Navigace - tlačítka na celou šířku */
+  nav {
+    flex-direction: column;
+  }
+  
+  nav button {
+    width: 100%;
+  }
+
+  /* Úprava mřížek (Statistiky, Formulář, Nastavení) */
+  .stats-summary {
+    grid-template-columns: repeat(2, 1fr); /* 2 sloupce místo 4 */
+  }
+
+  .stats-main, .form-grid, .settings-grid {
+    grid-template-columns: 1fr; /* Vše pod sebou */
+  }
+
+  /* Mapa na mobilu - zmenšení výšky pro lepší ovladatelnost */
+  #map {
+    height: 250px !important;
+  }
+
+  .container {
+    padding: 10px;
+  }
+
+  /* Tabulky a výběry jednotek */
+  select[multiple] {
+    min-height: 150px;
+  }
+}
+    
     .popis { 
       display: none; 
       font-size: 14px; 
