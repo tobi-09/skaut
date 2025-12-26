@@ -107,6 +107,32 @@
       color: white;
       user-select: none;
     }
+    @media (max-width: 768px) {
+  /* ... (ponechte ostatní styly, které jste již přidal) ... */
+
+  /* Hlavní kontejner přepneme na flexbox, abychom mohli měnit pořadí */
+  .stats-main {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Formulář (levá část) bude první */
+  .stats-main > div:first-child {
+    order: 1;
+  }
+
+  /* Mapa a boční panel (pravá část) budou až pod formulářem */
+  .stats-main > div:last-child {
+    order: 2;
+  }
+
+  /* Pokud chcete mapu posunout úplně na konec i v rámci pravého panelu */
+  #map {
+    order: 10; /* Vysoké číslo zajistí odsunutí dolů */
+    height: 300px !important;
+  }
+}
+    
     /* Responzivita pro mobilní zařízení */
 @media (max-width: 768px) {
   /* Hlavička - srovnání prvků pod sebe */
