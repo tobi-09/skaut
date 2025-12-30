@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Bodové vidění – offline MP4</title>
+<style>
+  body { background:#111; color:#eee; font-family:sans-serif; padding:1rem; }
+  .controls { display:flex; flex-wrap:wrap; gap:1rem; background:#222; padding:1rem; border-radius:8px; }
+  label { display:flex; flex-direction:column; font-size:0.9rem; }
+  input[type="range"] { width:150px; }
+  select, button, input[type="color"] {
+    background:#111; color:#eee; border:1px solid #555; padding:4px 6px; border-radius:4px;
+  }
+  canvas { background:#000; border-radius:6px; max-width:100%; }
+  .view { display:flex; flex-wrap:wrap; gap:1rem; margin-top:1rem; }
+  .view > div { flex:1 1 320px; }
+  #status { margin-top:0.5rem; font-size:0.85rem; opacity:0.8; }
+</style>
+</head>
+<body>
+
+<h1>Bodové vidění – offline export MP4 (bez MediaRecorderu)</h1>
+
+<div class="controls">
+
+  <label>
+    Zdroj:
+    <select id="sourceSelect">
+      <option value="webcam">Webkamera</option>
+      <option value="file">Soubor (obrázek / video)</option>
+    </select>
+  </label>
+
+  <label>
+    Soubor:
+    <input type="file" id="fileInput" accept="image/*,video/*">
+  </label>
+
+  <label>
+    Hustota teček
+    <input id="stepRange" type="range" min="2" max="40" value="8">
+  </label>
+
+  <label>
+    Režim barev
+    <select id="colorMode">
+      <option value="original">Původní barvy</option>
+      <option value="invert">Invertované</option>
+      <option value="gray">Šedotón</option>
+      <option value="single">Jednobarevné</option>
+      <option value="rainbow">Duha</option>
+      <option value="heat">Heatmap</option>
+      <option value="heat2">Bílá → žlutá → modrá → černá</option>
+    </select>
+  </label>
+
+  <label>
+    Barva pro jednobarevný režim
+    <input type="color" id="singleColor" value="#ffffff">
+  </label>
+
+  <label>
+    Tvar bodu
+    <select id="shapeMode">
+      <option value="circle">Kruh</option>
+      <option value="square">Čtverec</option>
+      <option value="cross">Křížek</option>
+    </select>
+  </label>
+
+  <button id="toggleButton">Spustit animaci</button>
+  <button id="recordStart">Start nahrávání</button>
+  <button id="recordStop">Stop nahrávání + MP4</button>
+  <button id="downloadButton">Stáhnout PNG</button>
+</div>
+
+<div id="status">Připraveno.</div>
+
+<div class="view">
+  <div>
+    <h2>Vstup</h2>
+    <video id="video" autoplay playsinline muted style="display:none;"></video>
+    <canvas id="inputCanvas"></canvas>
+  </div>
+
+  <div>
+    <h2>Tečkový výstup</h2>
+    <canvas id="dotsCanvas"></canvas>
+  </div>
+</div>
+
+<!-- Lokální FFmpeg.js – MUSÍ být ve stejné složce -->
+<script src="ffmpeg.min.js"></script>
+
+<script>
+const video = document.getElementById('video');
+const inputCanvas = document.getElementById('inputCanvas');
+const dotsCanvas = document.getElementById('dotsCanvas');
+
+const sourceSelect = document.getElementById('sourceSelect');
+const fileInput = document.getElementById('fileInput');
+const stepRange = document.getElementById('stepRange');
+const colorMode = document.getElementById('colorMode');
+const singleColor = document.getElementById('singleColor');
+const shapeMode = document.getElementById('shapeMode');
+const toggleButton = document.getElementById('toggleButton');
+const downloadButton = document.getElementById('downloadButton');
+
+const recordStart = document.getElementById('recordStart');
+const recordStop = document.getElementById('recordStop');
+const statusEl = document.getElementById('status');
+
+const inputCtx = inputCanvas.getContext('2d', { willReadFrequently: true });
+const dotsCtx = dotsCanvas.getContext('2d');
+
+let running = false;
+let usingWebcam = true;
+let fileVideo = null;
+let fileImage = null;
+
+// nahrávání přes snímky
+let recording = false;
+let recordedFrames = [];
+const TARGET_FPS = 25;
+let lastFrameTime = 0;
+
+toggleButton.addEventListener('click', () => {
+  running = !running;
+  toggleButton.textContent = running ? 'Zastavit animaci' : 'Spustit animaci';
+  if (running) requestAnimationFrame(animate);
+});
+
+downloadButton.addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'teckovy_obraz.png';
+  link.href = dotsCanvas.toDataURL('image/png');
+  link.click();
+});
+
+sourceSelect.addEventListener('change', async () => {
+  usingWebcam = sourceSelect.value === 'webcam';
+  if (usingWebcam) startWebcam();
+  else stopWebcam();
+});
+
+fileInput.addEventListener('change', handleFile);
+
+startWebcam();
+
+// start nahrávání snímků
+recordStart.addEventListener('click', () => {
+  if (!running) {
+    running = true;
+    toggleButton.textContent = 'Zastavit animaci';
+    requestAnimationFrame(animate);
+  }
+  recordedFrames = [];
+  recording = true;
+  statusEl.textContent = 'Nahrávání běží… Sbírám snímky.';
+});
+
+// stop nahrávání → FFmpeg MP4
+recordStop.addEventListener('click', async () => {
+  if (!recording) return;
+  recording = false;
+  statusEl.textContent = 'Zpracovávám snímky ve FFmpeg (může chvíli trvat)…';
+
+  try {
+    await exportFramesToMp4(recordedFrames);
+    statusEl.textContent = 'Hotovo – MP4 staženo.';
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = 'Chyba při vytváření MP4. Viz konzoli.';
+  }
+});
+
+async function startWebcam() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    video.style.display = 'block';
+  } catch (e) { console.error(e); }
+}
+
+function stopWebcam() {
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+  }
+  video.style.display = 'none';
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+
+  if (file.type.startsWith('image/')) {
+    fileImage = new Image();
+    fileImage.onload = () => {
+      fileVideo = null;
+      setCanvasSize(fileImage.width, fileImage.height);
+      drawDotsOnce(performance.now());
+    };
+    fileImage.src = url;
+  } else if (file.type.startsWith('video/')) {
+    fileVideo = document.createElement('video');
+    fileVideo.src = url;
+    fileVideo.autoplay = true;
+    fileVideo.loop = true;
+    fileVideo.muted = true;
+    fileVideo.play();
+    fileVideo.addEventListener('loadeddata', () => {
+      fileImage = null;
+      setCanvasSize(fileVideo.videoWidth, fileVideo.videoHeight);
+    });
+  }
+}
+
+function setCanvasSize(w, h) {
+  const maxWidth = Math.min(window.innerWidth * 0.45, 640);
+  const scale = maxWidth / w;
+  const width = Math.round(w * scale);
+  const height = Math.round(h * scale);
+  inputCanvas.width = width;
+  inputCanvas.height = height;
+  dotsCanvas.width = width;
+  dotsCanvas.height = height;
+}
+
+function animate(timestamp) {
+  if (!running) return;
+  drawDotsOnce(timestamp);
+  requestAnimationFrame(animate);
+}
+
+function drawDotsOnce(timestamp) {
+  if (usingWebcam && video.videoWidth > 0) {
+    setCanvasSize(video.videoWidth, video.videoHeight);
+    inputCtx.drawImage(video, 0, 0, inputCanvas.width, inputCanvas.height);
+  } else if (fileVideo && fileVideo.videoWidth > 0) {
+    inputCtx.drawImage(fileVideo, 0, 0, inputCanvas.width, inputCanvas.height);
+  } else if (fileImage) {
+    inputCtx.drawImage(fileImage, 0, 0, inputCanvas.width, inputCanvas.height);
+  } else {
+    return;
+  }
+
+  const w = dotsCanvas.width;
+  const h = dotsCanvas.height;
+  const step = parseInt(stepRange.value, 10);
+
+  const imgData = inputCtx.getImageData(0, 0, w, h).data;
+
+  dotsCtx.clearRect(0, 0, w, h);
+
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const idx = (y * w + x) * 4;
+      const r = imgData[idx];
+      const g = imgData[idx + 1];
+      const b = imgData[idx + 2];
+
+      const depth = (0.299*r + 0.587*g + 0.114*b) / 255;
+
+      const color = pickColor(r, g, b, depth);
+      const radius = (step / 2) * (0.2 + 0.8 * depth);
+
+      drawShape(x, y, radius, color);
+    }
+  }
+
+  if (recording) {
+    if (!lastFrameTime || timestamp - lastFrameTime >= 1000 / TARGET_FPS) {
+      captureFrame();
+      lastFrameTime = timestamp;
+    }
+  }
+}
+
+function drawShape(x, y, r, color) {
+  dotsCtx.fillStyle = color;
+  dotsCtx.strokeStyle = color;
+  dotsCtx.lineWidth = r * 0.6;
+
+  const shape = shapeMode.value;
+
+  if (shape === "circle") {
+    dotsCtx.beginPath();
+    dotsCtx.arc(x, y, r, 0, Math.PI * 2);
+    dotsCtx.fill();
+  }
+
+  if (shape === "square") {
+    dotsCtx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  if (shape === "cross") {
+    dotsCtx.beginPath();
+    dotsCtx.moveTo(x - r, y);
+    dotsCtx.lineTo(x + r, y);
+    dotsCtx.moveTo(x, y - r);
+    dotsCtx.lineTo(x, y + r);
+    dotsCtx.stroke();
+  }
+}
+
+function pickColor(r, g, b, d) {
+  const mode = colorMode.value;
+
+  if (mode === 'original') return `rgb(${r},${g},${b})`;
+  if (mode === 'invert') return `rgb(${255-r},${255-g},${255-b})`;
+  if (mode === 'gray') {
+    const v = Math.round(d * 255);
+    return `rgb(${v},${v},${v})`;
+  }
+  if (mode === 'single') {
+    const {r:rr,g:gg,b:bb} = hexToRgb(singleColor.value);
+    return `rgb(${Math.round(rr*d)},${Math.round(gg*d)},${Math.round(bb*d)})`;
+  }
+  if (mode === 'rainbow') {
+    const hue = d * 360;
+    return `hsl(${hue},100%,50%)`;
+  }
+
+  if (mode === 'heat') {
+    const v = Math.round(d * 255);
+    return `rgb(${v},${Math.round(v*0.6)},${255-v})`;
+  }
+
+  if (mode === 'heat2') {
+    if (d < 0.33) {
+      const t = d / 0.33;
+      return `rgb(255,255,${Math.round(255*(1-t))})`;
+    } else if (d < 0.66) {
+      const t = (d - 0.33) / 0.33;
+      return `rgb(${Math.round(255*(1-t))},${Math.round(255*(1-t))},255)`;
+    } else {
+      const t = (d - 0.66) / 0.34;
+      const v = Math.round(255*(1-t));
+      return `rgb(${v},${v},${v})`;
+    }
+  }
+}
+
+function hexToRgb(hex) {
+  let c = hex.replace('#','');
+  if (c.length === 3) c = c.split('').map(ch => ch+ch).join('');
+  const num = parseInt(c,16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+
+function captureFrame() {
+  const dataURL = dotsCanvas.toDataURL('image/png');
+  recordedFrames.push(dataURL);
+}
+
+function dataURLToUint8(dataURL) {
+  const base64 = dataURL.split(',')[1];
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function exportFramesToMp4(frames) {
+  if (!frames || frames.length === 0) {
+    throw new Error('Žádné snímky k exportu');
+  }
+
+  const { createFFmpeg } = FFmpeg;
+  const ffmpeg = createFFmpeg({
+    log: true,
+    corePath: 'ffmpeg-core.js' // důležité pro offline – odkud vzít jádro
+  });
+
+  statusEl.textContent = 'Načítám FFmpeg…';
+  await ffmpeg.load();
+
+  statusEl.textContent = 'Zapisují snímky do FFmpeg…';
+
+  for (let i = 0; i < frames.length; i++) {
+    const bytes = dataURLToUint8(frames[i]);
+    const name = `frame_${String(i).padStart(5, '0')}.png`;
+    ffmpeg.FS('writeFile', name, bytes);
+  }
+
+  statusEl.textContent = 'Spouštím enkódování do MP4…';
+
+  await ffmpeg.run(
+    '-framerate', String(TARGET_FPS),
+    '-i', 'frame_%05d.png',
+    '-c:v', 'libx264',
+    '-preset', 'fast',
+    '-pix_fmt', 'yuv420p',
+    'output.mp4'
+  );
+
+  statusEl.textContent = 'Čtu výsledek…';
+
+  const mp4Data = ffmpeg.FS('readFile', 'output.mp4');
+  const blob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'teckovy_vystup_offline.mp4';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
