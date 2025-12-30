@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Immersivní večeře – Dekodér QR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      background: radial-gradient(circle at top, #181820 0%, #050509 60%);
+      color: #f5f5f5;
+    }
+
+    header {
+      padding: 30px 20px 10px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(230,193,122,0.4);
+      background: rgba(5,5,9,0.75);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #e6c17a;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .card {
+      max-width: 640px;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 20px;
+      background: #101018;
+      border: 1px solid #252538;
+      box-shadow: 0 18px 48px rgba(0,0,0,0.7);
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(5,5,9,0.85);
+      border: 1px solid rgba(230,193,122,0.4);
+      display: none;
+    }
+
+    .row {
+      margin-bottom: 10px;
+    }
+
+    .label {
+      font-size: 11px;
+      color: #9a9aad;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .value {
+      font-size: 14px;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">IMMERSIVNÍ VEČEŘE</div>
+  <h1>Dekodér QR</h1>
+</header>
+
+<div class="card">
+  <div id="reader" style="width:100%; min-height:260px;"></div>
+
+  <div id="result" class="result">
+    <div class="row"><div class="label">Jméno</div><div id="n" class="value"></div></div>
+    <div class="row"><div class="label">Porce</div><div id="p" class="value"></div></div>
+    <div class="row"><div class="label">Dieta</div><div id="d" class="value"></div></div>
+    <div class="row"><div class="label">Sezení</div><div id="s" class="value"></div></div>
+    <div class="row"><div class="label">Souhlas</div><div id="c" class="value"></div></div>
+    <div class="row"><div class="label">Čas</div><div id="t" class="value"></div></div>
+  </div>
+</div>
+
+<script>
+function decode(text) {
+  try {
+    const json = pako.inflate(atob(text), { to: "string" });
+    return JSON.parse(json);
+  } catch (e) {
+    return null;
+  }
+}
+
+function translatePortion(p) {
+  return p === "1" ? "1 – menší"
+       : p === "2" ? "2 – standardní"
+       : p === "3" ? "3 – větší"
+       : "neuvedeno";
+}
+
+function translateSeat(s) {
+  return s === "l" ? "levá"
+       : s === "p" ? "pravá"
+       : s === "b" ? "bez preference"
+       : "neuvedeno";
+}
+
+function translateConsent(c) {
+  return c === 1 ? "souhlas udělen" : "ne";
+}
+
+new Html5Qrcode("reader").start(
+  { facingMode: "environment" },
+  { fps: 10, qrbox: 240 },
+  decoded => {
+    const data = decode(decoded);
+    if (!data) return;
+
+    document.getElementById("n").textContent = data.n;
+    document.getElementById("p").textContent = translatePortion(data.p);
+    document.getElementById("d").textContent = data.d || "neuvedeno";
+    document.getElementById("s").textContent = translateSeat(data.s);
+    document.getElementById("c").textContent = translateConsent(data.c);
+    document.getElementById("t").textContent = data.t;
+
+    document.getElementById("result").style.display = "block";
+  }
+);
+</script>
+
+</body>
+</html>
