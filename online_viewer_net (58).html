@@ -110,6 +110,16 @@
 </div>
 
 <script>
+// MAPA ČÍSEL NA JMÉNA
+const names = {
+  1: "1 Jméno Příjmení",
+  2: "2 Jméno Příjmení",
+  3: "3 Jméno Příjmení",
+  4: "4 Jméno Příjmení",
+  5: "5 Jméno Příjmení",
+  6: "6 Jméno Příjmení"
+};
+
 function translatePortion(p) {
   if (p === "1" || p === 1) return "1 – menší";
   if (p === "2" || p === 2) return "2 – standardní";
@@ -129,7 +139,7 @@ function translateConsent(c) {
 }
 
 function showData(data) {
-  document.getElementById("r-n").textContent = data.n || "neuvedeno";
+  document.getElementById("r-n").textContent = names[data.n] || "neuvedeno";
   document.getElementById("r-p").textContent = translatePortion(data.p);
   document.getElementById("r-d").textContent = data.d || "neuvedeno";
   document.getElementById("r-s").textContent = translateSeat(data.s);
@@ -176,11 +186,4 @@ document.getElementById("fileInput").addEventListener("change", async e => {
     const decoded = await scanner.scanFile(file, true);
     const data = parseJson(decoded);
     if (data) showData(data);
-  } catch (err) {
-    console.error("Chyba při načítání souboru:", err);
-  }
-});
-</script>
-
-</body>
-</html>
+  } catch (err)
