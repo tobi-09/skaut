@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <title>Immersivní večeře – Souhlas & preference</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      background: radial-gradient(circle at top, #181820 0%, #050509 60%);
+      color: #f5f5f5;
+    }
+    header {
+      padding: 40px 20px 20px;
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(230,193,122,0.4);
+      background: rgba(5,5,9,0.75);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #e6c17a;
+      margin-bottom: 16px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .subtitle {
+      margin-top: 6px;
+      font-size: 11px;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: #9a9aad;
+    }
+    .intro {
+      max-width: 640px;
+      margin: 24px auto 0;
+      padding: 18px 20px;
+      border-radius: 20px;
+      background: rgba(10,10,20,0.7);
+      border: 1px solid rgba(255,255,255,0.05);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .content {
+      padding: 20px;
+    }
+    .card {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 22px 20px 24px;
+      border-radius: 20px;
+      background: #101018;
+      border: 1px solid #252538;
+      box-shadow: 0 18px 48px rgba(0,0,0,0.7);
+    }
+    .card-title {
+      font-size: 15px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .field {
+      margin-bottom: 18px;
+    }
+    label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      display: block;
+      margin-bottom: 6px;
+    }
+    select, input, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #333344;
+      background: rgba(5,5,9,0.7);
+      color: #fff;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 80px;
+    }
+    .options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .tile {
+      padding: 9px 8px;
+      border-radius: 12px;
+      border: 1px solid #333344;
+      background: rgba(5,5,9,0.7);
+      cursor: pointer;
+      font-size: 13px;
+      text-align: center;
+    }
+    .tile.active {
+      border-color: #e6c17a;
+      background: rgba(230,193,122,0.12);
+    }
+    .consent-box {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(5,5,9,0.8);
+      border: 1px dashed rgba(230,193,122,0.4);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #e6c17a, #f3ddaf);
+      color: #211910;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #qrSection {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid #333344;
+      display: none;
+    }
+    #qrCode {
+      margin-top: 10px;
+      padding: 10px;
+      background: #050509;
+      border-radius: 16px;
+      display: inline-block;
+    }
+    .qr-text {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #9a9aad;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">IMMERSIVNÍ VEČEŘE</div>
+  <h1>Souhlas & preference</h1>
+  <div class="subtitle">projekce & degustační večer</div>
+</header>
+
+<div class="intro">
+  Večer je rozdělen do tří částí, mezi nimiž jsou podávány jednotlivé chody.
+  Jídlo a projekce existují vedle sebe jako součást jednoho společného zážitku.
+  <br><br>
+  Prosíme o vyplnění přiloženého souhlasu a preferencí předem.
+</div>
+
+<div class="content">
+  <div class="card">
+    <div class="card-title">Formulář</div>
+
+    <form id="form">
+
+      <!-- SELECT SE 6 JMÉNY (přenáší se číslo) -->
+      <div class="field">
+        <label>Jméno a příjmení</label>
+        <select id="n" required>
+          <option value="">Vyberte jméno…</option>
+          <option value="1">Aleš Pejsar</option>
+          <option value="2">Dana Pejsarova</option>
+          <option value="3">Kristína Pejsarova</option>
+          <option value="4">Matyaš Pejsar</option>
+          <option value="5">5 Jméno Příjmení</option>
+          <option value="6">6 Jméno Příjmení</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Velikost porce</label>
+        <div class="options" id="portion">
+          <div class="tile" data-v="1">1 – menší</div>
+          <div class="tile" data-v="2">2 – standardní</div>
+          <div class="tile" data-v="3">3 – větší</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Potravinové preference / omezení</label>
+        <textarea id="d"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Preference sezení</label>
+        <div class="options" id="seat">
+          <div class="tile" data-v="l">levá</div>
+          <div class="tile" data-v="p">pravá</div>
+          <div class="tile" data-v="b">bez preference</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Souhlas s podmínkami</label>
+        <div class="consent-box">
+          Souhlasím s pravidly immersivní projekce a beru na vědomí, že
+          jejich porušení může vést k vyloučení.
+        </div>
+        <label style="margin-top:10px; font-size:12px; letter-spacing:0.08em;">
+          <input type="checkbox" id="c" required> Souhlasím
+        </label>
+      </div>
+
+      <button class="btn" type="submit">Vygenerovat QR kód</button>
+    </form>
+
+    <div id="qrSection">
+      <h3 style="margin:0;font-size:13px;letter-spacing:0.18em;text-transform:uppercase;">QR kód připraven</h3>
+      <div id="qrCode"></div>
+      <div id="qrText" class="qr-text"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setupTiles(id) {
+  const box = document.getElementById(id);
+  let value = null;
+
+  box.querySelectorAll(".tile").forEach(tile => {
+    tile.addEventListener("click", () => {
+      box.querySelectorAll(".tile").forEach(t => t.classList.remove("active"));
+      tile.classList.add("active");
+      value = tile.dataset.v;
+    });
+  });
+
+  return () => value;
+}
+
+const getPortion = setupTiles("portion");
+const getSeat = setupTiles("seat");
+
+document.getElementById("form").addEventListener("submit", e => {
+  e.preventDefault();
+
+  const n = document.getElementById("n").value; // číslo 1–6
+  const p = getPortion();
+  const d = document.getElementById("d").value.trim();
+  const s = getSeat();
+  const c = document.getElementById("c").checked ? 1 : 0;
+
+  const payload = { n, p, d, s, c };
+  const json = JSON.stringify(payload);
+
+  const qrBox = document.getElementById("qrCode");
+  qrBox.innerHTML = "";
+
+  new QRCode(qrBox, {
+    text: json,
+    width: 200,
+    height: 200,
+    colorDark: "#ffffff",
+    colorLight: "#050509",
+    correctLevel: QRCode.CorrectLevel.M,
+    version: 10
+  });
+
+  document.getElementById("qrText").textContent = json;
+  document.getElementById("qrSection").style.display = "block";
+});
+</script>
+
+</body>
+</html>
