@@ -2,13 +2,12 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Immersivní večeře – Dekodér QR</title>
+  <title>Immersivní večeře – Dekodér Q</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
   <script src="https://unpkg.com/html5-qrcode"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 
   <style>
     body {
@@ -17,12 +16,10 @@
       background: radial-gradient(circle at top, #181820 0%, #050509 60%);
       color: #f5f5f5;
     }
-
     header {
       padding: 30px 20px 10px;
       text-align: center;
     }
-
     .badge {
       display: inline-block;
       padding: 6px 12px;
@@ -35,14 +32,12 @@
       color: #e6c17a;
       margin-bottom: 12px;
     }
-
     h1 {
       margin: 0;
       font-size: 24px;
       letter-spacing: 0.18em;
       text-transform: uppercase;
     }
-
     .card {
       max-width: 640px;
       margin: 20px auto;
@@ -52,7 +47,6 @@
       border: 1px solid #252538;
       box-shadow: 0 18px 48px rgba(0,0,0,0.7);
     }
-
     .result {
       margin-top: 20px;
       padding: 16px;
@@ -61,24 +55,35 @@
       border: 1px solid rgba(230,193,122,0.4);
       display: none;
     }
-
     .row {
       margin-bottom: 10px;
     }
-
     .label {
       font-size: 11px;
       color: #9a9aad;
       text-transform: uppercase;
       letter-spacing: 0.12em;
     }
-
     .value {
       font-size: 14px;
       margin-top: 2px;
     }
+    .upload-box {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px dashed rgba(230,193,122,0.4);
+      text-align: center;
+      font-size: 13px;
+    }
+    input[type="file"] {
+      margin-top: 10px;
+      color: #fff;
+    }
   </style>
 </head>
+
 <body>
 
 <header>
@@ -87,63 +92,94 @@
 </header>
 
 <div class="card">
+
   <div id="reader" style="width:100%; min-height:260px;"></div>
 
+  <div class="upload-box">
+    <div>Nebo nahrajte obrázek QR kódu</div>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+
   <div id="result" class="result">
-    <div class="row"><div class="label">Jméno</div><div id="n" class="value"></div></div>
-    <div class="row"><div class="label">Porce</div><div id="p" class="value"></div></div>
-    <div class="row"><div class="label">Dieta</div><div id="d" class="value"></div></div>
-    <div class="row"><div class="label">Sezení</div><div id="s" class="value"></div></div>
-    <div class="row"><div class="label">Souhlas</div><div id="c" class="value"></div></div>
-    <div class="row"><div class="label">Čas</div><div id="t" class="value"></div></div>
+    <div class="row"><div class="label">Jméno</div><div id="r-n" class="value"></div></div>
+    <div class="row"><div class="label">Porce</div><div id="r-p" class="value"></div></div>
+    <div class="row"><div class="label">Dieta</div><div id="r-d" class="value"></div></div>
+    <div class="row"><div class="label">Sezení</div><div id="r-s" class="value"></div></div>
+    <div class="row"><div class="label">Souhlas</div><div id="r-c" class="value"></div></div>
   </div>
 </div>
 
 <script>
-function decode(text) {
-  try {
-    const json = pako.inflate(atob(text), { to: "string" });
-    return JSON.parse(json);
-  } catch (e) {
-    return null;
-  }
-}
-
 function translatePortion(p) {
-  return p === "1" ? "1 – menší"
-       : p === "2" ? "2 – standardní"
-       : p === "3" ? "3 – větší"
-       : "neuvedeno";
+  if (p === "1" || p === 1) return "1 – menší";
+  if (p === "2" || p === 2) return "2 – standardní";
+  if (p === "3" || p === 3) return "3 – větší";
+  return "neuvedeno";
 }
 
 function translateSeat(s) {
-  return s === "l" ? "levá"
-       : s === "p" ? "pravá"
-       : s === "b" ? "bez preference"
-       : "neuvedeno";
+  if (s === "l") return "levá";
+  if (s === "p") return "pravá";
+  if (s === "b") return "bez preference";
+  return "neuvedeno";
 }
 
 function translateConsent(c) {
-  return c === 1 ? "souhlas udělen" : "ne";
+  return c === 1 || c === "1" ? "souhlas udělen" : "ne";
 }
 
-new Html5Qrcode("reader").start(
+function showData(data) {
+  document.getElementById("r-n").textContent = data.n || "neuvedeno";
+  document.getElementById("r-p").textContent = translatePortion(data.p);
+  document.getElementById("r-d").textContent = data.d || "neuvedeno";
+  document.getElementById("r-s").textContent = translateSeat(data.s);
+  document.getElementById("r-c").textContent = translateConsent(data.c);
+
+  document.getElementById("result").style.display = "block";
+}
+
+function parseJson(text) {
+  try { return JSON.parse(text); }
+  catch { return null; }
+}
+
+let scanned = false;
+let scanner = new Html5Qrcode("reader");
+
+// kamera
+scanner.start(
   { facingMode: "environment" },
   { fps: 10, qrbox: 240 },
   decoded => {
-    const data = decode(decoded);
-    if (!data) return;
+    if (scanned) return;
+    scanned = true;
 
-    document.getElementById("n").textContent = data.n;
-    document.getElementById("p").textContent = translatePortion(data.p);
-    document.getElementById("d").textContent = data.d || "neuvedeno";
-    document.getElementById("s").textContent = translateSeat(data.s);
-    document.getElementById("c").textContent = translateConsent(data.c);
-    document.getElementById("t").textContent = data.t;
+    const data = parseJson(decoded);
+    if (!data) {
+      scanned = false;
+      return;
+    }
 
-    document.getElementById("result").style.display = "block";
+    scanner.stop();
+    showData(data);
   }
 );
+
+// soubor
+document.getElementById("fileInput").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try { await scanner.stop(); } catch {}
+
+  try {
+    const decoded = await scanner.scanFile(file, true);
+    const data = parseJson(decoded);
+    if (data) showData(data);
+  } catch (err) {
+    console.error("Chyba při načítání souboru:", err);
+  }
+});
 </script>
 
 </body>
