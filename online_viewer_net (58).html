@@ -47,6 +47,54 @@
       border: 1px solid #252538;
       box-shadow: 0 18px 48px rgba(0,0,0,0.7);
     }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .btn {
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #e6c17a, #f3ddaf);
+      color: #211910;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-size: 12px;
+      text-align: center;
+    }
+    .btn.secondary {
+      background: transparent;
+      border: 1px solid rgba(230,193,122,0.6);
+      color: #e6c17a;
+    }
+    #reader {
+      width: 100%;
+      min-height: 240px;
+      background: #050509;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .upload-box {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px dashed rgba(230,193,122,0.4);
+      font-size: 13px;
+    }
+    input[type="file"] {
+      margin-top: 8px;
+      color: #fff;
+      font-size: 12px;
+    }
+    .hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #9a9aad;
+    }
     .result {
       margin-top: 20px;
       padding: 16px;
@@ -68,18 +116,16 @@
       font-size: 14px;
       margin-top: 2px;
     }
-    .upload-box {
-      margin-top: 20px;
-      padding: 14px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.05);
-      border: 1px dashed rgba(230,193,122,0.4);
-      text-align: center;
-      font-size: 13px;
+    .status {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #9a9aad;
     }
-    input[type="file"] {
-      margin-top: 10px;
-      color: #fff;
+    .status.error {
+      color: #f28b82;
+    }
+    .status.ok {
+      color: #8bc34a;
     }
   </style>
 </head>
@@ -93,12 +139,17 @@
 
 <div class="card">
 
-  <div id="reader" style="width:100%; min-height:260px;"></div>
-
-  <div class="upload-box">
-    <div>Nebo nahrajte obrázek QR kódu</div>
-    <input type="file" id="fileInput" accept="image/*">
+  <div class="controls">
+    <button id="startCam" class="btn">Spustit kameru</button>
+    <div class="upload-box">
+      <div>nebo nahrajte obrázek QR kódu</div>
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="hint">Můžete nahrát screenshot nebo fotku QR z mobilu.</div>
+    </div>
+    <div id="status" class="status">Kamera ještě nebyla spuštěna.</div>
   </div>
+
+  <div id="reader"></div>
 
   <div id="result" class="result">
     <div class="row"><div class="label">Jméno</div><div id="r-n" class="value"></div></div>
@@ -110,12 +161,12 @@
 </div>
 
 <script>
-// MAPA ČÍSEL NA JMÉNA
+// mapa čísel na jména – uprav si podle skutečných hostů
 const names = {
-  1: "1 Jméno Příjmení",
-  2: "2 Jméno Příjmení",
-  3: "3 Jméno Příjmení",
-  4: "4 Jméno Příjmení",
+  1: "Aleš Pejsar",
+  2: "Dana Pejsarova",
+  3: "Krystina Pejsarova",
+  4: "Matiaš pejsar",
   5: "5 Jméno Příjmení",
   6: "6 Jméno Příjmení"
 };
@@ -144,7 +195,6 @@ function showData(data) {
   document.getElementById("r-d").textContent = data.d || "neuvedeno";
   document.getElementById("r-s").textContent = translateSeat(data.s);
   document.getElementById("r-c").textContent = translateConsent(data.c);
-
   document.getElementById("result").style.display = "block";
 }
 
@@ -154,36 +204,96 @@ function parseJson(text) {
 }
 
 let scanned = false;
-let scanner = new Html5Qrcode("reader");
+let scanner = null;
+let cameraRunning = false;
 
-// kamera
-scanner.start(
-  { facingMode: "environment" },
-  { fps: 10, qrbox: 240 },
-  decoded => {
-    if (scanned) return;
-    scanned = true;
+const statusEl = document.getElementById("status");
 
-    const data = parseJson(decoded);
-    if (!data) {
-      scanned = false;
-      return;
-    }
+function setStatus(msg, type) {
+  statusEl.textContent = msg;
+  statusEl.className = "status" + (type ? " " + type : "");
+}
 
-    scanner.stop();
-    showData(data);
+async function startCamera() {
+  if (!scanner) {
+    scanner = new Html5Qrcode("reader");
   }
-);
 
-// soubor
+  if (cameraRunning) {
+    setStatus("Kamera už běží.", "ok");
+    return;
+  }
+
+  scanned = false;
+
+  try {
+    await scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 240 },
+      decoded => {
+        if (scanned) return;
+        scanned = true;
+
+        const data = parseJson(decoded);
+        if (!data) {
+          scanned = false;
+          return;
+        }
+
+        scanner.stop().then(() => {
+          cameraRunning = false;
+          setStatus("QR úspěšně načten z kamery.", "ok");
+        });
+        showData(data);
+      }
+    );
+    cameraRunning = true;
+    setStatus("Kamera spuštěna, namiřte na QR kód.", "ok");
+  } catch (err) {
+    console.error("Nepodařilo se spustit kameru:", err);
+    setStatus("Nepodařilo se spustit kameru: " + err, "error");
+  }
+}
+
+document.getElementById("startCam").addEventListener("click", () => {
+  startCamera();
+});
+
+// nahrání souboru
 document.getElementById("fileInput").addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
 
-  try { await scanner.stop(); } catch {}
+  // lazy init scanneru, pokud ještě neexistuje
+  if (!scanner) {
+    scanner = new Html5Qrcode("reader");
+  }
+
+  // pokud běží kamera, zastavit
+  if (cameraRunning) {
+    try {
+      await scanner.stop();
+    } catch (err) {
+      console.warn("Chyba při zastavování kamery:", err);
+    }
+    cameraRunning = false;
+  }
 
   try {
     const decoded = await scanner.scanFile(file, true);
     const data = parseJson(decoded);
-    if (data) showData(data);
-  } catch (err)
+    if (data) {
+      setStatus("QR úspěšně načten ze souboru.", "ok");
+      showData(data);
+    } else {
+      setStatus("Soubor obsahuje neplatný QR obsah.", "error");
+    }
+  } catch (err) {
+    console.error("Chyba při načítání souboru:", err);
+    setStatus("Chyba při čtení QR ze souboru: " + err, "error");
+  }
+});
+</script>
+
+</body>
+</html>
