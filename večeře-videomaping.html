@@ -1,229 +1,380 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <title>Works</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Immersive Experience — Země u svitu</title>
+  <style>
+    :root{
+      --bg:#050509; --card:#0b0b10; --muted:rgba(255,255,255,0.7);
+      --accent:#e6e6e6;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--bg);
+      color:var(--accent);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:28px;
+    }
+    .wrap{max-width:1100px;margin:0 auto}
+    h1{font-size:30px;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 8px}
+    h2{font-size:16px;margin:0 0 12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em}
+    p{margin:0 0 12px;color:var(--muted);line-height:1.5}
+    .hero{display:grid;grid-template-columns:1fr 420px;gap:28px;align-items:start;margin-bottom:28px}
+    .hero-media{border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#11101a,#050509);border:1px solid rgba(255,255,255,0.04)}
+    .hero-media img{width:100%;height:100%;display:block;object-fit:cover}
+    .hero-info{padding:6px 2px}
+    .tag{font-size:12px;text-transform:uppercase;letter-spacing:0.18em;color:rgba(255,255,255,0.6);margin-bottom:8px}
+    .desc{font-size:15px;color:var(--muted)}
+    .video-section{margin:18px 0 28px}
+    .video-box{border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);background:#07070a}
+    video{width:100%;height:auto;display:block}
+    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-bottom:28px}
+    .meta .card{background:linear-gradient(180deg,#0b0b12,#050509);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+    .meta .title{font-size:12px;text-transform:uppercase;letter-spacing:0.14em;color:rgba(255,255,255,0.65);margin-bottom:8px}
+    .meta pre{white-space:pre-wrap;font-family:inherit;color:var(--muted);font-size:14px;margin:0}
+    .chapter{border-top:1px solid rgba(255,255,255,0.04);padding-top:22px;margin-top:22px}
+    .chapter .head{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    .chapter .title{font-size:14px;text-transform:uppercase;letter-spacing:0.12em}
+    .chapter .text{color:var(--muted);font-size:15px}
+    .chapter-hero{border-radius:10px;overflow:hidden;margin:12px 0;border:1px solid rgba(255,255,255,0.04)}
+    .chapter-hero img{width:100%;display:block;object-fit:cover}
+    /* slider */
+    .slider{position:relative;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:#07070a}
+    .track{display:flex;transition:transform .6s cubic-bezier(.2,.9,.2,1)}
+    .slide{min-width:100%;flex-shrink:0}
+    .slide img{width:100%;display:block;object-fit:cover}
+    .nav{position:absolute;top:50%;left:0;right:0;display:flex;justify-content:space-between;transform:translateY(-50%);pointer-events:none;padding:0 8px}
+    .btn{pointer-events:auto;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);color:#fff;width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .dots{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;display:flex;gap:8px}
+    .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,0.25);cursor:pointer;border:none}
+    .dot.active{background:#fff;transform:scale(1.2)}
+    .slider-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;font-size:12px;color:rgba(255,255,255,0.7);background:linear-gradient(180deg,#0b0b12,#050509)}
+    @media (max-width:900px){
+      .hero{grid-template-columns:1fr;gap:18px}
+      .hero-media{height:320px}
+    }
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <!-- HERO -->
+    <header class="hero" role="banner">
+      <div class="hero-media" aria-hidden="false">
+        <picture>
+          <!-- HEIC fallback: prohlížeče HEIC většinou nepodporují; pokud máš JPG/WebP, přepiš src -->
+          <img src="IMG_4298.jpg" alt="Hlavní vizuál (IMG_4298)" />
+        </picture>
+      </div>
 
-<main class="works">
-  <section class="works-grid">
+      <div class="hero-info">
+        <div class="tag">Immersive Experience</div>
+        <h1>Země u svitu</h1>
+        <p class="desc">Cesta jídla k nám trvá miliony vteřin a stovky kilometrů. Instalace zkoumá původ, čas a prostor — od vzniku hvězd po budoucnost lidské civilizace.</p>
+      </div>
+    </header>
 
-    <figure class="work-item">
-      <img src="FullSizeRender.JPG" alt="Work 1">
-    </figure>
+    <!-- VIDEO -->
+    <section class="video-section" aria-labelledby="video-title">
+      <h2 id="video-title">Video</h2>
+      <div class="video-box">
+        <!-- Nahraď src vlastním videem; zde je placeholder -->
+        <video controls playsinline preload="metadata" poster="IMG_4302.jpg">
+          <source src="project-video.mp4" type="video/mp4">
+          Váš prohlížeč nepodporuje video tag.
+        </video>
+      </div>
+    </section>
 
-    <figure class="work-item">
-      <img src="IMG_1306.JPG" alt="Work 2">
-    </figure>
+    <!-- DESCRIPTION / INFO / CREDITS -->
+    <section class="meta" aria-label="Informace o projektu">
+      <div class="card">
+        <div class="title">Description</div>
+        <pre>DESCRIPTION
 
-    <figure class="work-item">
-      <img src="IMG_4243.HEIC" alt="Work 3">
-    </figure>
+INFO
+ROLE: Direction & Design & Concept
+TYPE: Immersive Experience
+DATE: 2021
+DURATION: 12' 00"
+COMMISSIONED BY: Culturespace Digital
+PREMIERE: ________</pre>
+      </div>
 
-    <figure class="work-item">
-      <img src="IMG_4244.HEIC" alt="Work 4">
-    </figure>
+      <div class="card">
+        <div class="title">Credits</div>
+        <pre>CREDITS
+DIRECTION, DESIGN & CONCEPT: NOHLAB
+VISUAL ARTISTS: Tiber Ergür; Alexandre Le Guillou; Fehmican Gözüm; VOID
+SOUND ARTISTS: Gökalp Kanatsız; Ilgın İçözü
+NARRATOR: Jeanne Barbieri (FR); Melissa Lara Clissold (EN)
+SCRIPT: Prof. Ebru Yetişkin; NOHLAB; u29dc; Erkan Esenoğlu
+CONCEPTUAL RESEARCH: Prof. Ebru Yetişkin; Candaş Şişman (NOHLAB)
+TECHNICAL CONTENT DIRECTION: Fehmican Gözüm
+PHOTOGRAPHERS: Roberto Conte; Camille McOuat; Jonathan Mascaro
+VIDEOGRAPHER: Jonathan Mascaro
+VIDEO EDITOR: Teoman Küçükeren</pre>
+      </div>
+    </section>
 
-    <figure class="work-item">
-      <img src="IMG_4247.HEIC" alt="Work 5">
-    </figure>
+    <!-- Chapters: automatické rozdělení podle pořadí souborů -->
+    <!-- Seznam souborů je vložen do JS a rozdělí se na 3 části; první fotka každé části je hlavní, zbytek do slideru -->
 
-    <figure class="work-item">
-      <img src="IMG_4248.HEIC" alt="Work 6">
-    </figure>
+    <main id="chapters">
 
-    <figure class="work-item">
-      <img src="IMG_4250.HEIC" alt="Work 7">
-    </figure>
+      <!-- Chapter template will be injected by JS -->
 
-    <figure class="work-item">
-      <img src="IMG_4251.HEIC" alt="Work 8">
-    </figure>
+    </main>
+  </div>
 
-    <figure class="work-item">
-      <img src="IMG_4253.HEIC" alt="Work 9">
-    </figure>
+  <script>
+    // Seznam souborů v přesném pořadí, jak jsi je poskytl
+    const files = [
+      "FullSizeRender.JPG",
+      "IMG_1306.JPG",
+      "IMG_4243.HEIC",
+      "IMG_4244.HEIC",
+      "IMG_4247.HEIC",
+      "IMG_4248.HEIC",
+      "IMG_4250.HEIC",
+      "IMG_4251.HEIC",
+      "IMG_4253.HEIC",
+      "IMG_4254.HEIC",
+      "IMG_4255.HEIC",
+      "IMG_4256.HEIC",
+      "IMG_4257.HEIC",
+      "IMG_4259.HEIC",
+      "IMG_4264.HEIC",
+      "IMG_4267.HEIC",
+      "IMG_4269.HEIC",
+      "IMG_4270.HEIC",
+      "IMG_4271.HEIC",
+      "IMG_4272.HEIC",
+      "IMG_4274.HEIC",
+      "IMG_4276.HEIC",
+      "IMG_4277.HEIC",
+      "IMG_4278.HEIC",
+      "IMG_4279.HEIC",
+      "IMG_4280.HEIC",
+      "IMG_4281.HEIC",
+      "IMG_4282.HEIC",
+      "IMG_4283.HEIC",
+      "IMG_4284.HEIC",
+      "IMG_4285.HEIC",
+      "IMG_4286.HEIC",
+      "IMG_4287.HEIC",
+      "IMG_4288.HEIC",
+      "IMG_4289.HEIC",
+      "IMG_4290.HEIC",
+      "IMG_4291.HEIC",
+      "IMG_4294.HEIC",
+      "IMG_4295.HEIC",
+      "IMG_4296.HEIC",
+      "IMG_4297.HEIC",
+      "IMG_4298.HEIC",
+      "IMG_4299.HEIC",
+      "IMG_4300.HEIC",
+      "IMG_4301.HEIC",
+      "IMG_4302.jpg",
+      "IMG_4304.jpg",
+      "IMG_4305.jpg",
+      "IMG_4307.jpg",
+      "IMG_4311.HEIC",
+      "IMG_4313.HEIC",
+      "IMG_4314.HEIC",
+      "IMG_4315.HEIC"
+    ];
 
-    <figure class="work-item">
-      <img src="IMG_4254.HEIC" alt="Work 10">
-    </figure>
+    // Rozdělíme na 3 části (pokud není dělitelné, rozdělíme zbylé rovnoměrně)
+    function splitIntoThree(arr){
+      const n = arr.length;
+      const base = Math.floor(n/3);
+      const rem = n % 3;
+      const sizes = [base, base, base];
+      for(let i=0;i<rem;i++) sizes[i]++;
+      const parts = [];
+      let idx = 0;
+      for(let s of sizes){
+        parts.push(arr.slice(idx, idx + s));
+        idx += s;
+      }
+      return parts;
+    }
 
-    <figure class="work-item">
-      <img src="IMG_4255.HEIC" alt="Work 11">
-    </figure>
+    const parts = splitIntoThree(files);
 
-    <figure class="work-item">
-      <img src="IMG_4256.HEIC" alt="Work 12">
-    </figure>
+    // Texty kapitol (uživatel dodal texty pro kapitoly 1 a 2)
+    const chapterTexts = [
+      {
+        title: "Kapitola 1 – Vesmír",
+        text: `Cesta jídla k nám trvá miliony vteřin a stovky kilometrů. Ale ne vždy tomu tak bylo.
+Pojďme se podívat zpět do ticha a vzduchoprázdna, do dne, který neměl včerejšek.
+Formují se první hvězdy a spolu s nimi planetky – žhavé a rozpálené.`
+      },
+      {
+        title: "Kapitola 2 – Lidstvo",
+        text: `Ale tu naši na jejím dobrodružství čeká dlouhá cesta.
+Ve formujících se oceánech pomalu začíná zobat Měsíc.
+Živočichové na pevnině ovládají nová území.
+Na Zemi se rodí první lidé a Slunce poprvé od vzniku vesmíru nebude samo.`
+      },
+      {
+        title: "Kapitola 3 – Budoucnost",
+        text: `Text doplním později.`
+      }
+    ];
 
-    <figure class="work-item">
-      <img src="IMG_4257.HEIC" alt="Work 13">
-    </figure>
+    // Vytvoření HTML pro kapitoly
+    const chaptersRoot = document.getElementById("chapters");
 
-    <figure class="work-item">
-      <img src="IMG_4259.HEIC" alt="Work 14">
-    </figure>
+    parts.forEach((part, idx) => {
+      if(part.length === 0) return;
+      const chap = document.createElement("section");
+      chap.className = "chapter";
+      const head = document.createElement("div");
+      head.className = "head";
+      const t = document.createElement("div");
+      t.className = "title";
+      t.textContent = chapterTexts[idx]?.title || `Kapitola ${idx+1}`;
+      const txt = document.createElement("div");
+      txt.className = "text";
+      txt.textContent = chapterTexts[idx]?.text || "";
+      head.appendChild(t);
+      head.appendChild(txt);
+      chap.appendChild(head);
 
-    <figure class="work-item">
-      <img src="IMG_4264.HEIC" alt="Work 15">
-    </figure>
+      // hlavní fotka kapitoly = první soubor v části
+      const mainFile = part[0];
+      const heroWrap = document.createElement("div");
+      heroWrap.className = "chapter-hero";
+      const pic = document.createElement("picture");
+      const img = document.createElement("img");
+      // fallback: pokud je HEIC, použij .jpg verzi v src (pokud máš konvertované)
+      const srcFallback = mainFile.replace(/\.HEIC$/i, ".jpg");
+      img.src = srcFallback;
+      img.alt = `Hlavní fotka kapitoly ${idx+1} — ${mainFile}`;
+      pic.appendChild(img);
+      heroWrap.appendChild(pic);
+      chap.appendChild(heroWrap);
 
-    <figure class="work-item">
-      <img src="IMG_4267.HEIC" alt="Work 16">
-    </figure>
+      // slider: zbytek souborů v části (pokud žádné, přeskočíme)
+      const slides = part.slice(1);
+      if(slides.length > 0){
+        const slider = document.createElement("div");
+        slider.className = "slider";
+        slider.setAttribute("data-slider", `chap-${idx+1}`);
 
-    <figure class="work-item">
-      <img src="IMG_4269.HEIC" alt="Work 17">
-    </figure>
+        const track = document.createElement("div");
+        track.className = "track";
 
-    <figure class="work-item">
-      <img src="IMG_4270.HEIC" alt="Work 18">
-    </figure>
+        slides.forEach(f => {
+          const s = document.createElement("div");
+          s.className = "slide";
+          const p = document.createElement("picture");
+          const im = document.createElement("img");
+          im.src = f.replace(/\.HEIC$/i, ".jpg");
+          im.alt = f;
+          p.appendChild(im);
+          s.appendChild(p);
+          track.appendChild(s);
+        });
 
-    <figure class="work-item">
-      <img src="IMG_4271.HEIC" alt="Work 19">
-    </figure>
+        slider.appendChild(track);
 
-    <figure class="work-item">
-      <img src="IMG_4272.HEIC" alt="Work 20">
-    </figure>
+        // nav
+        const nav = document.createElement("div");
+        nav.className = "nav";
+        const btnPrev = document.createElement("button");
+        btnPrev.className = "btn";
+        btnPrev.innerHTML = "‹";
+        btnPrev.setAttribute("data-dir","prev");
+        const btnNext = document.createElement("button");
+        btnNext.className = "btn";
+        btnNext.innerHTML = "›";
+        btnNext.setAttribute("data-dir","next");
+        nav.appendChild(btnPrev);
+        nav.appendChild(btnNext);
+        slider.appendChild(nav);
 
-    <figure class="work-item">
-      <img src="IMG_4274.HEIC" alt="Work 21">
-    </figure>
+        // dots
+        const dots = document.createElement("div");
+        dots.className = "dots";
+        slides.forEach((_,i)=>{
+          const d = document.createElement("button");
+          d.className = "dot" + (i===0 ? " active" : "");
+          d.setAttribute("data-index", i);
+          dots.appendChild(d);
+        });
+        slider.appendChild(dots);
 
-    <figure class="work-item">
-      <img src="IMG_4276.HEIC" alt="Work 22">
-    </figure>
+        // footer
+        const footer = document.createElement("div");
+        footer.className = "slider-footer";
+        footer.innerHTML = `<span>Více fotografií</span><span>← →</span>`;
+        slider.appendChild(footer);
 
-    <figure class="work-item">
-      <img src="IMG_4277.HEIC" alt="Work 23">
-    </figure>
+        chap.appendChild(slider);
+      }
 
-    <figure class="work-item">
-      <img src="IMG_4278.HEIC" alt="Work 24">
-    </figure>
+      chaptersRoot.appendChild(chap);
+    });
 
-    <figure class="work-item">
-      <img src="IMG_4279.HEIC" alt="Work 25">
-    </figure>
+    // Iniciace všech sliderů s autoplay (volba A)
+    function initAllSliders(){
+      document.querySelectorAll(".slider").forEach(slider => {
+        const track = slider.querySelector(".track");
+        const slides = Array.from(slider.querySelectorAll(".slide"));
+        if(slides.length === 0) return;
+        const dots = Array.from(slider.querySelectorAll(".dot"));
+        const btnPrev = slider.querySelector('[data-dir="prev"]');
+        const btnNext = slider.querySelector('[data-dir="next"]');
+        let idx = 0;
+        const total = slides.length;
+        const delay = 3500;
+        let timer = null;
 
-    <figure class="work-item">
-      <img src="IMG_4280.HEIC" alt="Work 26">
-    </figure>
+        function update(){
+          track.style.transform = `translateX(${-idx * 100}%)`;
+          dots.forEach((d,i)=> d.classList.toggle("active", i===idx));
+        }
 
-    <figure class="work-item">
-      <img src="IMG_4281.HEIC" alt="Work 27">
-    </figure>
+        function next(){
+          idx = (idx + 1) % total;
+          update();
+        }
+        function prev(){
+          idx = (idx - 1 + total) % total;
+          update();
+        }
+        function start(){
+          stop();
+          timer = setInterval(next, delay);
+        }
+        function stop(){
+          if(timer){ clearInterval(timer); timer = null; }
+        }
 
-    <figure class="work-item">
-      <img src="IMG_4282.HEIC" alt="Work 28">
-    </figure>
+        // events
+        btnNext && btnNext.addEventListener("click", ()=>{ next(); start(); });
+        btnPrev && btnPrev.addEventListener("click", ()=>{ prev(); start(); });
+        dots.forEach(d => d.addEventListener("click", (e)=>{ idx = Number(e.currentTarget.dataset.index); update(); start(); }));
 
-    <figure class="work-item">
-      <img src="IMG_4283.HEIC" alt="Work 29">
-    </figure>
+        slider.addEventListener("mouseenter", stop);
+        slider.addEventListener("mouseleave", start);
 
-    <figure class="work-item">
-      <img src="IMG_4284.HEIC" alt="Work 30">
-    </figure>
+        update();
+        start();
+      });
+    }
 
-    <figure class="work-item">
-      <img src="IMG_4285.HEIC" alt="Work 31">
-    </figure>
+    // Spustit po vložení kapitol
+    initAllSliders();
 
-    <figure class="work-item">
-      <img src="IMG_4286.HEIC" alt="Work 32">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4287.HEIC" alt="Work 33">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4288.HEIC" alt="Work 34">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4289.HEIC" alt="Work 35">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4290.HEIC" alt="Work 36">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4291.HEIC" alt="Work 37">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4294.HEIC" alt="Work 38">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4295.HEIC" alt="Work 39">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4296.HEIC" alt="Work 40">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4297.HEIC" alt="Work 41">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4298.HEIC" alt="Work 42">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4299.HEIC" alt="Work 43">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4300.HEIC" alt="Work 44">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4301.HEIC" alt="Work 45">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4302.jpg" alt="Work 46">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4304.jpg" alt="Work 47">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4305.jpg" alt="Work 48">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4307.jpg" alt="Work 49">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4311.HEIC" alt="Work 50">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4313.HEIC" alt="Work 51">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4314.HEIC" alt="Work 52">
-    </figure>
-
-    <figure class="work-item">
-      <img src="IMG_4315.HEIC" alt="Work 53">
-    </figure>
-
-  </section>
-</main>
-
+    // Poznámka pro uživatele: HEIC soubory většina prohlížečů přímo nezobrazí.
+    // Doporučeno převést HEIC -> JPG/WebP a nahradit soubory na serveru.
+  </script>
 </body>
 </html>
