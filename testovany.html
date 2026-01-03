@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Immersive Experience — Země u svitu</title>
+  <style>
+    :root{
+      --bg:#050509; --card:#0b0b10; --muted:rgba(255,255,255,0.7);
+      --accent:#e6e6e6;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--bg);
+      color:var(--accent);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:28px;
+    }
+    .wrap{max-width:1100px;margin:0 auto}
+    h1{font-size:30px;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 8px}
+    h2{font-size:16px;margin:0 0 12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em}
+    p{margin:0 0 12px;color:var(--muted);line-height:1.5}
+    
+    /* HERO sekce s fixní výškou */
+    .hero{display:grid;grid-template-columns:1fr 420px;gap:28px;align-items:start;margin-bottom:28px}
+    .hero-media{
+      height: 600px; /* Fixní výška pro velké obrazovky */
+      border-radius:12px;
+      overflow:hidden;
+      background:linear-gradient(180deg,#11101a,#050509);
+      border:1px solid rgba(255,255,255,0.04)
+    }
+    .hero-media img{width:100%;height:100%;display:block;object-fit:cover}
+    .hero-info{padding:6px 2px}
+    
+    .tag{font-size:12px;text-transform:uppercase;letter-spacing:0.18em;color:rgba(255,255,255,0.6);margin-bottom:8px}
+    .desc{font-size:15px;color:var(--muted)}
+    
+    .video-section{margin:18px 0 28px}
+    .video-box{border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);background:#07070a}
+    video{width:100%;height:auto;display:block}
+    
+    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-bottom:28px}
+    .meta .card{background:linear-gradient(180deg,#0b0b12,#050509);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+    .meta .title{font-size:12px;text-transform:uppercase;letter-spacing:0.14em;color:rgba(255,255,255,0.65);margin-bottom:8px}
+    .meta pre{white-space:pre-wrap;font-family:inherit;color:var(--muted);font-size:14px;margin:0}
+    
+    /* KAPITOLY s fixní výškou */
+    .chapter{border-top:1px solid rgba(255,255,255,0.04);padding-top:22px;margin-top:22px}
+    .chapter .head{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    .chapter .title{font-size:14px;text-transform:uppercase;letter-spacing:0.12em}
+    .chapter .text{color:var(--muted);font-size:15px}
+    
+    .chapter-hero{
+      height: 600px; /* Fixní výška */
+      border-radius:10px;
+      overflow:hidden;
+      margin:12px 0;
+      border:1px solid rgba(255,255,255,0.04)
+    }
+    .chapter-hero img{width:100%;height:100%;display:block;object-fit:cover}
+    
+    /* SLIDER s fixní výškou */
+    .slider{position:relative;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:#07070a}
+    .track{display:flex;transition:transform .6s cubic-bezier(.2,.9,.2,1)}
+    .slide{
+      min-width:100%;
+      height: 600px; /* Fixní výška slideru */
+      flex-shrink:0
+    }
+    .slide img{width:100%;height:100%;display:block;object-fit:cover}
+    
+    .nav{position:absolute;top:50%;left:0;right:0;display:flex;justify-content:space-between;transform:translateY(-50%);pointer-events:none;padding:0 8px}
+    .btn{pointer-events:auto;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);color:#fff;width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .dots{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;display:flex;gap:8px}
+    .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,0.25);cursor:pointer;border:none}
+    .dot.active{background:#fff;transform:scale(1.2)}
+    .slider-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;font-size:12px;color:rgba(255,255,255,0.7);background:linear-gradient(180deg,#0b0b12,#050509)}
+    
+    /* RESPONZIVITA */
+    @media (max-width:900px){
+      .hero{grid-template-columns:1fr;gap:18px}
+      .hero-media, .chapter-hero, .slide {
+        height: 350px; /* Menší výška pro mobily */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero" role="banner">
+      <div class="hero-media">
+        <img src="https://tobi-09.github.io/skaut/img/IMG_4298.jpg" alt="Hlavní vizuál" />
+      </div>
+
+      <div class="hero-info">
+        <div class="tag">Immersive Experience</div>
+        <h1>Země u svitu</h1>
+        <p class="desc">Cesta jídla k nám trvá miliony vteřin a stovky kilometrů. Instalace zkoumá původ, čas a prostor — od vzniku hvězd po budoucnost lidské civilizace.</p>
+      </div>
+    </header>
+
+    <section class="video-section" aria-labelledby="video-title">
+      <h2 id="video-title">Video</h2>
+      <div class="video-box">
+        <video controls playsinline preload="metadata" poster="https://tobi-09.github.io/skaut/img/IMG_4302.jpg">
+          <source src="project-video.mp4" type="video/mp4">
+          Váš prohlížeč nepodporuje video tag.
+        </video>
+      </div>
+    </section>
+
+    <section class="meta" aria-label="Informace o projektu">
+      <div class="card">
+        <div class="title">Description</div>
+        <pre>INFO
+ROLE: Direction & Design & Concept
+TYPE: Immersive Experience
+DATE: 2021
+DURATION: 12' 00"
+COMMISSIONED BY: Culturespace Digital</pre>
+      </div>
+
+      <div class="card">
+        <div class="title">Credits</div>
+        <pre>DIRECTION: NOHLAB
+VISUALS: Tiber Ergür; Alexandre Le Guillou
+SOUND: Gökalp Kanatsız; Ilgın İçözü
+NARRATOR: Melissa Lara Clissold</pre>
+      </div>
+    </section>
+
+    <main id="chapters"></main>
+  </div>
+
+  <script>
+    const files = [
+      "https://tobi-09.github.io/skaut/img/FullSizeRender.JPG",
+      "https://tobi-09.github.io/skaut/img/FullSizeRender.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4243.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4244.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4247.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4248.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4250.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4251.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4253.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4254.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4255.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4256.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4257.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4259.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4264.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4267.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4269.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4270.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4271.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4272.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4274.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4276.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4277.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4278.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4279.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4280.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4281.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4282.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4283.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4284.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4285.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4286.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4287.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4288.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4289.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4290.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4291.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4294.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4295.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4296.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4297.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4298.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4299.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4300.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4301.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4302.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4304.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4305.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4307.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4311.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4313.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4314.jpg",
+      "https://tobi-09.github.io/skaut/img/IMG_4315.jpg"
+    ];
+
+    function splitIntoThree(arr){
+      const n = arr.length;
+      const base = Math.floor(n/3);
+      const rem = n % 3;
+      const sizes = [base, base, base];
+      for(let i=0;i<rem;i++) sizes[i]++;
+      const parts = [];
+      let idx = 0;
+      for(let s of sizes){
+        parts.push(arr.slice(idx, idx + s));
+        idx += s;
+      }
+      return parts;
+    }
+
+    const parts = splitIntoThree(files);
+    const chapterTexts = [
+      { title: "Kapitola 1 – Vesmír", text: "Formují se první hvězdy a spolu s nimi planetky – žhavé a rozpálené." },
+      { title: "Kapitola 2 – Lidstvo", text: "Na Zemi se rodí první lidé a Slunce poprvé od vzniku vesmíru nebude samo." },
+      { title: "Kapitola 3 – Budoucnost", text: "Cesta jídla a civilizace pokračuje dál do neznáma." }
+    ];
+
+    const chaptersRoot = document.getElementById("chapters");
+
+    parts.forEach((part, idx) => {
+      if(part.length === 0) return;
+      const chap = document.createElement("section");
+      chap.className = "chapter";
+      
+      chap.innerHTML = `
+        <div class="head">
+          <div class="title">${chapterTexts[idx]?.title || 'Kapitola ' + (idx+1)}</div>
+          <div class="text">${chapterTexts[idx]?.text || ''}</div>
+        </div>
+        <div class="chapter-hero">
+          <img src="${part[0]}" alt="Kapitola ${idx+1}">
+        </div>
+      `;
+
+      const slides = part.slice(1);
+      if(slides.length > 0){
+        const slider = document.createElement("div");
+        slider.className = "slider";
+        const track = document.createElement("div");
+        track.className = "track";
+
+        slides.forEach(f => {
+          const s = document.createElement("div");
+          s.className = "slide";
+          s.innerHTML = `<img src="${f}" alt="Slide">`;
+          track.appendChild(s);
+        });
+
+        slider.appendChild(track);
+        slider.innerHTML += `
+          <div class="nav"><button class="btn" data-dir="prev">‹</button><button class="btn" data-dir="next">›</button></div>
+          <div class="dots">${slides.map((_,i)=>`<button class="dot ${i===0?'active':''}" data-index="${i}"></button>`).join('')}</div>
+          <div class="slider-footer"><span>Více fotografií</span><span>← →</span></div>
+        `;
+        chap.appendChild(slider);
+      }
+      chaptersRoot.appendChild(chap);
+    });
+
+    function initAllSliders(){
+      document.querySelectorAll(".slider").forEach(slider => {
+        const track = slider.querySelector(".track");
+        const slides = slider.querySelectorAll(".slide");
+        const dots = slider.querySelectorAll(".dot");
+        let idx = 0;
+        const total = slides.length;
+        
+        function update(){
+          track.style.transform = `translateX(${-idx * 100}%)`;
+          dots.forEach((d,i)=> d.classList.toggle("active", i===idx));
+        }
+        
+        slider.addEventListener("click", (e) => {
+          const btn = e.target.closest('button');
+          if(!btn) return;
+          if(btn.dataset.dir === "next") idx = (idx + 1) % total;
+          if(btn.dataset.dir === "prev") idx = (idx - 1 + total) % total;
+          if(btn.dataset.index) idx = Number(btn.dataset.index);
+          update();
+        });
+      });
+    }
+    initAllSliders();
+  </script>
+</body>
+</html>
