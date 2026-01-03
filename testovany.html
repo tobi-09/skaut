@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Immersive Experience — Oživlá Večeře</title>
+  <title>Immersive Experience —Oživlá Večeře</title>
   <style>
     :root{
       --bg:#050509; --card:#0b0b10; --muted:rgba(255,255,255,0.7);
@@ -12,43 +12,47 @@
     *{box-sizing:border-box}
     body{
       margin:0;
-      font-family:Inter, system-ui, -apple-system, sans-serif;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
       background:var(--bg);
       color:var(--accent);
       -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
       padding:28px;
     }
     .wrap{max-width:1100px;margin:0 auto}
+    h1{font-size:30px;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 8px}
+    h2{font-size:16px;margin:0 0 12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em}
+    p{margin:0 0 12px;color:var(--muted);line-height:1.5}
     
-    /* HERO: Obrázek nad textem */
+    /* HERO - Obrázek nad textem */
     .hero{display:flex; flex-direction: column; gap:28px; margin-bottom:28px}
     .hero-media{
       width: 100%;
       height: 600px; 
       border-radius:12px; 
       overflow:hidden; 
+      background:linear-gradient(180deg,#11101a,#050509);
       border:1px solid rgba(255,255,255,0.04)
     }
     .hero-media img{width:100%; height:100%; display:block; object-fit:cover}
+    .hero-info{padding:6px 2px}
     
-    h1{font-size:30px;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 8px}
     .tag{font-size:12px;text-transform:uppercase;letter-spacing:0.18em;color:rgba(255,255,255,0.6);margin-bottom:8px}
-    .desc{font-size:15px;color:var(--muted); line-height:1.5}
-
+    .desc{font-size:15px;color:var(--muted)}
     .video-section{margin:18px 0 28px}
     .video-box{border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);background:#07070a}
     video{width:100%;height:auto;display:block}
-
+    
     .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-bottom:28px}
     .meta .card{background:linear-gradient(180deg,#0b0b12,#050509);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
     .meta .title{font-size:12px;text-transform:uppercase;letter-spacing:0.14em;color:rgba(255,255,255,0.65);margin-bottom:8px}
     .meta pre{white-space:pre-wrap;font-family:inherit;color:var(--muted);font-size:14px;margin:0}
-
+    
     .chapter{border-top:1px solid rgba(255,255,255,0.04);padding-top:22px;margin-top:22px}
     .chapter .head{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
     .chapter .title{font-size:14px;text-transform:uppercase;letter-spacing:0.12em}
     .chapter .text{color:var(--muted);font-size:15px}
-
+    
     .chapter-hero{
       width: 100%;
       height: 600px; 
@@ -58,31 +62,27 @@
       border:1px solid rgba(255,255,255,0.04)
     }
     .chapter-hero img{width:100%; height:100%; display:block; object-fit:cover}
-
-    .slider{position:relative;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:#07070a}
-    .track{display:flex;transition:transform .6s cubic-bezier(.2,.9,.2,1)}
-    .slide{min-width:100%; height: 600px; flex-shrink:0}
+    
+    /* SLIDER - Oprava pro mobilní zobrazení */
+    .slider{position:relative;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:#07070a;width:100%}
+    .track{display:flex;width:100%;transition:transform .6s cubic-bezier(.2,.9,.2,1)}
+    .slide{min-width:100%; width:100%; height: 600px; flex-shrink:0}
     .slide img{width:100%; height:100%; display:block; object-fit:cover}
-
-    .nav{position:absolute;top:50%;left:0;right:0;display:flex;justify-content:space-between;transform:translateY(-50%);pointer-events:none;padding:0 8px}
+    
+    .nav{position:absolute;top:50%;left:0;right:0;display:flex;justify-content:space-between;transform:translateY(-50%);pointer-events:none;padding:0 8px;z-index:10}
     .btn{pointer-events:auto;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);color:#fff;width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-    .dots{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;display:flex;gap:8px}
+    .dots{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;display:flex;gap:8px;z-index:10}
     .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,0.25);cursor:pointer;border:none}
     .dot.active{background:#fff;transform:scale(1.2)}
     .slider-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;font-size:12px;color:rgba(255,255,255,0.7);background:linear-gradient(180deg,#0b0b12,#050509)}
-
-    /* --- MOBILNÍ OPTIMALIZACE --- */
+    
     @media (max-width:900px){
       body{padding:18px}
-      .hero{gap:12px}
-      
-      /* Změna velikosti fotek pro mobil */
+      .hero{gap:18px}
       .hero-media, .chapter-hero, .slide {
-        height: 280px; /* Kompaktnější výška pro lepší procházení na telefonu */
+        height: 250px; /* Sjednocená výška pro mobily */
       }
-      
       h1{font-size:24px}
-      .meta{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -90,21 +90,159 @@
   <div class="wrap">
     <header class="hero" role="banner">
       <div class="hero-media">
-        <img src="https://tobi-09.github.io/skaut/img/IMG_4298.jpg" alt="Hlavní vizuál" />
+        <picture>
+          <img src="https://tobi-09.github.io/skaut/img/IMG_4298.jpg" alt="Hlavní vizuál" />
+        </picture>
       </div>
+
       <div class="hero-info">
         <div class="tag">Immersive Experience</div>
         <h1>Oživlá Večeře</h1>
-        <p class="desc">This immersive experience follows the journey of food not as an object, but as a witness of time...</p>
+        <p class="desc">This immersive experience follows the journey of food not as an object, but as a witness of time.
+A journey that today spans millions of seconds and hundreds of kilometers — yet once began in absolute silence.
+
+The narrative invites us to return to the beginning.
+To emptiness.
+To a moment without yesterday.
+
+Before taste.
+Before direction.
+Before time itself.
+
+Visuals and sound trace the emergence of matter from nothingness: the birth of stars, the formation of planets, bodies glowing with heat and motion. Among them, one planet begins a long and fragile transformation. Oceans take shape. The Moon slowly claims its orbit. Life emerges, adapts, and dares to leave the water.
+
+As continents form and environments shift, living beings conquer new territories. Humanity appears — not as a conclusion, but as a turning point. For the first time, the Sun is no longer alone in observing the universe.
+
+The experience unfolds in three stages, mirroring cosmic evolution, planetary life, and human systems. It gradually shifts from natural processes to constructed realities — from organic rhythms to structures, cities, machines, and automated networks. What once followed gravity and instinct now follows algorithms, logistics, and artificial intelligence.
+
+Through abstraction rather than illustration, the work questions acceleration, control, and authorship. It reflects on how systems designed to sustain life have grown complex, autonomous, and opaque. Food becomes a silent connector between origins and futures — shaped by the same forces that formed stars, societies, and technologies.
+
+The experience does not explain.
+It observes.
+
+It asks whether progress is linear, whether efficiency replaces meaning, and whether the systems we created now observe us in return. Ending at the threshold of a new year, the work opens space for reflection — not as closure, but as renewal.
+
+A pause.
+Before the next cycle begins.</p>
       </div>
     </header>
+
+    <section class="video-section" aria-labelledby="video-title">
+      <h2 id="video-title">Video</h2>
+      <div class="video-box">
+        <video controls playsinline preload="metadata" poster="https://tobi-09.github.io/skaut/img/IMG_4302.jpg">
+          <source src="project-video.mp4" type="video/mp4">
+          Váš prohlížeč nepodporuje video tag.
+        </video>
+      </div>
+    </section>
+
+    <section class="meta" aria-label="Informace o projektu">
+      <div class="card">
+        <div class="title">Description</div>
+        <pre>INFO
+ROLE: Direction · Design · Concept
+TYPE: Immersive Experience
+DATE: 2026
+DURATION: —
+COMMISSIONED BY: —
+PREMIERE: 1. 1. 2026 · Prague, Czech Republic</pre>
+      </div>
+
+      <div class="card">
+        <div class="title">Credits</div>
+        <pre>CREDITS
+
+DIRECTION, DESIGN & CONCEPT
+Tobiaš Pejsar
+
+VISUAL ART & PROJECTION CONTENT
+Tobiaš Pejsar
+
+SOUND DESIGN & MUSIC
+Tobiaš Pejsar
+
+NARRATION / TEXT
+Tobiaš Pejsar
+
+SCRIPT & CONCEPT DEVELOPMENT
+Tobiaš Pejsar
+
+TECHNICAL CONTENT & SPATIAL DESIGN
+Tobiaš Pejsar
+
+PRODUCTION & COORDINATION
+Tobiaš Pejsar
+
+PHOTOGRAPHY
+Tobiaš Pejsar
+Aleš Pejsar
+
+DOCUMENTATION & POST-PRODUCTION
+Tobiaš Pejsar</pre>
+      </div>
+    </section>
 
     <main id="chapters"></main>
   </div>
 
   <script>
-    /* TVŮJ PŮVODNÍ JS ZŮSTÁVÁ STEJNÝ */
-    const files = ["https://tobi-09.github.io/skaut/img/FullSizeRender.JPG", "https://tobi-09.github.io/skaut/img/FullSizeRender.jpg", "https://tobi-09.github.io/skaut/img/IMG_4243.jpg", "https://tobi-09.github.io/skaut/img/IMG_4244.jpg", "https://tobi-09.github.io/skaut/img/IMG_4247.jpg", "https://tobi-09.github.io/skaut/img/IMG_4248.jpg", "https://tobi-09.github.io/skaut/img/IMG_4250.jpg", "https://tobi-09.github.io/skaut/img/IMG_4251.jpg", "https://tobi-09.github.io/skaut/img/IMG_4253.jpg", "https://tobi-09.github.io/skaut/img/IMG_4254.jpg", "https://tobi-09.github.io/skaut/img/IMG_4255.jpg", "https://tobi-09.github.io/skaut/img/IMG_4256.jpg", "https://tobi-09.github.io/skaut/img/IMG_4257.jpg", "https://tobi-09.github.io/skaut/img/IMG_4259.jpg", "https://tobi-09.github.io/skaut/img/IMG_4264.jpg", "https://tobi-09.github.io/skaut/img/IMG_4267.jpg", "https://tobi-09.github.io/skaut/img/IMG_4269.jpg", "https://tobi-09.github.io/skaut/img/IMG_4270.jpg", "https://tobi-09.github.io/skaut/img/IMG_4271.jpg", "https://tobi-09.github.io/skaut/img/IMG_4272.jpg", "https://tobi-09.github.io/skaut/img/IMG_4274.jpg", "https://tobi-09.github.io/skaut/img/IMG_4276.jpg", "https://tobi-09.github.io/skaut/img/IMG_4277.jpg", "https://tobi-09.github.io/skaut/img/IMG_4278.jpg", "https://tobi-09.github.io/skaut/img/IMG_4279.jpg", "https://tobi-09.github.io/skaut/img/IMG_4280.jpg", "https://tobi-09.github.io/skaut/img/IMG_4281.jpg", "https://tobi-09.github.io/skaut/img/IMG_4282.jpg", "https://tobi-09.github.io/skaut/img/IMG_4283.jpg", "https://tobi-09.github.io/skaut/img/IMG_4284.jpg", "https://tobi-09.github.io/skaut/img/IMG_4285.jpg", "https://tobi-09.github.io/skaut/img/IMG_4286.jpg", "https://tobi-09.github.io/skaut/img/IMG_4287.jpg", "https://tobi-09.github.io/skaut/img/IMG_4288.jpg", "https://tobi-09.github.io/skaut/img/IMG_4289.jpg", "https://tobi-09.github.io/skaut/img/IMG_4290.jpg", "https://tobi-09.github.io/skaut/img/IMG_4291.jpg", "https://tobi-09.github.io/skaut/img/IMG_4294.jpg", "https://tobi-09.github.io/skaut/img/IMG_4295.jpg", "https://tobi-09.github.io/skaut/img/IMG_4296.jpg", "https://tobi-09.github.io/skaut/img/IMG_4297.jpg", "https://tobi-09.github.io/skaut/img/IMG_4298.jpg", "https://tobi-09.github.io/skaut/img/IMG_4299.jpg", "https://tobi-09.github.io/skaut/img/IMG_4300.jpg", "https://tobi-09.github.io/skaut/img/IMG_4301.jpg", "https://tobi-09.github.io/skaut/img/IMG_4302.jpg", "https://tobi-09.github.io/skaut/img/IMG_4304.jpg", "https://tobi-09.github.io/skaut/img/IMG_4305.jpg", "https://tobi-09.github.io/skaut/img/IMG_4307.jpg", "https://tobi-09.github.io/skaut/img/IMG_4311.jpg", "https://tobi-09.github.io/skaut/img/IMG_4313.jpg", "https://tobi-09.github.io/skaut/img/IMG_4314.jpg", "https://tobi-09.github.io/skaut/img/IMG_4315.jpg", "https://tobi-09.github.io/skaut/img/Logo2-barevne.png"];
+    const files = [
+"https://tobi-09.github.io/skaut/img/FullSizeRender.JPG",
+"https://tobi-09.github.io/skaut/img/FullSizeRender.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4243.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4244.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4247.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4248.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4250.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4251.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4253.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4254.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4255.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4256.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4257.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4259.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4264.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4267.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4269.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4270.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4271.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4272.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4274.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4276.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4277.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4278.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4279.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4280.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4281.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4282.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4283.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4284.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4285.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4286.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4287.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4288.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4289.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4290.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4291.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4294.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4295.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4296.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4297.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4298.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4299.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4300.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4301.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4302.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4304.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4305.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4307.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4311.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4313.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4314.jpg",
+"https://tobi-09.github.io/skaut/img/IMG_4315.jpg",
+"https://tobi-09.github.io/skaut/img/Logo2-barevne.png"
+    ];
 
     function splitIntoThree(arr){
       const n = arr.length;
@@ -114,18 +252,30 @@
       for(let i=0;i<rem;i++) sizes[i]++;
       const parts = [];
       let idx = 0;
-      for(let s of sizes){
-        parts.push(arr.slice(idx, idx + s));
-        idx += s;
-      }
+      for(let s of sizes){ parts.push(arr.slice(idx, idx + s)); idx += s; }
       return parts;
     }
 
     const parts = splitIntoThree(files);
+
     const chapterTexts = [
-      { title: "Kapitola 1 – Vesmír", text: "Cesta jídla k nám trvá miliony vteřin a stovky kilometrů..." },
-      { title: "Kapitola 2 – Lidstvo", text: "Na Zemi se rodí první lidé a Slunce poprvé nebude samo." },
-      { title: "Kapitola 3 – Budoucnost", text: "Text doplním později." }
+      {
+        title: "Kapitola 1 – Vesmír",
+        text: `Cesta jídla k nám trvá miliony vteřin a stovky kilometrů. Ale ne vždy tomu tak bylo.
+Pojďme se podívat zpět do ticha a vzduchoprázdna, do dne, který neměl včerejšek.
+Formují se první hvězdy a spolu s nimi planetky – žhavé a rozpálené.`
+      },
+      {
+        title: "Kapitola 2 – Lidstvo",
+        text: `Ale tu naši na jejím dobrodružství čeká dlouhá cesta.
+Ve formujících se oceánech pomalu začíná zobat Měsíc.
+Živočichové na pevnině ovládají nová území.
+Na Zemi se rodí první lidé a Slunce poprvé od vzniku vesmíru nebude samo.`
+      },
+      {
+        title: "Kapitola 3 – Budoucnost",
+        text: `Text doplním později.`
+      }
     ];
 
     const chaptersRoot = document.getElementById("chapters");
@@ -137,8 +287,10 @@
       
       const head = document.createElement("div");
       head.className = "head";
-      const t = document.createElement("div"); t.className = "title"; t.textContent = chapterTexts[idx]?.title || `Kapitola ${idx+1}`;
-      const txt = document.createElement("div"); txt.className = "text"; txt.textContent = chapterTexts[idx]?.text || "";
+      const t = document.createElement("div"); t.className = "title";
+      t.textContent = chapterTexts[idx]?.title || `Kapitola ${idx+1}`;
+      const txt = document.createElement("div"); txt.className = "text";
+      txt.textContent = chapterTexts[idx]?.text || "";
       head.appendChild(t); head.appendChild(txt);
       chap.appendChild(head);
 
@@ -159,22 +311,29 @@
 
         slides.forEach(f => {
           const s = document.createElement("div"); s.className = "slide";
-          const im = document.createElement("img"); im.src = f.replace(/\.HEIC$/i, ".jpg");
+          const im = document.createElement("img");
+          im.src = f.replace(/\.HEIC$/i, ".jpg");
           s.appendChild(im); track.appendChild(s);
         });
 
         slider.appendChild(track);
-        const nav = document.createElement("div");
-        nav.className = "nav"; nav.innerHTML = '<button class="btn" data-dir="prev">‹</button><button class="btn" data-dir="next">›</button>';
-        slider.appendChild(nav);
-
+        slider.innerHTML += `<div class="nav"><button class="btn" data-dir="prev">‹</button><button class="btn" data-dir="next">›</button></div>`;
+        
         const dots = document.createElement("div");
         dots.className = "dots";
         slides.forEach((_,i)=>{
-          const d = document.createElement("button"); d.className = "dot" + (i===0 ? " active" : "");
-          d.setAttribute("data-index", i); dots.appendChild(d);
+          const d = document.createElement("button");
+          d.className = "dot" + (i===0 ? " active" : "");
+          d.setAttribute("data-index", i);
+          dots.appendChild(d);
         });
         slider.appendChild(dots);
+
+        const footer = document.createElement("div");
+        footer.className = "slider-footer";
+        footer.innerHTML = `<span>Více fotografií</span><span>← →</span>`;
+        slider.appendChild(footer);
+
         chap.appendChild(slider);
       }
       chaptersRoot.appendChild(chap);
@@ -199,9 +358,9 @@
         function start(){ stop(); timer = setInterval(next, delay); }
         function stop(){ if(timer){ clearInterval(timer); timer = null; } }
 
-        slider.querySelector('[data-dir="next"]').addEventListener("click", ()=>{ next(); start(); });
-        slider.querySelector('[data-dir="prev"]').addEventListener("click", ()=>{ prev(); start(); });
-        dots.forEach(d => d.addEventListener("click", (e)=>{ idx = Number(e.currentTarget.dataset.index); update(); start(); }));
+        slider.querySelector('[data-dir="next"]').onclick = () => { next(); start(); };
+        slider.querySelector('[data-dir="prev"]').onclick = () => { prev(); start(); };
+        dots.forEach(d => d.onclick = (e) => { idx = parseInt(e.target.dataset.index); update(); start(); });
         slider.addEventListener("mouseenter", stop);
         slider.addEventListener("mouseleave", start);
         update(); start();
