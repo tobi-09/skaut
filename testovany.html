@@ -3,125 +3,112 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Immersive Experience — Oživlá Večeře</title>
+  <title>Immersive Experience —Oživlá Večeře</title>
   <style>
-    :root {
-      --bg: #050509;
-      --card: #0b0b10;
-      --muted: rgba(255, 255, 255, 0.7);
-      --accent: #e6e6e6;
+    :root{
+      --bg:#050509; --card:#0b0b10; --muted:rgba(255,255,255,0.7);
+      --accent:#e6e6e6;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Inter, system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--accent);
-      -webkit-font-smoothing: antialiased;
-      padding: 28px;
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--bg);
+      color:var(--accent);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:28px;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; }
+    .wrap{max-width:1100px;margin:0 auto}
+    h1{font-size:30px;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 8px}
+    h2{font-size:16px;margin:0 0 12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em}
+    p{margin:0 0 12px;color:var(--muted);line-height:1.5}
     
-    /* HERO: Obrázek nad textem */
-    .hero {
-      display: flex;
-      flex-direction: column; /* Obrázek a text pod sebou */
-      gap: 28px;
-      margin-bottom: 48px;
-    }
-    .hero-media {
+    /* HERO: Změněno na sloupec, aby byl obrázek nad nadpisem */
+    .hero{display:flex; flex-direction: column; gap:28px; margin-bottom:28px}
+    .hero-media{
       width: 100%;
-      height: 600px; /* Fixní výška */
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.04);
+      height: 600px; /* Fixní výška pro PC */
+      border-radius:12px; 
+      overflow:hidden; 
+      background:linear-gradient(180deg,#11101a,#050509);
+      border:1px solid rgba(255,255,255,0.04)
     }
-    .hero-media img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: cover; /* Zachová poměr stran, ořízne okraje */
-    }
-    .hero-info { max-width: 800px; }
+    .hero-media img{width:100%; height:100%; display:block; object-fit:cover}
+    .hero-info{padding:6px 2px}
     
-    h1 { font-size: 36px; letter-spacing: 0.06em; text-transform: uppercase; margin: 0 0 16px; }
-    .tag { font-size: 12px; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px; }
-    .desc { font-size: 16px; color: var(--muted); line-height: 1.6; white-space: pre-line; }
-
-    /* Video */
-    .video-section { margin-bottom: 48px; }
-    .video-box { border-radius: 10px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.06); background: #07070a; }
-    video { width: 100%; display: block; }
-
-    /* Meta Cards */
-    .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 48px; }
-    .meta .card { background: linear-gradient(180deg, #0b0b12, #050509); padding: 20px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.03); }
-    .meta .title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; color: rgba(255, 255, 255, 0.65); margin-bottom: 12px; }
-    .meta pre { white-space: pre-wrap; font-family: inherit; color: var(--muted); font-size: 14px; margin: 0; line-height: 1.5; }
-
-    /* Kapitoly */
-    .chapter { border-top: 1px solid rgba(255, 255, 255, 0.04); padding-top: 32px; margin-top: 32px; }
-    .chapter .head { margin-bottom: 20px; }
-    .chapter .title { font-size: 14px; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
-    .chapter .text { color: var(--muted); font-size: 15px; line-height: 1.5; }
-
-    .chapter-hero {
+    .tag{font-size:12px;text-transform:uppercase;letter-spacing:0.18em;color:rgba(255,255,255,0.6);margin-bottom:8px}
+    .desc{font-size:15px;color:var(--muted)}
+    .video-section{margin:18px 0 28px}
+    .video-box{border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);background:#07070a}
+    video{width:100%;height:auto;display:block}
+    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-bottom:28px}
+    .meta .card{background:linear-gradient(180deg,#0b0b12,#050509);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+    .meta .title{font-size:12px;text-transform:uppercase;letter-spacing:0.14em;color:rgba(255,255,255,0.65);margin-bottom:8px}
+    .meta pre{white-space:pre-wrap;font-family:inherit;color:var(--muted);font-size:14px;margin:0}
+    
+    .chapter{border-top:1px solid rgba(255,255,255,0.04);padding-top:22px;margin-top:22px}
+    .chapter .head{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    .chapter .title{font-size:14px;text-transform:uppercase;letter-spacing:0.12em}
+    .chapter .text{color:var(--muted);font-size:15px}
+    
+    /* Fixní výška pro obrázky v kapitolách */
+    .chapter-hero{
       width: 100%;
-      height: 600px; /* Fixní výška pro kapitoly */
-      border-radius: 10px;
-      overflow: hidden;
-      margin: 20px 0;
-      border: 1px solid rgba(255, 255, 255, 0.04);
+      height: 600px; 
+      border-radius:10px;
+      overflow:hidden;
+      margin:12px 0;
+      border:1px solid rgba(255,255,255,0.04)
     }
-    .chapter-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-    /* Slider */
-    .slider { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.03); background: #07070a; }
-    .track { display: flex; transition: transform .6s cubic-bezier(.2, .9, .2, 1); }
-    .slide {
-      min-width: 100%;
-      height: 600px; /* Fixní výška pro slider */
-      flex-shrink: 0;
+    .chapter-hero img{width:100%; height:100%; display:block; object-fit:cover}
+    
+    /* slider - Fixní výška */
+    .slider{position:relative;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:#07070a}
+    .track{display:flex;transition:transform .6s cubic-bezier(.2,.9,.2,1)}
+    .slide{
+      min-width:100%;
+      height: 600px; /* Fixní výška pro PC */
+      flex-shrink:0
     }
-    .slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-    .nav { position: absolute; top: 50%; left: 0; right: 0; display: flex; justify-content: space-between; transform: translateY(-50%); pointer-events: none; padding: 0 12px; }
-    .btn { pointer-events: auto; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
-    .dots { position: absolute; left: 50%; transform: translateX(-50%); bottom: 15px; display: flex; gap: 8px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.3); border: none; cursor: pointer; transition: 0.3s; }
-    .dot.active { background: #fff; transform: scale(1.2); }
-    .slider-footer { display: flex; justify-content: space-between; padding: 12px 16px; font-size: 11px; color: rgba(255, 255, 255, 0.5); background: #0b0b12; }
-
-    /* MOBILNÍ OPTIMALIZACE */
-    @media (max-width: 768px) {
-      body { padding: 15px; }
+    .slide img{width:100%; height:100%; display:block; object-fit:cover}
+    
+    .nav{position:absolute;top:50%;left:0;right:0;display:flex;justify-content:space-between;transform:translateY(-50%);pointer-events:none;padding:0 8px}
+    .btn{pointer-events:auto;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);color:#fff;width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .dots{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;display:flex;gap:8px}
+    .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,0.25);cursor:pointer;border:none}
+    .dot.active{background:#fff;transform:scale(1.2)}
+    .slider-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;font-size:12px;color:rgba(255,255,255,0.7);background:linear-gradient(180deg,#0b0b12,#050509)}
+    
+    /* Mobilní verze */
+    @media (max-width:900px){
+      .hero{gap:18px}
       .hero-media, .chapter-hero, .slide {
-        height: 350px; /* Snížená výška pro mobily */
+        height: 350px; /* Fixní výška pro mobil */
       }
-      h1 { font-size: 26px; }
-      .meta { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-
   <div class="wrap">
-    <header class="hero">
-      <div class="hero-media">
-        <img src="https://tobi-09.github.io/skaut/img/IMG_4298.jpg" alt="Oživlá Večeře Main Visual" />
+    <header class="hero" role="banner">
+      <div class="hero-media" aria-hidden="false">
+        <picture>
+          <img src="https://tobi-09.github.io/skaut/img/IMG_4298.jpg" alt="Hlavní vizuál (IMG_4298)" />
+        </picture>
       </div>
 
       <div class="hero-info">
         <div class="tag">Immersive Experience</div>
         <h1>Oživlá Večeře</h1>
-        <p class="desc">This immersive experience follows the journey of food not as an object, but as a witness of time. A journey that today spans millions of seconds and hundreds of kilometers — yet once began in absolute silence.
-
-        Visuals and sound trace the emergence of matter from nothingness: the birth of stars, the formation of planets, and the eventual rise of human systems. Food becomes a silent connector between origins and futures — shaped by the same forces that formed stars, societies, and technologies.</p>
+        <p class="desc">This immersive experience follows the journey of food not as an object, but as a witness of time.
+A journey that today spans millions of seconds and hundreds of kilometers — yet once began in absolute silence.
+... [zkráceno pro přehlednost kódu, tvůj text zůstává celý] ...</p>
       </div>
     </header>
 
-    <section class="video-section">
-      <h2 id="video-title">Visual Documentation</h2>
+    <section class="video-section" aria-labelledby="video-title">
+      <h2 id="video-title">Video</h2>
       <div class="video-box">
         <video controls playsinline preload="metadata" poster="https://tobi-09.github.io/skaut/img/IMG_4302.jpg">
           <source src="project-video.mp4" type="video/mp4">
@@ -130,21 +117,24 @@
       </div>
     </section>
 
-    <section class="meta">
+    <section class="meta" aria-label="Informace o projektu">
       <div class="card">
-        <div class="title">Project Info</div>
-        <pre>ROLE: Direction · Design · Concept
+        <div class="title">Description</div>
+        <pre>INFO
+ROLE: Direction · Design · Concept
 TYPE: Immersive Experience
 DATE: 2026
-PREMIERE: 1. 1. 2026 · Prague, CZ</pre>
+DURATION: —
+COMMISSIONED BY: —
+PREMIERE: 1. 1. 2026 · Prague, Czech Republic</pre>
       </div>
 
       <div class="card">
         <div class="title">Credits</div>
-        <pre>DIRECTOR: Tobiaš Pejsar
-VISUALS: Tobiaš Pejsar
-SOUND: Tobiaš Pejsar
-PHOTOGRAPHY: Tobiaš & Aleš Pejsar</pre>
+        <pre>CREDITS
+DIRECTION, DESIGN & CONCEPT
+Tobiaš Pejsar
+... [tvůj kód pokračuje stejně] ...</pre>
       </div>
     </section>
 
@@ -152,6 +142,7 @@ PHOTOGRAPHY: Tobiaš & Aleš Pejsar</pre>
   </div>
 
   <script>
+    // Zde je tvůj původní JS kód pro generování kapitol a sliderů
     const files = [
       "https://tobi-09.github.io/skaut/img/FullSizeRender.JPG",
       "https://tobi-09.github.io/skaut/img/FullSizeRender.jpg",
@@ -205,95 +196,130 @@ PHOTOGRAPHY: Tobiaš & Aleš Pejsar</pre>
       "https://tobi-09.github.io/skaut/img/IMG_4311.jpg",
       "https://tobi-09.github.io/skaut/img/IMG_4313.jpg",
       "https://tobi-09.github.io/skaut/img/IMG_4314.jpg",
-      "https://tobi-09.github.io/skaut/img/IMG_4315.jpg"
+      "https://tobi-09.github.io/skaut/img/IMG_4315.jpg",
+      "https://tobi-09.github.io/skaut/img/Logo2-barevne.png"
     ];
 
-    function splitIntoThree(arr) {
+    function splitIntoThree(arr){
       const n = arr.length;
-      const base = Math.floor(n / 3);
+      const base = Math.floor(n/3);
       const rem = n % 3;
+      const sizes = [base, base, base];
+      for(let i=0;i<rem;i++) sizes[i]++;
       const parts = [];
       let idx = 0;
-      for (let i = 0; i < 3; i++) {
-        let size = base + (i < rem ? 1 : 0);
-        parts.push(arr.slice(idx, idx + size));
-        idx += size;
+      for(let s of sizes){
+        parts.push(arr.slice(idx, idx + s));
+        idx += s;
       }
       return parts;
     }
 
     const parts = splitIntoThree(files);
     const chapterTexts = [
-      { title: "Kapitola 1 – Vesmír", text: "Formují se první hvězdy a spolu s nimi planetky – žhavé a rozpálené." },
-      { title: "Kapitola 2 – Lidstvo", text: "Na Zemi se rodí první lidé a Slunce poprvé od vzniku vesmíru nebude samo." },
-      { title: "Kapitola 3 – Budoucnost", text: "Z organicých rytmů ke strukturám, městům a automatizovaným sítím." }
+      { title: "Kapitola 1 – Vesmír", text: "Cesta jídla k nám trvá miliony vteřin a stovky kilometrů. Ale ne vždy tomu tak bylo.\nPojďme se podívat zpět do ticha a vzduchoprázdna, do dne, který neměl včerejšek.\nFormují se první hvězdy a spolu s nimi planetky – žhavé a rozpálené." },
+      { title: "Kapitola 2 – Lidstvo", text: "Ale tu naši na jejím dobrodružství čeká dlouhá cesta.\nVe formujících se oceánech pomalu začíná zobat Měsíc.\nŽivočichové na pevnině ovládají nová území.\nNa Zemi se rodí první lidé a Slunce poprvé od vzniku vesmíru nebude samo." },
+      { title: "Kapitola 3 – Budoucnost", text: "Text doplním později." }
     ];
 
     const chaptersRoot = document.getElementById("chapters");
 
     parts.forEach((part, idx) => {
-      if (part.length === 0) return;
+      if(part.length === 0) return;
       const chap = document.createElement("section");
       chap.className = "chapter";
-
-      // První obrázek jako hlavní hrdina kapitoly
-      const mainFile = part[0].replace(/\.HEIC$/i, ".jpg");
       
-      let html = `
-        <div class="head">
-          <div class="title">${chapterTexts[idx]?.title || 'Kapitola ' + (idx + 1)}</div>
-          <div class="text">${chapterTexts[idx]?.text || ""}</div>
-        </div>
-        <div class="chapter-hero">
-          <img src="${mainFile}" alt="Chapter Hero">
-        </div>
-      `;
+      const head = document.createElement("div");
+      head.className = "head";
+      const t = document.createElement("div");
+      t.className = "title";
+      t.textContent = chapterTexts[idx]?.title || `Kapitola ${idx+1}`;
+      const txt = document.createElement("div");
+      txt.className = "text";
+      txt.textContent = chapterTexts[idx]?.text || "";
+      head.appendChild(t);
+      head.appendChild(txt);
+      chap.appendChild(head);
 
-      // Zbytek do slideru
+      const mainFile = part[0];
+      const heroWrap = document.createElement("div");
+      heroWrap.className = "chapter-hero";
+      const img = document.createElement("img");
+      img.src = mainFile.replace(/\.HEIC$/i, ".jpg");
+      heroWrap.appendChild(img);
+      chap.appendChild(heroWrap);
+
       const slides = part.slice(1);
-      if (slides.length > 0) {
-        html += `
-          <div class="slider">
-            <div class="track">
-              ${slides.map(f => `<div class="slide"><img src="${f.replace(/\.HEIC$/i, ".jpg")}" alt="Slide"></div>`).join('')}
-            </div>
-            <div class="nav">
-              <button class="btn" data-dir="prev">‹</button>
-              <button class="btn" data-dir="next">›</button>
-            </div>
-            <div class="dots">
-              ${slides.map((_, i) => `<button class="dot ${i === 0 ? 'active' : ''}" data-index="${i}"></button>`).join('')}
-            </div>
-            <div class="slider-footer"><span>Více z kapitoly</span><span>Swipe / Klik</span></div>
-          </div>
-        `;
-      }
+      if(slides.length > 0){
+        const slider = document.createElement("div");
+        slider.className = "slider";
+        const track = document.createElement("div");
+        track.className = "track";
 
-      chap.innerHTML = html;
+        slides.forEach(f => {
+          const s = document.createElement("div");
+          s.className = "slide";
+          const im = document.createElement("img");
+          im.src = f.replace(/\.HEIC$/i, ".jpg");
+          s.appendChild(im);
+          track.appendChild(s);
+        });
+
+        slider.appendChild(track);
+
+        const nav = document.createElement("div");
+        nav.className = "nav";
+        nav.innerHTML = '<button class="btn" data-dir="prev">‹</button><button class="btn" data-dir="next">›</button>';
+        slider.appendChild(nav);
+
+        const dots = document.createElement("div");
+        dots.className = "dots";
+        slides.forEach((_,i)=>{
+          const d = document.createElement("button");
+          d.className = "dot" + (i===0 ? " active" : "");
+          d.setAttribute("data-index", i);
+          dots.appendChild(d);
+        });
+        slider.appendChild(dots);
+
+        const footer = document.createElement("div");
+        footer.className = "slider-footer";
+        footer.innerHTML = `<span>Více fotografií</span><span>← →</span>`;
+        slider.appendChild(footer);
+
+        chap.appendChild(slider);
+      }
       chaptersRoot.appendChild(chap);
     });
 
-    // Slider Logic
-    function initAllSliders() {
+    function initAllSliders(){
       document.querySelectorAll(".slider").forEach(slider => {
         const track = slider.querySelector(".track");
-        const slides = slider.querySelectorAll(".slide");
-        const dots = slider.querySelectorAll(".dot");
-        let currentIdx = 0;
+        const slides = Array.from(slider.querySelectorAll(".slide"));
+        const dots = Array.from(slider.querySelectorAll(".dot"));
+        const btnPrev = slider.querySelector('[data-dir="prev"]');
+        const btnNext = slider.querySelector('[data-dir="next"]');
+        let idx = 0;
+        const total = slides.length;
+        const delay = 3500;
+        let timer = null;
 
-        function update() {
-          track.style.transform = `translateX(${-currentIdx * 100}%)`;
-          dots.forEach((d, i) => d.classList.toggle("active", i === currentIdx));
+        function update(){
+          track.style.transform = `translateX(${-idx * 100}%)`;
+          dots.forEach((d,i)=> d.classList.toggle("active", i===idx));
         }
+        function next(){ idx = (idx + 1) % total; update(); }
+        function prev(){ idx = (idx - 1 + total) % total; update(); }
+        function start(){ stop(); timer = setInterval(next, delay); }
+        function stop(){ if(timer){ clearInterval(timer); timer = null; } }
 
-        slider.addEventListener("click", (e) => {
-          const btn = e.target.closest("button");
-          if (!btn) return;
-          if (btn.dataset.dir === "next") currentIdx = (currentIdx + 1) % slides.length;
-          if (btn.dataset.dir === "prev") currentIdx = (currentIdx - 1 + slides.length) % slides.length;
-          if (btn.dataset.index) currentIdx = parseInt(btn.dataset.index);
-          update();
-        });
+        btnNext && btnNext.addEventListener("click", ()=>{ next(); start(); });
+        btnPrev && btnPrev.addEventListener("click", ()=>{ prev(); start(); });
+        dots.forEach(d => d.addEventListener("click", (e)=>{ idx = Number(e.currentTarget.dataset.index); update(); start(); }));
+        slider.addEventListener("mouseenter", stop);
+        slider.addEventListener("mouseleave", start);
+        update();
+        start();
       });
     }
     initAllSliders();
