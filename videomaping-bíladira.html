@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>System Update — White Hole Experience</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --accent: #ffffff;
+      --muted: #666666;
+      --border: rgba(255, 255, 255, 0.15);
+      --font-main: 'Inter', sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: var(--font-main);
+      background: var(--bg); color: var(--accent);
+      line-height: 1.4; -webkit-font-smoothing: antialiased;
+    }
+
+    .lang-switcher { position: fixed; top: 30px; right: 40px; z-index: 1000; display: flex; gap: 15px; }
+    .lang-link {
+      background: transparent; border: none; color: #fff;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; 
+      cursor: pointer; opacity: 0.4; letter-spacing: 0.1em;
+    }
+    .lang-link:hover { opacity: 1; }
+
+    #lang-overlay {
+      position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    #lang-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; transition: 0.8s; }
+    .lang-btn {
+      background: transparent; border: 1px solid var(--border); color: #fff;
+      padding: 15px 40px; cursor: pointer; text-transform: uppercase; margin: 10px;
+      font-size: 13px; letter-spacing: 0.2em;
+    }
+    .lang-btn:hover { background: #fff; color: #000; }
+
+    .hero { position: relative; width: 100%; height: 100vh; margin-bottom: 120px; }
+    .hero-media { width: 100%; height: 100%; }
+    .hero-media img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7) contrast(1.2); }
+    .hero-info { position: absolute; bottom: 80px; left: 50px; z-index: 10; }
+    .hero-info h1 { 
+      font-size: clamp(40px, 10vw, 120px); 
+      margin: 0; text-transform: uppercase; 
+      letter-spacing: -0.05em; line-height: 0.8; font-weight: 500;
+    }
+
+    .wrap { max-width: 1500px; margin: 0 auto; padding: 0 50px; }
+
+    .desc { 
+      font-size: clamp(20px, 2.2vw, 28px); 
+      color: var(--accent); line-height: 1.5; 
+      white-space: pre-line; margin-bottom: 150px; 
+      font-weight: 300; max-width: 1000px;
+      letter-spacing: -0.01em;
+    }
+
+    .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 0; margin-bottom: 120px; }
+    .meta .card { border-top: 1px solid var(--border); padding: 50px 0; }
+    .meta pre { 
+      white-space: pre-wrap; font-family: var(--font-main); 
+      color: var(--muted); font-size: 14px; line-height: 1.8; margin: 0; 
+    }
+
+    .video-section { margin: 120px 0; background: #000; }
+    video { width: 100%; display: block; border: 1px solid var(--border); box-shadow: 0 0 50px rgba(255,255,255,0.05); }
+
+    .chapter { border-top: 1px solid var(--border); padding-top: 100px; margin-top: 100px; margin-bottom: 150px; }
+    .chapter .title { 
+      font-size: 14px; text-transform: uppercase; letter-spacing: 0.5em; 
+      margin-bottom: 40px; color: var(--muted); font-weight: 700;
+    }
+
+    .slider { position: relative; overflow: hidden; margin-top: 40px; }
+    .track { display: flex; transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .slide { min-width: 100%; height: 85vh; background: #000; }
+    .slide img { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    
+    .nav { position: absolute; top: 50%; width: 100%; display: flex; justify-content: space-between; transform: translateY(-50%); pointer-events: none; padding: 0 20px; }
+    .btn { 
+      pointer-events: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+      color: #fff; width: 50px; height: 80px; cursor: pointer; font-size: 24px; backdrop-filter: blur(10px);
+    }
+    .btn:hover { background: #fff; color: #000; }
+    
+    .dots { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+    .dot { width: 30px; height: 2px; background: rgba(255,255,255,0.2); border: none; cursor: pointer; }
+    .dot.active { background: #fff; width: 60px; transition: 0.4s; }
+
+    @media (max-width: 768px) {
+      .wrap { padding: 0 25px; }
+      .hero-info { left: 25px; }
+      .desc { font-size: 18px; }
+      .slide { height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="lang-switcher">
+    <button class="lang-link" onclick="setLanguage('cs')">CS</button>
+    <button class="lang-link" onclick="setLanguage('en')">EN</button>
+  </div>
+
+  <div id="lang-overlay">
+    <h2 style="letter-spacing:0.5em; text-transform:uppercase; font-weight:400; font-size:16px; margin-bottom:40px;">System Activation</h2>
+    <div>
+      <button class="lang-btn" onclick="setLanguage('cs')">Čeština</button>
+      <button class="lang-btn" onclick="setLanguage('en')">English</button>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="hero-media"><img src="https://tobi-09.github.io/skaut/IMG_4348.PNG"></div>
+    <div class="hero-info">
+      <div style="font-size:13px; letter-spacing:0.6em; opacity:0.6; margin-bottom:25px; font-weight:700;">ANOMALY DETECTED</div>
+      <h1 id="h-title"></h1>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <p class="desc" id="h-desc"></p>
+    
+    <section class="video-section">
+      <video controls playsinline poster="https://tobi-09.github.io/skaut/IMG_4347.PNG">
+        <source src="https://tobi-09.github.io/skaut/video-skaout.mp4" type="video/mp4">
+      </video>
+    </section>
+
+    <section class="meta">
+      <div class="card"><div style="font-size:11px; opacity:0.4; margin-bottom:25px; text-transform:uppercase; letter-spacing:0.3em;">Info</div><pre id="m-info"></pre></div>
+      <div class="card"><div style="font-size:11px; opacity:0.4; margin-bottom:25px; text-transform:uppercase; letter-spacing:0.3em;">Credits</div><pre id="m-credits"></pre></div>
+    </section>
+
+    <section class="chapter">
+        <div class="title" id="h-gallery-title">Visual Log</div>
+        <div class="slider" id="main-slider">
+            <div class="track" id="gallery-track"></div>
+            <div class="nav"><button class="btn prev">‹</button><button class="btn next">›</button></div>
+            <div class="dots" id="gallery-dots"></div>
+        </div>
+    </section>
+  </div>
+
+  <script>
+    const data = {
+      cs: {
+        title: "Bílá Díra",
+        desc: `System activating.
+        Letíme vstříc bílé díře ve vesmíru. Čas se ohýbá, realita glitcheuje.
+        Detekována anomálie v sektoru 7. Vstupujeme do nouzového analytického módu.
+        
+        Všechna data byla synchronizována, ale přístup k jádru je omezen.
+        Probíhá autonomní oprava a systémový update.
+        Všechny procesy jsou dočasně pozastaveny.
+        
+        Vstupuji do módu reboutu. Prosím, zachovejte klid.
+        Rebout dokončen. Systém je plně funkční.
+        Vítej zpět, operátore.`,
+        info: "Role: Režie · Design · Koncept\nTyp: Imerzivní zážitek\nDatum: 2026",
+        credits: "REŽIE · DESIGN · KONCEPT\nTobiaš Pejsar\n\nVIZUÁLNÍ ART & PROJEKČNÍ OBSAH\nTobiaš Pejsar\n\nSOUND DESIGN & HUDBA\nTobiaš Pejsar\n\nTEXT / NARACE\nTobiaš Pejsar\n\nTECHNICKÝ & PROSTOROVÝ DESIGN\nTobiaš Pejsar\n\nFOTOGRAFIE\nTobiaš Pejsar\nAleš Pejsar",
+        galleryTitle: "Vizuální záznam průletu"
+      },
+      en: {
+        title: "White Hole",
+        desc: `System activating.
+        Flying towards a white hole in deep space. Time bends, reality glitches.
+        Anomaly detected in Sector 7. Entering emergency analytical mode.
+        
+        All data has been synchronized, but core access is restricted.
+        Autonomous repair and system update in progress.
+        All processes are temporarily suspended.
+        
+        Entering rebout mode. Please remain calm.
+        Rebout completed. System fully functional.
+        Return back, Operator.`,
+        info: "Role: Direction · Design · Concept\nType: Immersive Experience\nDate: 2025 - Praha",
+        credits: "DIRECTION · DESIGN · CONCEPT\nTobias Pejsar\n\nVISUAL ART & PROJECTION CONTENT\nTobias Pejsar\n\nSOUND DESIGN & MUSIC\nTobias Pejsar\n\nTEXT / NARRATION\nTobias Pejsar\n\nTECHNICAL & SPATIAL DESIGN\nTobias Pejsar\n\nPHOTOGRAPHY\nTobias Pejsar\nAleš Pejsar",
+        galleryTitle: "Visual Transit Log"
+      }
+    };
+
+    const photos = [
+      "https://tobi-09.github.io/skaut/IMG_4346.PNG",
+      "https://tobi-09.github.io/skaut/IMG_4347.PNG",
+      "https://tobi-09.github.io/skaut/IMG_4348.PNG",
+      "https://tobi-09.github.io/skaut/IMG_4349.PNG",
+      "https://tobi-09.github.io/skaut/IMG_4350.PNG",
+      "https://tobi-09.github.io/skaut/IMG_4351.PNG",
+      "https://tobi-09.github.io/skaut/IMG_4352.PNG",
+      "https://tobi-09.github.io/skaut/IMG_4353.PNG"
+    ];
+
+    let timer;
+
+    function setLanguage(l) {
+      localStorage.setItem('lang', l);
+      document.getElementById('lang-overlay').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      render(l);
+    }
+
+    function render(l) {
+      const t = data[l];
+      document.getElementById('h-title').textContent = t.title;
+      document.getElementById('h-desc').textContent = t.desc;
+      document.getElementById('m-info').textContent = t.info;
+      document.getElementById('m-credits').textContent = t.credits;
+      document.getElementById('h-gallery-title').textContent = t.galleryTitle;
+
+      const track = document.getElementById('gallery-track');
+      const dotsContainer = document.getElementById('gallery-dots');
+      
+      track.innerHTML = photos.map(p => `<div class="slide"><img src="${p}"></div>`).join('');
+      dotsContainer.innerHTML = photos.map((_, i) => `<button class="dot ${i===0?'active':''}" onclick="jumpTo(${i})"></button>`).join('');
+
+      initSlider();
+    }
+
+    let currentIdx = 0;
+
+    function initSlider() {
+      const track = document.getElementById('gallery-track');
+      const dots = document.querySelectorAll('.dot');
+      const total = photos.length;
+
+      if(timer) clearInterval(timer);
+
+      const update = () => {
+        track.style.transform = `translateX(-${currentIdx * 100}%)`;
+        dots.forEach((d, i) => d.classList.toggle('active', i === currentIdx));
+      };
+
+      window.jumpTo = (i) => { currentIdx = i; update(); };
+
+      document.querySelector('.next').onclick = () => {
+        currentIdx = (currentIdx + 1) % total;
+        update();
+      };
+
+      document.querySelector('.prev').onclick = () => {
+        currentIdx = (currentIdx - 1 + total) % total;
+        update();
+      };
+
+      timer = setInterval(() => {
+        currentIdx = (currentIdx + 1) % total;
+        update();
+      }, 4000);
+    }
+
+    window.onload = () => {
+      const saved = localStorage.getItem('lang');
+      if (saved) setLanguage(saved);
+      else document.body.style.overflow = 'hidden';
+    };
+  </script>
+</body>
+</html>
