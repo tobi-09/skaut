@@ -121,17 +121,17 @@
     /* KAPITOLY */
     .chapter { border-top:1px solid rgba(255,255,255,0.05); padding-top:50px; margin-top:50px; }
     .chapter .head { margin-bottom:25px; }
-    .chapter .title { font-size:13px; text-transform:uppercase; letter-spacing:0.2em; margin-bottom:10px; color: #fff; }
-    .chapter .text { color:var(--muted); font-size:15px; line-height:1.6; }
+    .chapter .title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 10px; color: #fff; }
+    .chapter .text { color: var(--muted); font-size: 15px; line-height: 1.6; }
 
-    .chapter-hero { width:100%; height:600px; border-radius:12px; overflow:hidden; margin-bottom:20px; border:1px solid rgba(255,255,255,0.05); }
-    .chapter-hero img { width:100%; height:100%; object-fit:cover; }
+    .chapter-hero { width:100%; height:600px; border-radius:12px; overflow:hidden; margin-bottom:20px; border:1px solid rgba(255,255,255,0.05); background: #000; }
+    .chapter-hero img { width:100%; height:100%; object-fit:cover; display:block; }
 
-    /* SLIDER - OPRAVENÁ MOBILNÍ VELIKOST */
+    /* SLIDER */
     .slider { position:relative; border-radius:12px; overflow:hidden; background:#000; width:100%; border:1px solid rgba(255,255,255,0.05); }
     .track { display:flex; transition:transform 0.8s cubic-bezier(0.2, 0.9, 0.2, 1); }
-    .slide { min-width:100%; height:600px; flex-shrink:0; }
-    .slide img { width:100%; height:100%; object-fit:cover; }
+    .slide { min-width:100%; height:600px; flex-shrink:0; background: #000; }
+    .slide img { width:100%; height:100%; object-fit:cover; display:block; }
     
     .nav { position:absolute; top:50%; left:0; right:0; display:flex; justify-content:space-between; transform:translateY(-50%); pointer-events:none; padding:0 15px; z-index:10; }
     .btn { pointer-events:auto; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; width:44px; height:44px; border-radius:50%; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; }
@@ -143,11 +143,15 @@
     /* MOBILE OPTIMIZACE */
     @media (max-width:900px){
       .hero-info { left: 20px; bottom: 40px; }
-      .hero-info h1 { font-size: 38px; }
-      /* Zmenšení výšky pro mobilní telefony */
-      .chapter-hero, .slide { height: 350px; } 
-      .wrap { padding: 0 20px; }
-      .lang-switcher { top: 10px; right: 10px; }
+      .hero-info h1 { font-size: 34px; }
+      
+      /* Oprava výšky a ořezu pro mobil */
+      .chapter-hero, .slide { height: 40vh; min-height: 280px; } 
+      .chapter-hero img, .slide img { object-fit: contain; }
+
+      .wrap { padding: 0 15px; }
+      .desc, .chapter .text { font-size: 14px; }
+      .meta { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -183,12 +187,11 @@
       <p class="desc" id="main-desc"></p>
     </section>
 
-    <section class="video-section" aria-labelledby="video-title">
-      <h2 id="video-title">Video 1</h2>
+    <section class="video-section">
+      <h2 id="video-title">Video</h2>
       <div class="video-box">
         <video controls playsinline preload="metadata" poster="https://tobi-09.github.io/skaut/img/IMG_4271.jpg">
           <source src="https://tobi-09.github.io/skaut/img/1.2videa.mp4" type="video/mp4">
-          Váš prohlížeč nepodporuje video tag.
         </video>
       </div>
     </section>
@@ -211,7 +214,7 @@
     const translations = {
       cs: {
         hero: "Oživlá Večeře",
-        video2_title: "Video - Kapitola 2",
+        video2_title: "Video - Cesta pokračuje",
         mainDesc: `Tato imerzivní zkušenost sleduje cestu jídla nikoli jako objektu, ale jako svědka času.
 Cestu, která dnes trvá miliony vteřin a stovky kilometrů — a přesto začala v absolutním tichu.
 
@@ -245,14 +248,35 @@ Ptá se, zda je pokrok lineární, zda efektivita nahrazuje smysl a zda systémy
       },
       en: {
         hero: "Animated Dinner",
-        video2_title: "Video - Chapter 2",
+        video2_title: "Video - The Journey Continues",
         mainDesc: `This immersive experience follows the journey of food not as an object, but as a witness of time.
-A journey that today spans millions of seconds and hundreds of kilometers — yet once began in absolute silence... (Full English Text preserved)`,
+A journey that today spans millions of seconds and hundreds of kilometers — yet once began in absolute silence.
+
+The narrative invites us to return to the beginning.
+To emptiness.
+To a moment without yesterday.
+
+Before taste.
+Before direction.
+Before time itself.
+
+Visuals and sound trace the emergence of matter from nothingness: the birth of stars, the formation of planets, bodies glowing with heat and motion. Among them, one planet begins a long and fragile transformation. Oceans take shape. The Moon slowly claims its orbit. Life emerges, adapts, and dares to leave the water.
+
+As continents form and environments shift, living beings conquer new territories. Humanity appears — not as a conclusion, but as a turning point. For the first time, the Sun is no longer alone in observing the universe.
+
+The experience unfolds in three stages, mirroring cosmic evolution, planetary life, and human systems. It gradually shifts from natural processes to constructed realities — from organic rhythms to structures, cities, machines, and automated networks. What once followed gravity and instinct now follows algorithms, logistics, and artificial intelligence.
+
+Through abstraction rather than illustration, the work questions acceleration, control, and authorship. It reflects on how systems designed to sustain life have grown complex, autonomous, and opaque. Food becomes a silent connector between origins and futures — shaped by the same forces that formed stars, societies, and technologies.
+
+The experience does not explain.
+It observes.
+
+It asks whether progress is linear, whether efficiency replaces meaning, and whether the systems we created now observe us in return. Ending at the threshold of a new year, the work opens space for reflection — not as closure, but as renewal.`,
         info: "Role: Direction · Design · Concept\nType: Immersive Experience\nPREMIERE: 1. 1. 2026 · Prague, Czech Republic",
         credits: "DIRECTION · DESIGN · CONCEPT\nTobias Pejsar\n\nVISUAL ART & PROJECTION CONTENT\nTobias Pejsar\n\nSOUND DESIGN & MUSIC\nTobias Pejsar\n\nTEXT / NARRATION\nTobias Pejsar\n\nTECHNICAL & SPATIAL DESIGN\nTobias Pejsar\n\nPHOTOGRAPHY\nTobias Pejsar\nAleš Pejsar",
         chapters: [
           { title: "Chapter 1 – Universe", text: "The journey of food to us takes millions of seconds and hundreds of kilometers. Yet it was not always this way. Let us return to silence and vacuum, to a day without yesterday. The first stars form, followed by planets — glowing with heat and motion." },
-          { title: "Chapter 2 – Humanity", text: "But our planet faces a long journey ahead. Oceans begin to take shape, and the Moon slowly finds its orbit. Life emerges in water, adapts, and dares to step onto land. Living beings conquer new territories. On Earth, the first humans are born, and for the first time, the Sun will not be alone in the universe. Humanity builds monumental structures, critical infrastructure, and homes." },
+          { title: "Chapter 2 – Humanity", text: "But our planet faces a long journey ahead. Oceans begin to take shape, and the Moon slowly finds its orbit. Life emerges in water, adapts, and dares to step onto land. Living beings conquer new territories. On Earth, the first humans are born, and for the first time, the Sun will not be alone in the universe. The fire gives humanity warmth, light, and over time, strength. Noble families divide the world into territories and the lands we know today. Humanity builds monumental structures, critical infrastructure, and homes." },
           { title: "Chapter 3 – Future", text: "What once followed gravity now follows algorithms and logistics. Food becomes a silent connector between origins and futures." }
         ]
       }
@@ -275,18 +299,10 @@ A journey that today spans millions of seconds and hundreds of kilometers — ye
       chaptersRoot.innerHTML = "";
 
       [0,1,2].forEach(i => {
-        // VIDEO 2 VKLÁDANÉ MEZI KAPITOLU 1 A 2
         if (i === 1) {
             const vidSec = document.createElement("section");
             vidSec.className = "video-section";
-            vidSec.innerHTML = `
-                <h2>${t.video2_title}</h2>
-                <div class="video-box">
-                    <video controls playsinline preload="metadata">
-                        <source src="https://tobi-09.github.io/skaut/img/2.2videa.mp4" type="video/mp4">
-                    </video>
-                </div>
-            `;
+            vidSec.innerHTML = `<h2>${t.video2_title}</h2><div class="video-box"><video controls playsinline preload="metadata"><source src="https://tobi-09.github.io/skaut/img/2.2videa.mp4" type="video/mp4"></video></div>`;
             chaptersRoot.appendChild(vidSec);
         }
 
@@ -295,14 +311,7 @@ A journey that today spans millions of seconds and hundreds of kilometers — ye
 
         const chap = document.createElement("section");
         chap.className = "chapter";
-        chap.innerHTML = `
-          <div class="head">
-            <div class="title">${t.chapters[i].title}</div>
-            <div class="text">${t.chapters[i].text}</div>
-          </div>
-          <div class="chapter-hero">
-            <img src="${part[0]}">
-          </div>`;
+        chap.innerHTML = `<div class="head"><div class="title">${t.chapters[i].title}</div><div class="text">${t.chapters[i].text}</div></div><div class="chapter-hero"><img src="${part[0]}"></div>`;
 
         if(part.length > 1) {
           let sliderHtml = `<div class="slider"><div class="track">`;
