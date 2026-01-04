@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Works — Tobiáš Pejsar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --accent: #ffffff;
+      --muted: #888888;
+      --font-main: 'Inter', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--accent);
+      font-family: var(--font-main);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* NAVIGACE */
+    nav {
+      position: fixed; top: 0; left: 0; width: 100%;
+      padding: 40px 50px;
+      display: flex; justify-content: space-between;
+      align-items: flex-start;
+      z-index: 100;
+      mix-blend-mode: difference; /* Text bude vidět i přes světlé obrázky */
+    }
+
+    .logo { 
+      font-weight: 500; text-transform: uppercase; 
+      letter-spacing: 0.3em; font-size: 12px; 
+    }
+
+    .nav-links { list-style: none; display: flex; gap: 30px; }
+    .nav-links a { 
+      color: var(--accent); text-decoration: none; 
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em;
+      opacity: 0.6; transition: opacity 0.3s;
+    }
+    .nav-links a:hover { opacity: 1; }
+
+    /* GRID SYSTÉM PROJEKTŮ (NOHLAB STYLE) */
+    .works-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr); /* Dva sloupce jako na Nohlab */
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    .project-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10; /* Širokoúhlý formát */
+      overflow: hidden;
+      border: 0.5px solid rgba(255,255,255,0.05); /* Velmi jemná dělící linka */
+      text-decoration: none;
+      color: white;
+    }
+
+    /* OBRÁZEK V KARTĚ */
+    .project-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+      filter: grayscale(0.2) brightness(0.8);
+    }
+
+    .project-card:hover img {
+      transform: scale(1.05); /* Jemný zoom při najetí */
+      filter: grayscale(0) brightness(1);
+    }
+
+    /* INFO O PROJEKTU (TEXT PŘES OBRÁZEK) */
+    .project-info {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 40px;
+      background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%);
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .project-card:hover .project-info {
+      opacity: 1;
+    }
+
+    .project-info h2 {
+      font-size: clamp(24px, 4vw, 48px);
+      text-transform: uppercase;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      margin-bottom: 5px;
+    }
+
+    .project-info span {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+    }
+
+    /* MOBILNÍ VERZE - Jeden sloupec */
+    @media (max-width: 900px) {
+      .works-grid { grid-template-columns: 1fr; }
+      nav { padding: 25px; }
+      .project-info { opacity: 1; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="logo">Tobiáš Pejsar</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Works</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+
+  <main class="works-grid">
+    
+    <a href="https://tobi-09.github.io/skaut/ve%C4%8De%C5%99e-videomaping.html" class="project-card">
+      <img src="https://tobi-09.github.io/skaut/img/IMG_4298.jpg" alt="Oživlá Večeře">
+      <div class="project-info">
+        <span>2026 — Immersive Experience</span>
+        <h2>Oživlá Večeře</h2>
+      </div>
+    </a>
+
+    <a href="#" class="project-card">
+      <img src="https://tobi-09.github.io/skaut/videomaping-b%C3%ADladira.html" alt="Project 02">
+      <div class="project-info">
+        <span>2025 — Visual Art</span>
+        <h2>Bílá díra</h2>
+      </div>
+    </a>
+
+    
+
+  </main>
+
+  <footer style="padding: 100px 50px; text-align: center; color: var(--muted); font-size: 10px; letter-spacing: 0.5em; text-transform: uppercase;">
+    © 2026 Tobiáš Pejsar — All Rights Reserved
+  </footer>
+
+</body>
+</html>
