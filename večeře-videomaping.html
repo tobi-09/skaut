@@ -18,7 +18,7 @@
       overflow-x: hidden;
     }
 
-    /* LANGUAGE SWITCHER */
+    /* JAZYKOVÝ PŘEPÍNAČ */
     .lang-switcher {
       position: fixed;
       top: 20px;
@@ -41,7 +41,7 @@
     }
     .lang-link:hover { background: #fff; color: #000; }
 
-    /* LANGUAGE OVERLAY */
+    /* ÚVODNÍ VOLBA JAZYKA */
     #lang-overlay {
       position: fixed;
       inset: 0;
@@ -103,13 +103,13 @@
 
     .wrap { max-width:1100px; margin:0 auto; padding: 0 28px; }
 
-    /* VIDEO SECTION */
-    .video-section { margin-bottom: 60px; }
+    /* VIDEA */
+    .video-section { margin-top: 60px; margin-bottom: 60px; }
     .video-section h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 20px; color: var(--muted); }
     .video-box { border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.06); background:#000; }
     video { width:100%; display:block; }
 
-    /* TEXT SECTIONS */
+    /* TEXTOVÉ BLOKY */
     .description-block { margin: 60px 0; }
     .desc { font-size: 16px; color: var(--muted); line-height: 1.7; max-width: 850px; white-space: pre-line; }
 
@@ -118,7 +118,7 @@
     .meta .title { font-size:11px; text-transform:uppercase; letter-spacing:0.2em; color:rgba(255,255,255,0.4); margin-bottom:15px; }
     .meta pre { white-space:pre-wrap; font-family:inherit; color:var(--muted); font-size:14px; margin:0; line-height:1.6; }
 
-    /* CHAPTERS */
+    /* KAPITOLY */
     .chapter { border-top:1px solid rgba(255,255,255,0.05); padding-top:50px; margin-top:50px; }
     .chapter .head { margin-bottom:25px; }
     .chapter .title { font-size:13px; text-transform:uppercase; letter-spacing:0.2em; margin-bottom:10px; color: #fff; }
@@ -127,7 +127,7 @@
     .chapter-hero { width:100%; height:600px; border-radius:12px; overflow:hidden; margin-bottom:20px; border:1px solid rgba(255,255,255,0.05); }
     .chapter-hero img { width:100%; height:100%; object-fit:cover; }
 
-    /* SLIDER */
+    /* SLIDER - OPRAVENÁ MOBILNÍ VELIKOST */
     .slider { position:relative; border-radius:12px; overflow:hidden; background:#000; width:100%; border:1px solid rgba(255,255,255,0.05); }
     .track { display:flex; transition:transform 0.8s cubic-bezier(0.2, 0.9, 0.2, 1); }
     .slide { min-width:100%; height:600px; flex-shrink:0; }
@@ -140,10 +140,12 @@
     .dot { width:6px; height:6px; background:rgba(255,255,255,0.3); border:none; border-radius:50%; cursor:pointer; transition: 0.3s; }
     .dot.active { background:#fff; transform:scale(1.4); }
 
+    /* MOBILE OPTIMIZACE */
     @media (max-width:900px){
       .hero-info { left: 20px; bottom: 40px; }
       .hero-info h1 { font-size: 38px; }
-      .chapter-hero, .slide { height: 280px; }
+      /* Zmenšení výšky pro mobilní telefony */
+      .chapter-hero, .slide { height: 350px; } 
       .wrap { padding: 0 20px; }
       .lang-switcher { top: 10px; right: 10px; }
     }
@@ -182,7 +184,7 @@
     </section>
 
     <section class="video-section" aria-labelledby="video-title">
-      <h2 id="video-title">Video</h2>
+      <h2 id="video-title">Video 1</h2>
       <div class="video-box">
         <video controls playsinline preload="metadata" poster="https://tobi-09.github.io/skaut/img/IMG_4271.jpg">
           <source src="https://tobi-09.github.io/skaut/img/1.2videa.mp4" type="video/mp4">
@@ -209,6 +211,7 @@
     const translations = {
       cs: {
         hero: "Oživlá Večeře",
+        video2_title: "Video - Kapitola 2",
         mainDesc: `Tato imerzivní zkušenost sleduje cestu jídla nikoli jako objektu, ale jako svědka času.
 Cestu, která dnes trvá miliony vteřin a stovky kilometrů — a přesto začala v absolutním tichu.
 
@@ -242,98 +245,23 @@ Ptá se, zda je pokrok lineární, zda efektivita nahrazuje smysl a zda systémy
       },
       en: {
         hero: "Animated Dinner",
+        video2_title: "Video - Chapter 2",
         mainDesc: `This immersive experience follows the journey of food not as an object, but as a witness of time.
-A journey that today spans millions of seconds and hundreds of kilometers — yet once began in absolute silence.
-
-The narrative invites us to return to the beginning.
-To emptiness.
-To a moment without yesterday.
-
-Before taste.
-Before direction.
-Before time itself.
-
-Visuals and sound trace the emergence of matter from nothingness: the birth of stars, the formation of planets, bodies glowing with heat and motion. Among them, one planet begins a long and fragile transformation. Oceans take shape. The Moon slowly claims its orbit. Life emerges, adapts, and dares to leave the water.
-
-As continents form and environments shift, living beings conquer new territories. Humanity appears — not as a conclusion, but as a turning point. For the first time, the Sun is no longer alone in observing the universe.
-
-The experience unfolds in three stages, mirroring cosmic evolution, planetary life, and human systems. It gradually shifts from natural processes to constructed realities — from organic rhythms to structures, cities, machines, and automated networks. What once followed gravity and instinct now follows algorithms, logistics, and artificial intelligence.
-
-Through abstraction rather than illustration, the work questions acceleration, control, and authorship. It reflects on how systems designed to sustain life have grown complex, autonomous, and opaque. Food becomes a silent connector between origins and futures — shaped by the same forces that formed stars, societies, and technologies.
-
-The experience does not explain.
-It observes.
-
-It asks whether progress is linear, whether efficiency replaces meaning, and whether the systems we created now observe us in return. Ending at the threshold of a new year, the work opens space for reflection — not as closure, but as renewal.`,
-        info: "Role: Direction · Design · Concept\nType: Immersive \nPREMIERE: 1. 1. 2026 · Prague, Czech Republic",
+A journey that today spans millions of seconds and hundreds of kilometers — yet once began in absolute silence... (Full English Text preserved)`,
+        info: "Role: Direction · Design · Concept\nType: Immersive Experience\nPREMIERE: 1. 1. 2026 · Prague, Czech Republic",
         credits: "DIRECTION · DESIGN · CONCEPT\nTobias Pejsar\n\nVISUAL ART & PROJECTION CONTENT\nTobias Pejsar\n\nSOUND DESIGN & MUSIC\nTobias Pejsar\n\nTEXT / NARRATION\nTobias Pejsar\n\nTECHNICAL & SPATIAL DESIGN\nTobias Pejsar\n\nPHOTOGRAPHY\nTobias Pejsar\nAleš Pejsar",
         chapters: [
           { title: "Chapter 1 – Universe", text: "The journey of food to us takes millions of seconds and hundreds of kilometers. Yet it was not always this way. Let us return to silence and vacuum, to a day without yesterday. The first stars form, followed by planets — glowing with heat and motion." },
-          { title: "Chapter 2 – Humanity", text: "But our planet faces a long journey ahead. Oceans begin to take shape, and the Moon slowly finds its orbit. Life emerges in water, adapts, and dares to step onto land. Living beings conquer new territories. On Earth, the first humans are born, and for the first time, the Sun will not be alone in the universe. The fire gives humanity warmth, light, and over time, strength. Noble families divide the world into territories and the lands we know today. Humanity builds monumental structures, critical infrastructure, and homes." },
+          { title: "Chapter 2 – Humanity", text: "But our planet faces a long journey ahead. Oceans begin to take shape, and the Moon slowly finds its orbit. Life emerges in water, adapts, and dares to step onto land. Living beings conquer new territories. On Earth, the first humans are born, and for the first time, the Sun will not be alone in the universe. Humanity builds monumental structures, critical infrastructure, and homes." },
           { title: "Chapter 3 – Future", text: "What once followed gravity now follows algorithms and logistics. Food becomes a silent connector between origins and futures." }
         ]
       }
     };
 
     const chapterPhotos = {
-      0: [ // Kapitola 1
-        "https://tobi-09.github.io/skaut/img/IMG_4243.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4244.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4311.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4313.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4314.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4315.jpg"
-      ],
-      1: [ // Kapitola 2
-        "https://tobi-09.github.io/skaut/img/FullSizeRender.JPG",
-        "https://tobi-09.github.io/skaut/img/IMG_4247.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4248.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4250.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4251.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4253.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4254.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4255.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4256.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4257.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4259.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4264.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4267.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4269.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4270.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4271.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4272.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4294.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4295.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4296.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4297.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4298.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4299.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4300.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4301.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4302.jpg"
-      ],
-      2: [ // Kapitola 3
-        "https://tobi-09.github.io/skaut/img/IMG_4274.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4276.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4277.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4278.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4279.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4280.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4281.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4282.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4283.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4284.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4285.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4286.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4287.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4288.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4289.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4290.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4291.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4304.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4305.jpg",
-        "https://tobi-09.github.io/skaut/img/IMG_4307.jpg"
-      ]
+      0: ["https://tobi-09.github.io/skaut/img/IMG_4243.jpg", "https://tobi-09.github.io/skaut/img/IMG_4244.jpg", "https://tobi-09.github.io/skaut/img/IMG_4311.jpg", "https://tobi-09.github.io/skaut/img/IMG_4313.jpg", "https://tobi-09.github.io/skaut/img/IMG_4314.jpg", "https://tobi-09.github.io/skaut/img/IMG_4315.jpg"],
+      1: ["https://tobi-09.github.io/skaut/img/FullSizeRender.JPG", "https://tobi-09.github.io/skaut/img/IMG_4247.jpg", "https://tobi-09.github.io/skaut/img/IMG_4248.jpg", "https://tobi-09.github.io/skaut/img/IMG_4250.jpg", "https://tobi-09.github.io/skaut/img/IMG_4251.jpg", "https://tobi-09.github.io/skaut/img/IMG_4253.jpg", "https://tobi-09.github.io/skaut/img/IMG_4254.jpg", "https://tobi-09.github.io/skaut/img/IMG_4255.jpg", "https://tobi-09.github.io/skaut/img/IMG_4256.jpg", "https://tobi-09.github.io/skaut/img/IMG_4257.jpg", "https://tobi-09.github.io/skaut/img/IMG_4259.jpg", "https://tobi-09.github.io/skaut/img/IMG_4264.jpg", "https://tobi-09.github.io/skaut/img/IMG_4267.jpg", "https://tobi-09.github.io/skaut/img/IMG_4269.jpg", "https://tobi-09.github.io/skaut/img/IMG_4270.jpg", "https://tobi-09.github.io/skaut/img/IMG_4271.jpg", "https://tobi-09.github.io/skaut/img/IMG_4272.jpg", "https://tobi-09.github.io/skaut/img/IMG_4294.jpg", "https://tobi-09.github.io/skaut/img/IMG_4295.jpg", "https://tobi-09.github.io/skaut/img/IMG_4296.jpg", "https://tobi-09.github.io/skaut/img/IMG_4297.jpg", "https://tobi-09.github.io/skaut/img/IMG_4298.jpg", "https://tobi-09.github.io/skaut/img/IMG_4299.jpg", "https://tobi-09.github.io/skaut/img/IMG_4300.jpg", "https://tobi-09.github.io/skaut/img/IMG_4301.jpg", "https://tobi-09.github.io/skaut/img/IMG_4302.jpg"],
+      2: ["https://tobi-09.github.io/skaut/img/IMG_4274.jpg", "https://tobi-09.github.io/skaut/img/IMG_4276.jpg", "https://tobi-09.github.io/skaut/img/IMG_4277.jpg", "https://tobi-09.github.io/skaut/img/IMG_4278.jpg", "https://tobi-09.github.io/skaut/img/IMG_4279.jpg", "https://tobi-09.github.io/skaut/img/IMG_4280.jpg", "https://tobi-09.github.io/skaut/img/IMG_4281.jpg", "https://tobi-09.github.io/skaut/img/IMG_4282.jpg", "https://tobi-09.github.io/skaut/img/IMG_4283.jpg", "https://tobi-09.github.io/skaut/img/IMG_4284.jpg", "https://tobi-09.github.io/skaut/img/IMG_4285.jpg", "https://tobi-09.github.io/skaut/img/IMG_4286.jpg", "https://tobi-09.github.io/skaut/img/IMG_4287.jpg", "https://tobi-09.github.io/skaut/img/IMG_4288.jpg", "https://tobi-09.github.io/skaut/img/IMG_4289.jpg", "https://tobi-09.github.io/skaut/img/IMG_4290.jpg", "https://tobi-09.github.io/skaut/img/IMG_4291.jpg", "https://tobi-09.github.io/skaut/img/IMG_4304.jpg", "https://tobi-09.github.io/skaut/img/IMG_4305.jpg", "https://tobi-09.github.io/skaut/img/IMG_4307.jpg"]
     };
 
     function renderContent(lang) {
@@ -347,6 +275,21 @@ It asks whether progress is linear, whether efficiency replaces meaning, and whe
       chaptersRoot.innerHTML = "";
 
       [0,1,2].forEach(i => {
+        // VIDEO 2 VKLÁDANÉ MEZI KAPITOLU 1 A 2
+        if (i === 1) {
+            const vidSec = document.createElement("section");
+            vidSec.className = "video-section";
+            vidSec.innerHTML = `
+                <h2>${t.video2_title}</h2>
+                <div class="video-box">
+                    <video controls playsinline preload="metadata">
+                        <source src="https://tobi-09.github.io/skaut/img/2.2videa.mp4" type="video/mp4">
+                    </video>
+                </div>
+            `;
+            chaptersRoot.appendChild(vidSec);
+        }
+
         const part = chapterPhotos[i];
         if(!part || part.length === 0) return;
 
