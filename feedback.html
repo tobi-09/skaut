@@ -3,58 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zpětná vazba k programu</title>
+    <title>Hodnocení programu</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .rating-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+        body { font-family: 'Google Sans', sans-serif; background-color: #f0f2f5; }
+        .star { cursor: pointer; transition: transform 0.2s, color 0.2s; }
+        .star:hover { transform: scale(1.2); }
+        .star.active { color: #fabb05; }
+        .card { transition: box-shadow 0.3s ease; }
+        .card:hover { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-12">
-    <header class="bg-blue-900 text-white py-8 mb-8 shadow-md">
-        <div class="max-w-2xl mx-auto px-4 text-center">
-            <h1 id="gameName" class="text-3xl font-bold italic mb-2">Načítám program...</h1>
-            <p class="text-blue-200">Tvůj názor nás zajímá! Pomoz nám vylepšit příští hry.</p>
+<body class="text-slate-700 min-h-screen">
+
+    <div class="w-full h-3 bg-blue-700"></div>
+
+    <header class="max-w-2xl mx-auto mt-8 px-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 border-t-[10px] border-t-blue-700">
+            <h1 id="gameName" class="text-3xl font-bold text-slate-900 mb-2 italic">Načítání...</h1>
+            <p class="text-slate-500 border-b pb-4">Děkujeme, že nám pomáháte zlepšovat naše skautské programy. Vaše odpovědi jsou anonymní.</p>
+            <p class="text-red-500 text-sm mt-2 font-medium">* Povinné pole</p>
         </div>
     </header>
 
-    <div id="loading" class="flex justify-center items-center py-20">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+    <div id="loading" class="flex flex-col justify-center items-center py-20">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-700 mb-4"></div>
+        <p class="text-slate-400 animate-pulse">Načítám detaily akce...</p>
     </div>
 
-    <main id="app" class="max-w-2xl mx-auto px-4 hidden">
-        <div id="blocks" class="space-y-6">
+    <main id="app" class="max-w-2xl mx-auto px-4 mt-4 hidden space-y-4">
+        <div id="blocks" class="space-y-4">
             </div>
 
-        <div class="mt-10 p-6 bg-white rounded-2xl shadow-sm border border-slate-200">
-            <h2 class="text-xl font-bold mb-4">Celkový komentář</h2>
-            <textarea id="overallComment" class="w-full p-4 border rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition" rows="4" placeholder="Co se ti líbilo nejvíc? Co bychom měli změnit?"></textarea>
-            
-            <button id="submitBtn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transform transition active:scale-95">
-                Odeslat zpětnou vazbu
+        <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 card">
+            <h2 class="text-lg font-medium mb-4 text-slate-900">Co bychom měli vědět? (Dobrovolné)</h2>
+            <textarea id="overallComment" 
+                class="w-full p-4 border-b-2 border-slate-200 bg-slate-50 focus:border-blue-600 outline-none transition rounded-t-lg resize-none" 
+                rows="3" 
+                placeholder="Tvoje zpráva..."></textarea>
+        </div>
+
+        <div class="flex justify-between items-center pb-12">
+            <button id="submitBtn" class="bg-blue-700 hover:bg-blue-800 text-white font-medium px-8 py-2.5 rounded shadow-md transition-all active:scale-95">
+                Odeslat
             </button>
+            <button onclick="location.reload()" class="text-blue-700 text-sm font-medium hover:bg-blue-50 px-4 py-2 rounded transition">Vymazat formulář</button>
         </div>
     </main>
 
-    <div id="successScreen" class="hidden max-w-md mx-auto mt-20 text-center px-4">
-        <div class="text-6xl mb-4">✅</div>
-        <h2 class="text-2xl font-bold text-slate-800 mb-2">Děkujeme za zpětnou vazbu!</h2>
-        <p class="text-slate-600">Tvé hodnocení bylo úspěšně uloženo k vedoucím.</p>
+    <div id="successScreen" class="hidden max-w-2xl mx-auto mt-8 px-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">✓</div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4">Vaše odpověď byla zaznamenána.</h2>
+            <p class="text-blue-700 underline cursor-pointer hover:text-blue-900" onclick="location.reload()">Odeslat další odpověď</p>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-        import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+        import { getDatabase, ref, get, push } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAgqIX3_OHPrh27vuMJsIUpKLjVLcxMOaU",
             authDomain: "skladatel-progrmu-a-her.firebaseapp.com",
             databaseURL: "https://skladatel-progrmu-a-her-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "skladatel-progrmu-a-her",
-            storageBucket: "skladatel-progrmu-a-her.firebasestorage.app",
-            messagingSenderId: "1088099395066",
-            appId: "1:1088099395066:web:38863cc7963b8a8fc27043"
+            projectId: "skladatel-progrmu-a-her"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -62,7 +76,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('id');
-        let responses = {}; // Ukládání smajlíků pro jednotlivé bloky
+        let ratings = {}; 
 
         if (gameId) {
             get(ref(db, 'feedback/' + gameId)).then((snapshot) => {
@@ -70,70 +84,71 @@
                     const data = snapshot.val();
                     document.getElementById('loading').classList.add('hidden');
                     document.getElementById('app').classList.remove('hidden');
-                    document.getElementById('gameName').innerText = data.meta.name || "Program bez názvu";
+                    document.getElementById('gameName').innerText = data.meta.name || "Bez názvu";
                     
                     const container = document.getElementById('blocks');
-                    data.blocks.forEach((b, index) => {
-                        const blockId = b.id || `block_${index}`;
-                        const div = document.createElement('div');
-                        div.className = "p-6 bg-white rounded-2xl shadow-sm border border-slate-200 transition hover:border-blue-300";
-                        div.innerHTML = `
-                            <h3 class="font-bold text-lg text-slate-800 mb-1">${b.title}</h3>
-                            <p class="text-sm text-slate-500 mb-4 italic">${b.od || ''} - ${b.do || ''} | ${b.type}</p>
-                            <div class="flex justify-between max-w-xs mx-auto">
-                                <button data-block="${blockId}" data-val="1" class="rating-btn text-3xl p-2 rounded-full border-2 border-transparent transition hover:bg-red-50">🙁</button>
-                                <button data-block="${blockId}" data-val="2" class="rating-btn text-3xl p-2 rounded-full border-2 border-transparent transition hover:bg-orange-50">😐</button>
-                                <button data-block="${blockId}" data-val="3" class="rating-btn text-3xl p-2 rounded-full border-2 border-transparent transition hover:bg-blue-50">😊</button>
-                                <button data-block="${blockId}" data-val="4" class="rating-btn text-3xl p-2 rounded-full border-2 border-transparent transition hover:bg-green-50">🤩</button>
+                    data.blocks.forEach((b, idx) => {
+                        const bId = b.id || `idx_${idx}`;
+                        const card = document.createElement('div');
+                        card.className = "bg-white p-8 rounded-xl shadow-sm border border-slate-200 card";
+                        card.innerHTML = `
+                            <h3 class="text-lg font-medium text-slate-900 mb-1">${b.title} <span class="text-red-500">*</span></h3>
+                            <p class="text-sm text-slate-400 mb-6 font-normal">${b.type || 'Program'} • ${b.duration || '?'} min</p>
+                            <div class="flex gap-2 justify-center sm:justify-start" data-block="${bId}">
+                                ${[1,2,3,4,5].map(num => `
+                                    <span class="star text-4xl text-slate-200" data-val="${num}">★</span>
+                                `).join('')}
                             </div>
                         `;
-                        container.appendChild(div);
+                        container.appendChild(card);
                     });
 
-                    // Logika klikání na smajlíky
-                    document.querySelectorAll('.rating-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            const bId = btn.dataset.block;
-                            const val = btn.dataset.val;
-                            // Reset ostatních tlačítek v bloku
-                            document.querySelectorAll(`.rating-btn[data-block="${bId}"]`).forEach(b => b.classList.remove('active', 'border-blue-500'));
-                            // Aktivace kliknutého
-                            btn.classList.add('active', 'border-blue-500');
-                            responses[bId] = val;
-                        });
+                    // Logika hvězdiček
+                    document.querySelectorAll('.star').forEach(star => {
+                        star.onclick = function() {
+                            const bId = this.parentElement.dataset.block;
+                            const val = parseInt(this.dataset.val);
+                            ratings[bId] = val;
+
+                            // Vybarvení hvězd
+                            const siblings = this.parentElement.querySelectorAll('.star');
+                            siblings.forEach((s, i) => {
+                                if(i < val) s.classList.add('active', 'text-yellow-400');
+                                else s.classList.remove('active', 'text-yellow-400');
+                            });
+                        };
                     });
+
                 } else {
-                    document.getElementById('loading').innerHTML = "<p class='text-red-500 font-bold'>Program nebyl nalezen.</p>";
+                    document.getElementById('loading').innerHTML = "Program nenalezen.";
                 }
             });
         }
 
-        // Odeslání do Firebase
-        document.getElementById('submitBtn').addEventListener('click', async () => {
-            if (Object.keys(responses).length === 0 && !document.getElementById('overallComment').value) {
-                alert("Vyplň prosím alespoň něco před odesláním.");
+        // Odeslání
+        document.getElementById('submitBtn').onclick = async () => {
+            const blockCount = document.querySelectorAll('[data-block]').length;
+            if (Object.keys(ratings).length < blockCount) {
+                alert("Prosím ohodnoťte všechny části programu označené hvězdičkou.");
                 return;
             }
 
-            const feedbackData = {
-                gameId: gameId,
-                ratings: responses,
+            const finalData = {
+                gameId,
+                ratings,
                 comment: document.getElementById('overallComment').value,
-                timestamp: Date.now()
+                submittedAt: new Date().toISOString()
             };
 
             try {
-                // Ukládá se do větve "responses/feedback/ID_HRY"
-                const responsesRef = ref(db, `responses/feedback/${gameId}`);
-                await push(responsesRef, feedbackData);
-                
+                await push(ref(db, `responses/feedback/${gameId}`), finalData);
                 document.getElementById('app').classList.add('hidden');
                 document.getElementById('successScreen').classList.remove('hidden');
                 window.scrollTo(0,0);
             } catch (e) {
-                alert("Chyba při odesílání: " + e.message);
+                alert("Chyba při ukládání: " + e.message);
             }
-        });
+        };
     </script>
 </body>
 </html>
