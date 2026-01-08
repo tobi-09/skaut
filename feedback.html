@@ -2,58 +2,138 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zpětná vazba k programu</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .rating-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+    </style>
 </head>
-<body class="bg-slate-100 p-4">
-    <div id="app" class="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
-        <h1 id="gameName" class="text-2xl font-bold mb-4 text-blue-900 italic">Načítám program...</h1>
-        <div id="blocks" class="space-y-4"></div>
+<body class="bg-slate-50 min-h-screen pb-12">
+    <header class="bg-blue-900 text-white py-8 mb-8 shadow-md">
+        <div class="max-w-2xl mx-auto px-4 text-center">
+            <h1 id="gameName" class="text-3xl font-bold italic mb-2">Načítám program...</h1>
+            <p class="text-blue-200">Tvůj názor nás zajímá! Pomoz nám vylepšit příští hry.</p>
+        </div>
+    </header>
+
+    <div id="loading" class="flex justify-center items-center py-20">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+    </div>
+
+    <main id="app" class="max-w-2xl mx-auto px-4 hidden">
+        <div id="blocks" class="space-y-6">
+            </div>
+
+        <div class="mt-10 p-6 bg-white rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-xl font-bold mb-4">Celkový komentář</h2>
+            <textarea id="overallComment" class="w-full p-4 border rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition" rows="4" placeholder="Co se ti líbilo nejvíc? Co bychom měli změnit?"></textarea>
+            
+            <button id="submitBtn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transform transition active:scale-95">
+                Odeslat zpětnou vazbu
+            </button>
+        </div>
+    </main>
+
+    <div id="successScreen" class="hidden max-w-md mx-auto mt-20 text-center px-4">
+        <div class="text-6xl mb-4">✅</div>
+        <h2 class="text-2xl font-bold text-slate-800 mb-2">Děkujeme za zpětnou vazbu!</h2>
+        <p class="text-slate-600">Tvé hodnocení bylo úspěšně uloženo k vedoucím.</p>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+        import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAgqIX3_OHPrh27vuMJsIUpKLjVLcxMOaU",
             authDomain: "skladatel-progrmu-a-her.firebaseapp.com",
             databaseURL: "https://skladatel-progrmu-a-her-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "skladatel-progrmu-a-her"
+            projectId: "skladatel-progrmu-a-her",
+            storageBucket: "skladatel-progrmu-a-her.firebasestorage.app",
+            messagingSenderId: "1088099395066",
+            appId: "1:1088099395066:web:38863cc7963b8a8fc27043"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Získání ID z URL adresy
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('id');
+        let responses = {}; // Ukládání smajlíků pro jednotlivé bloky
 
         if (gameId) {
             get(ref(db, 'feedback/' + gameId)).then((snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    document.getElementById('gameName').innerText = "Hodnocení: " + (data.meta.name || "Bez názvu");
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+                    document.getElementById('gameName').innerText = data.meta.name || "Program bez názvu";
                     
                     const container = document.getElementById('blocks');
-                    data.blocks.forEach(b => {
+                    data.blocks.forEach((b, index) => {
+                        const blockId = b.id || `block_${index}`;
                         const div = document.createElement('div');
-                        div.className = "p-4 border rounded-xl bg-slate-50";
+                        div.className = "p-6 bg-white rounded-2xl shadow-sm border border-slate-200 transition hover:border-blue-300";
                         div.innerHTML = `
-                            <h3 class="font-bold">${b.title}</h3>
-                            <div class="flex gap-2 mt-2">
-                                <button onclick="alert('Děkujeme za hodnocení!')" class="bg-white border p-2 rounded">⭐</button>
-                                <button onclick="alert('Děkujeme za hodnocení!')" class="bg-white border p-2 rounded">⭐⭐</button>
-                                <button onclick="alert('Děkujeme za hodnocení!')" class="bg-white border p-2 rounded">⭐⭐⭐</button>
+                            <h3 class="font-bold text-lg text-slate-800 mb-1">${b.title}</h3>
+                            <p class="text-sm text-slate-500 mb-4 italic">${b.od || ''} - ${b.do || ''} | ${b.type}</p>
+                            <div class="flex justify-between max-w-xs mx-auto">
+                                <button data-block="${blockId}" data-val="1" class="rating-btn text-3xl p-2 rounded-full border-2 border-transparent transition hover:bg-red-50">🙁</button>
+                                <button data-block="${blockId}" data-val="2" class="rating-btn text-3xl p-2 rounded-full border-2 border-transparent transition hover:bg-orange-50">😐</button>
+                                <button data-block="${blockId}" data-val="3" class="rating-btn text-3xl p-2 rounded-full border-2 border-transparent transition hover:bg-blue-50">😊</button>
+                                <button data-block="${blockId}" data-val="4" class="rating-btn text-3xl p-2 rounded-full border-2 border-transparent transition hover:bg-green-50">🤩</button>
                             </div>
                         `;
                         container.appendChild(div);
                     });
+
+                    // Logika klikání na smajlíky
+                    document.querySelectorAll('.rating-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const bId = btn.dataset.block;
+                            const val = btn.dataset.val;
+                            // Reset ostatních tlačítek v bloku
+                            document.querySelectorAll(`.rating-btn[data-block="${bId}"]`).forEach(b => b.classList.remove('active', 'border-blue-500'));
+                            // Aktivace kliknutého
+                            btn.classList.add('active', 'border-blue-500');
+                            responses[bId] = val;
+                        });
+                    });
                 } else {
-                    alert("Program nenalezen.");
+                    document.getElementById('loading').innerHTML = "<p class='text-red-500 font-bold'>Program nebyl nalezen.</p>";
                 }
             });
         }
+
+        // Odeslání do Firebase
+        document.getElementById('submitBtn').addEventListener('click', async () => {
+            if (Object.keys(responses).length === 0 && !document.getElementById('overallComment').value) {
+                alert("Vyplň prosím alespoň něco před odesláním.");
+                return;
+            }
+
+            const feedbackData = {
+                gameId: gameId,
+                ratings: responses,
+                comment: document.getElementById('overallComment').value,
+                timestamp: Date.now()
+            };
+
+            try {
+                // Ukládá se do větve "responses/feedback/ID_HRY"
+                const responsesRef = ref(db, `responses/feedback/${gameId}`);
+                await push(responsesRef, feedbackData);
+                
+                document.getElementById('app').classList.add('hidden');
+                document.getElementById('successScreen').classList.remove('hidden');
+                window.scrollTo(0,0);
+            } catch (e) {
+                alert("Chyba při odesílání: " + e.message);
+            }
+        });
     </script>
 </body>
 </html>
