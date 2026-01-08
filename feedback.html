@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Zpětná vazba k programu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 p-4">
+    <div id="app" class="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
+        <h1 id="gameName" class="text-2xl font-bold mb-4 text-blue-900 italic">Načítám program...</h1>
+        <div id="blocks" class="space-y-4"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgqIX3_OHPrh27vuMJsIUpKLjVLcxMOaU",
+            authDomain: "skladatel-progrmu-a-her.firebaseapp.com",
+            databaseURL: "https://skladatel-progrmu-a-her-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "skladatel-progrmu-a-her"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Získání ID z URL adresy
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('id');
+
+        if (gameId) {
+            get(ref(db, 'feedback/' + gameId)).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    document.getElementById('gameName').innerText = "Hodnocení: " + (data.meta.name || "Bez názvu");
+                    
+                    const container = document.getElementById('blocks');
+                    data.blocks.forEach(b => {
+                        const div = document.createElement('div');
+                        div.className = "p-4 border rounded-xl bg-slate-50";
+                        div.innerHTML = `
+                            <h3 class="font-bold">${b.title}</h3>
+                            <div class="flex gap-2 mt-2">
+                                <button onclick="alert('Děkujeme za hodnocení!')" class="bg-white border p-2 rounded">⭐</button>
+                                <button onclick="alert('Děkujeme za hodnocení!')" class="bg-white border p-2 rounded">⭐⭐</button>
+                                <button onclick="alert('Děkujeme za hodnocení!')" class="bg-white border p-2 rounded">⭐⭐⭐</button>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    alert("Program nenalezen.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>
