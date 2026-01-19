@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Ovládání projekce</title>
+<style>
+body { margin:0; font-family: Arial; background:#111; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh;}
+button { margin:10px; padding:20px 40px; font-size:22px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<h1>Vyber scénu</h1>
+<button onclick="sendScene('1')">Scéna 1</button>
+<button onclick="sendScene('2')">Scéna 2</button>
+<button onclick="sendScene('3')">Scéna 3</button>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBiax9dVOdtX5k3Ajmq-otnfV6JOlOgS1Q",
+    authDomain: "projekce-0.firebaseapp.com",
+    databaseURL: "https://projekce-0-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "projekce-0",
+    storageBucket: "projekce-0.firebasestorage.app",
+    messagingSenderId: "976431090482",
+    appId: "1:976431090482:web:dabed64e8f20b10bc6252b",
+    measurementId: "G-WH569QMXBN"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window.sendScene = (scene) => {
+    set(ref(db, 'scene'), scene)
+      .then(() => console.log("Odeslána scéna:", scene))
+      .catch(err => console.error("Chyba při odesílání:", err));
+  };
+</script>
+
+</body>
+</html>
