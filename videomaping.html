@@ -1,6 +1,74 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
+  <meta charset="UTF-8">
+  <title>Nové funkce – Overlay</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    /* Celoplošné překrytí */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    /* Box s obsahem */
+    #overlay-content {
+      background: #111;
+      color: #f5f5f5;
+      padding: 24px 28px;
+      max-width: 520px;
+      width: 90%;
+      border-radius: 10px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    #overlay-content h1 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      margin-bottom: 0.75rem;
+    }
+
+    #overlay-content ul {
+      padding-left: 1.2rem;
+      margin: 0 0 1.2rem 0;
+    }
+
+    #overlay-content li {
+      margin-bottom: 0.35rem;
+    }
+
+    #overlay-ok {
+      display: inline-block;
+      padding: 8px 18px;
+      border-radius: 6px;
+      border: none;
+      background: #00b894;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    #overlay-ok:hover {
+      background: #019170;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tvoje stránka / canvas / app půjde sem -->
+ <!DOCTYPE html>
+<html lang="cs">
+<head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Video Mapping — opravené efekty (funkční) + Export PNG</title>
@@ -10,28 +78,36 @@
   #video-container{position:fixed;inset:0;overflow:hidden;background:#000;z-index:0}
   #video-container video,#video-container img,#video-container .media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;z-index:0}
   #canvas-overlay{position:fixed;inset:0;cursor:crosshair;z-index:5;pointer-events:auto}
-  .controls{position:fixed;left:12px;top:12px;background:var(--ui-bg);color:var(--ui-color);padding:10px;border-radius:10px;z-index:120;min-width:320px;max-width:540px;backdrop-filter:blur(3px)}
+  .controls{position:fixed;left:12px;top:12px;background:var(--ui-bg);color:var(--ui-color);padding:10px;border-radius:10px;z-index:120;min-width:320px;max-width:540px;backdrop-filter:blur(3px);max-height:90vh;overflow-y:auto}
   .hidden-ui{display:none !important;opacity:0 !important;pointer-events:none !important}
   .controls input[type=color]{width:100%}
-  .controls button,.controls input[type=file]{width:100%;margin-top:6px;padding:8px;border-radius:6px;border:0;background:#222;color:#fff}
+  .controls button,.controls input[type=file]{width:100%;margin-top:6px;padding:8px;border-radius:6px;border:0;background:#222;color:#fff;cursor:pointer;font-weight:600;font-size:13px}
+  .controls button:hover{background:#333}
+  .controls button.active{background:#0066cc}
+  .controls input[type=checkbox]{margin-right:6px;cursor:pointer}
   .hint{font-size:12px;opacity:0.9;margin-top:6px}
-  #polygonList{margin-top:8px;max-height:56vh;overflow:auto}
+  #polygonList{margin-top:8px;max-height:56vh;overflow-y:auto}
   details.polygon-panel{margin-top:8px;padding:8px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)}
-  details.polygon-panel summary{font-weight:700;cursor:pointer;outline:none}
+  details.polygon-panel summary{font-weight:700;cursor:pointer;outline:none;user-select:none}
   .effect-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .eff-wrap{flex:1 1 48%;display:flex;flex-direction:column;gap:6px}
-  .mini-range{width:100%;height:28px}
-  label.block{display:block;margin-top:8px;font-size:12px}
+  .mini-range{width:100%;height:28px;cursor:pointer}
+  label.block{display:block;margin-top:8px;font-size:12px;font-weight:600}
+  label.inline{display:inline-flex;align-items:center;margin-top:6px;font-size:12px;cursor:pointer}
   .small{font-size:12px}
-  .muted{opacity:0.8;font-size:12px}
+  .muted{opacity:0.8;font-size:11px}
   .row{display:flex;gap:8px}
   .col{flex:1}
+  .shortcut-hint{font-size:10px;opacity:0.6;display:inline-block;margin-left:4px}
+  .texture-box{margin-top:8px;padding:8px;background:rgba(100,150,255,0.08);border-radius:6px;border:1px solid rgba(100,150,255,0.2)}
+  .texture-label{font-size:11px;font-weight:600;color:#9cf;margin-bottom:4px;display:block}
+  #grid-overlay{position:fixed;inset:0;pointer-events:none;z-index:1;background-image:linear-gradient(0deg,transparent 49px,rgba(255,255,255,0.1) 49px,rgba(255,255,255,0.1) 50px),linear-gradient(90deg,transparent 49px,rgba(255,255,255,0.1) 49px,rgba(255,255,255,0.1) 50px);background-size:50px 50px;display:none}
 </style>
 </head>
 <body>
 
 <div id="video-container">
-  <video id="video" src="" autoplay loop muted playsinline></video>
+  <div id="grid-overlay"></div>
   <canvas id="canvas-overlay"></canvas>
 </div>
 
@@ -41,28 +117,37 @@
     <button id="finishPolygon">Dokončit polygon</button>
   </div>
   <div class="row" style="margin-top:8px">
+    <button id="playBtn" class="active">⏸ Pause <span class="shortcut-hint">(K)</span></button>
+    <button id="fullscreen">⛶ Fullscreen <span class="shortcut-hint">(F)</span></button>
+  </div>
+  <div class="row" style="margin-top:8px">
     <button id="clearPolygons">Vymazat vše</button>
     <button id="resetBtn">RESET</button>
   </div>
 
   <div class="row" style="margin-top:8px">
     <button id="presentBtn">PRESENT</button>
-    <button id="fullscreen">Fullscreen</button>
-  </div>
-
-  <div class="row" style="margin-top:8px">
     <button id="exportPNG">Export obrysů PNG</button>
-    <button id="dispatchingBtn">IZS Dispecing</button>
   </div>
 
-  <label class="block">Nahrát médium (obraz/video)</label>
+  <label class="inline">
+    <input id="showHandlesChk" type="checkbox" checked/>
+    Zobrazit body
+  </label>
+
+  <label class="inline">
+    <input id="showGridChk" type="checkbox"/>
+    Zobrazit mřížku
+  </label>
+
+  <label class="block">📹 Nahrát médium (obraz/video na pozadí)</label>
   <input id="uploadMedia" type="file" accept="image/*,video/*"/>
 
   <label class="block">Globální intenzita</label>
   <input id="globalIntensity" type="range" min="0.5" max="4" step="0.1" value="1.8"/>
   <div class="muted">Vyšší = silnější čáry / větší částice / rychlejší animace</div>
 
-  <div class="hint">Klikni pro přidání bodu. Dvojklik dokončí polygon. Rozbal polygon v seznamu níže a nastav barvu/vyplnění a efekty.</div>
+  <div class="hint">Klikni pro přidání bodu. Dvojklik dokončí polygon. Rozbal polygon v seznamu níže a nastav barvu/vyplnění/texturu a efekty.</div>
 
   <div id="polygonList"></div>
 </div>
@@ -71,6 +156,7 @@
 /* ---------- základ (HiDPI, elementy) ---------- */
 const canvas = document.getElementById('canvas-overlay');
 const ctx = canvas.getContext('2d');
+const gridOverlay = document.getElementById('grid-overlay');
 let DPR = Math.max(1, window.devicePixelRatio || 1);
 function resizeCanvas(){
   DPR = Math.max(1, window.devicePixelRatio || 1);
@@ -86,7 +172,6 @@ document.addEventListener('fullscreenchange', ()=> setTimeout(resizeCanvas,60));
 resizeCanvas();
 
 const videoContainer = document.getElementById('video-container');
-const video = document.getElementById('video');
 const ui = {
   root: document.getElementById('ui'),
   color: document.getElementById('colorPicker'),
@@ -95,13 +180,21 @@ const ui = {
   resetBtn: document.getElementById('resetBtn'),
   presentBtn: document.getElementById('presentBtn'),
   fullscreenBtn: document.getElementById('fullscreen'),
+  playBtn: document.getElementById('playBtn'),
   upload: document.getElementById('uploadMedia'),
   list: document.getElementById('polygonList'),
   globalIntensity: document.getElementById('globalIntensity'),
-  exportBtn: document.getElementById('exportPNG')
+  exportBtn: document.getElementById('exportPNG'),
+  showHandlesChk: document.getElementById('showHandlesChk'),
+  showGridChk: document.getElementById('showGridChk')
 };
 window.EXAGGERATION = parseFloat(ui.globalIntensity.value) || 1.8;
 ui.globalIntensity.addEventListener('input', ()=> window.EXAGGERATION = parseFloat(ui.globalIntensity.value));
+
+let showHandles = true;
+let isPlaying = false;
+ui.showHandlesChk.addEventListener('change', ()=> showHandles = ui.showHandlesChk.checked);
+ui.showGridChk.addEventListener('change', ()=> gridOverlay.style.display = ui.showGridChk.checked ? 'block' : 'none');
 
 /* ---------- math / helpers ---------- */
 function getMousePos(evt){ const rect = canvas.getBoundingClientRect(); return { x: (evt.clientX - rect.left), y: (evt.clientY - rect.top) }; }
@@ -109,7 +202,6 @@ function polygonCentroid(points){ let x=0,y=0; for(const p of points){ x+=p.x; y
 function polygonBBox(points){ let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9; for(const p of points){ if(p.x<minX)minX=p.x; if(p.y<minY)minY=p.y; if(p.x>maxX)maxX=p.x; if(p.y>maxY)maxY=p.y; } if(maxX<minX) {minX=0; maxX=0; minY=0; maxY=0;} return {minX,minY,maxX,maxY,width:maxX-minX,height:maxY-minY}; }
 function computeEdges(points){ const edges=[]; let total=0; for(let i=0;i<points.length;i++){ const a=points[i], b=points[(i+1)%points.length]; const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy); edges.push({a,b,len,dx,dy}); total+=len;} return {edges,total}; }
 function pointAtDistance(pointsData, dist){ const {edges,total}=pointsData; if(!edges||edges.length===0) return {x:0,y:0}; if(total===0) return edges[0].a; let d=(dist%total+total)%total; for(const e of edges){ if(d<=e.len){ const t=e.len===0?0:d/e.len; return {x:e.a.x + e.dx*t, y:e.a.y + e.dy*t}; } d-=e.len;} const last=edges[edges.length-1]; return {x:last.b.x,y:last.b.y}; }
-/* hex->hsl */
 function hexToHSL(hex){ hex = hex.replace('#',''); if(hex.length===3) hex = hex.split('').map(c=>c+c).join(''); const r = parseInt(hex.substring(0,2),16)/255; const g = parseInt(hex.substring(2,4),16)/255; const b = parseInt(hex.substring(4,6),16)/255; const max = Math.max(r,g,b), min = Math.min(r,g,b); let h=0,s=0,l=(max+min)/2; if(max!==min){ const d=max-min; s = l>0.5? d/(2-max-min): d/(max+min); switch(max){ case r: h=(g-b)/d + (g<b?6:0); break; case g: h=(b-r)/d + 2; break; case b: h=(r-g)/d + 4; break; } h = h*60; } return {h: Math.round(h), s: Math.round(s*100), l: Math.round(l*100)}; }
 
 /* ---------- stav ---------- */
@@ -123,11 +215,50 @@ ui.clearBtn.addEventListener('click', ()=>{ polygons=[]; currentPolygon=null; ui
 ui.resetBtn.addEventListener('click', ()=> { if(!confirm('Opravdu RESETovat?')) return; resetApp(); });
 ui.presentBtn.addEventListener('click', togglePresentation);
 ui.fullscreenBtn.addEventListener('click', ()=> enterFullscreen(videoContainer));
+ui.playBtn.addEventListener('click', togglePlayScene);
 ui.upload.addEventListener('change', handleUpload);
 ui.exportBtn.addEventListener('click', exportOutlinePNG);
-document.getElementById('dispatchingBtn').addEventListener('click', openDispatching);
 
-async function enterFullscreen(elem){ try{ if(!elem) elem=document.documentElement; if(elem.requestFullscreen) await elem.requestFullscreen(); else if(elem.webkitRequestFullscreen) elem.webkitRequestFullscreen(); else if(elem.msRequestFullscreen) elem.msRequestFullscreen(); }catch(e){console.warn('fullscreen error',e);} }
+/* ---------- Keyboard shortcuts ---------- */
+document.addEventListener('keydown', (e) => {
+  if(e.key.toLowerCase() === 'k') { e.preventDefault(); togglePlayScene(); }
+  if(e.key.toLowerCase() === 'f') { e.preventDefault(); enterFullscreen(videoContainer); }
+});
+
+async function enterFullscreen(elem){ 
+  try{ 
+    if(!elem) elem=document.documentElement; 
+    if(elem.requestFullscreen) await elem.requestFullscreen(); 
+    else if(elem.webkitRequestFullscreen) elem.webkitRequestFullscreen(); 
+    else if(elem.msRequestFullscreen) elem.msRequestFullscreen(); 
+  }catch(e){console.warn('fullscreen error',e);} 
+}
+
+/* ---------- Play/Pause scene ---------- */
+function togglePlayScene(){
+  isPlaying = !isPlaying;
+  ui.playBtn.classList.toggle('active', isPlaying);
+  ui.playBtn.innerText = isPlaying ? '▶ Play (K)' : '⏸ Pause (K)';
+  
+  if(mediaLayer && mediaLayer.tagName === 'VIDEO'){
+    if(isPlaying){
+      mediaLayer.play().catch(e => console.warn('Video play error:', e));
+    } else {
+      mediaLayer.pause();
+    }
+  }
+  
+  // také spusť/pozastav všechna videa v polygonovech
+  for(const poly of polygons){
+    if(poly.tex && poly.tex.el && poly.tex.el.tagName === 'VIDEO'){
+      if(isPlaying){
+        poly.tex.el.play().catch(e => {});
+      } else {
+        poly.tex.el.pause();
+      }
+    }
+  }
+}
 
 /* ---------- myš / kreslení polygonu (drag bodů) ---------- */
 canvas.addEventListener('click', (e)=>{ if(dragPoint) return; const pos=getMousePos(e); if(!currentPolygon) currentPolygon = createEmptyPolygon(ui.color.value); currentPolygon.points.push(pos); });
@@ -145,9 +276,9 @@ function createEmptyPolygon(color){
     animOffset:0, intensity:1,
     anim: { fill:false, colorCycle:false },
     fillColor:'#000000', fillOpacity:0.35, fillType:'solid',
-    // effect arrays (initialized)
-    particles:[], sparks:[], smoke:[], fog:[], rings:[], shockwaves:[], fireworks:[], falling:[], rotatingDots:[], spiral:[], zoomRings:[], lightning:[], driftCloud:[],
-    _edgeData:null, _morphState:{t:0,dir:1,seed:Math.random()}
+    particles:[], sparks:[], smoke:[], fog:[], rings:[], shockwaves:[], fireworks:[], falling:[], rotatingDots:[], spiral:[], zoomRings:[], lightning:[], driftCloud:[], glitchParts:[],
+    _edgeData:null, _morphState:{t:0,dir:1,seed:Math.random()},
+    tex:{ el:null, scale:1, offsetX:0, offsetY:0 }
   };
 }
 
@@ -163,34 +294,82 @@ function finishPolygon(){
   } else alert('Polygon musí mít alespoň 3 body.');
 }
 
-/* ---------- UI per-polygon (rework: collapsible panels + sliders) ---------- */
+/* ---------- UI per-polygon ---------- */
 function addPolygonControls(polygon){
   const idx = polygons.indexOf(polygon)+1;
   const details = document.createElement('details'); details.className='polygon-panel'; details.open=true;
   const summary = document.createElement('summary'); summary.innerText = `Polygon #${idx} — body: ${polygon.points.length}`; details.appendChild(summary);
 
-  // color + cycle
   const row = document.createElement('div'); row.className='row'; row.style.marginTop='6px';
   const colorInp = document.createElement('input'); colorInp.type='color'; colorInp.value = polygon.color; colorInp.addEventListener('input', e=>{ polygon.color = e.target.value; const h = hexToHSL(polygon.color); polygon.colorHue = h.h; });
   const cycleBtn = document.createElement('button'); cycleBtn.innerText = polygon.anim.colorCycle ? 'Color cycle: ON' : 'Color cycle: OFF';
   cycleBtn.addEventListener('click', ()=>{ polygon.anim.colorCycle = !polygon.anim.colorCycle; cycleBtn.innerText = polygon.anim.colorCycle ? 'Color cycle: ON' : 'Color cycle: OFF'; });
   row.appendChild(colorInp); row.appendChild(cycleBtn); details.appendChild(row);
 
-  // fill controls
   const fillRow = document.createElement('div'); fillRow.style.marginTop='8px';
   const fillBtn = document.createElement('button'); fillBtn.innerText = polygon.anim.fill ? 'Vyplnění: ON' : 'Vyplnění: OFF';
   fillBtn.addEventListener('click', ()=>{ polygon.anim.fill = !polygon.anim.fill; fillBtn.innerText = polygon.anim.fill ? 'Vyplnění: ON' : 'Vyplnění: OFF'; });
   const fillColor = document.createElement('input'); fillColor.type='color'; fillColor.value = polygon.fillColor || '#000000'; fillColor.addEventListener('input', e=> polygon.fillColor = e.target.value);
   const fillOpacity = document.createElement('input'); fillOpacity.type='range'; fillOpacity.min=0; fillOpacity.max=1; fillOpacity.step=0.01; fillOpacity.value = polygon.fillOpacity || 0.35; fillOpacity.addEventListener('input', e=> polygon.fillOpacity = parseFloat(e.target.value));
-  const fillType = document.createElement('select'); const o1=document.createElement('option'); o1.value='solid'; o1.text='solid'; const o2=document.createElement('option'); o2.value='gradient'; o2.text='gradient'; fillType.appendChild(o1); fillType.appendChild(o2); fillType.value = polygon.fillType || 'solid'; fillType.addEventListener('change', e=> polygon.fillType = e.target.value);
-  fillRow.appendChild(fillBtn); fillRow.appendChild(fillColor); fillRow.appendChild(fillOpacity); fillRow.appendChild(fillType); details.appendChild(fillRow);
+  fillRow.appendChild(fillBtn); fillRow.appendChild(fillColor); fillRow.appendChild(fillOpacity); details.appendChild(fillRow);
 
-  // intensity
   const ilabel = document.createElement('label'); ilabel.className='block small'; ilabel.innerText = 'Intenzita polygonu';
   const irange = document.createElement('input'); irange.type='range'; irange.min=0.3; irange.max=3; irange.step=0.1; irange.value = polygon.intensity || 1; irange.addEventListener('input', ()=> polygon.intensity = parseFloat(irange.value));
   details.appendChild(ilabel); details.appendChild(irange);
 
-  // effects organized
+  // TEXTURE MAPPING UI - OPRAVENO
+  const texBox = document.createElement('div'); texBox.className='texture-box';
+  const texLabel = document.createElement('span'); texLabel.className='texture-label'; texLabel.innerText='🎬 Textura v polygonu';
+  texBox.appendChild(texLabel);
+  
+  const texUpload = document.createElement('input'); texUpload.type='file'; texUpload.accept='image/*,video/*';
+  texUpload.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const url = URL.createObjectURL(file);
+    let el;
+    if(file.type.startsWith('video')){
+      el = document.createElement('video');
+      el.src = url;
+      el.autoplay = false;
+      el.loop = true;
+      el.muted = true;
+      el.playsInline = true;
+      el.crossOrigin = 'anonymous';
+      el.addEventListener('loadedmetadata', ()=>{
+        console.log('✓ Polygon video loaded');
+        if(isPlaying) el.play().catch(e=>{});
+      });
+    } else {
+      el = document.createElement('img');
+      el.src = url;
+      el.crossOrigin = 'anonymous';
+    }
+    polygon.tex.el = el;
+    texUpload.value = '';
+  });
+  texBox.appendChild(texUpload);
+
+  const scaleLabel = document.createElement('label'); scaleLabel.className='block small'; scaleLabel.style.marginTop='6px'; scaleLabel.innerText = 'Měřítko textury';
+  const scaleRange = document.createElement('input'); scaleRange.type='range'; scaleRange.min=0.1; scaleRange.max=5; scaleRange.step=0.1; scaleRange.value = polygon.tex.scale || 1;
+  scaleRange.className='mini-range';
+  scaleRange.addEventListener('input', ()=> polygon.tex.scale = parseFloat(scaleRange.value));
+  texBox.appendChild(scaleLabel); texBox.appendChild(scaleRange);
+
+  const offsetXLabel = document.createElement('label'); offsetXLabel.className='block small'; offsetXLabel.style.marginTop='6px'; offsetXLabel.innerText = 'Posun X textury';
+  const offsetXRange = document.createElement('input'); offsetXRange.type='range'; offsetXRange.min=-200; offsetXRange.max=200; offsetXRange.step=1; offsetXRange.value = polygon.tex.offsetX || 0;
+  offsetXRange.className='mini-range';
+  offsetXRange.addEventListener('input', ()=> polygon.tex.offsetX = parseFloat(offsetXRange.value));
+  texBox.appendChild(offsetXLabel); texBox.appendChild(offsetXRange);
+
+  const offsetYLabel = document.createElement('label'); offsetYLabel.className='block small'; offsetYLabel.style.marginTop='6px'; offsetYLabel.innerText = 'Posun Y textury';
+  const offsetYRange = document.createElement('input'); offsetYRange.type='range'; offsetYRange.min=-200; offsetYRange.max=200; offsetYRange.step=1; offsetYRange.value = polygon.tex.offsetY || 0;
+  offsetYRange.className='mini-range';
+  offsetYRange.addEventListener('input', ()=> polygon.tex.offsetY = parseFloat(offsetYRange.value));
+  texBox.appendChild(offsetYLabel); texBox.appendChild(offsetYRange);
+
+  details.appendChild(texBox);
+
   const categories = {
     'Hrany': ['movingEdge','edgeRunner','marquee','wave','lightningEdge','glowPulse'],
     'Částice & Iskry': ['particles','rgbSmoke','sparkle','sparks','fire','starField','fireworks','fallingParticles'],
@@ -226,27 +405,87 @@ function refreshTitles(){ Array.from(ui.list.querySelectorAll('summary')).forEac
 
 /* ---------- media upload ---------- */
 function handleUpload(e){
-  const file = e.target.files[0]; if(!file) return;
+  const file = e.target.files[0]; 
+  if(!file) return;
   const url = URL.createObjectURL(file);
   if(lastMediaURL){ try{ URL.revokeObjectURL(lastMediaURL); }catch(e){} lastMediaURL=null; }
   lastMediaURL = url;
-  if(mediaLayer){ mediaLayer.remove(); mediaLayer=null; }
-  if(file.type.startsWith('video')){ const v=document.createElement('video'); v.className='media'; v.src=url; v.autoplay=true; v.loop=true; v.muted=true; v.playsInline=true; v.style.pointerEvents='none'; videoContainer.appendChild(v); mediaLayer=v; }
-  else { const img=document.createElement('img'); img.className='media'; img.src=url; img.style.pointerEvents='none'; videoContainer.appendChild(img); mediaLayer=img; }
+  if(mediaLayer){ 
+    try{ 
+      if(mediaLayer.tagName==='VIDEO'){ mediaLayer.pause(); mediaLayer.src=''; } 
+      mediaLayer.remove(); 
+    }catch(e){} 
+    mediaLayer=null; 
+  }
+  
+  if(file.type.startsWith('video')){ 
+    const v=document.createElement('video'); 
+    v.className='media'; 
+    v.src=url; 
+    v.autoplay=false;
+    v.loop=true; 
+    v.muted=true; 
+    v.playsInline=true; 
+    v.style.pointerEvents='none';
+    v.crossOrigin='anonymous';
+    v.addEventListener('error', (e)=> console.error('Video error:', e));
+    v.addEventListener('loadedmetadata', ()=> console.log('✓ BG Video loaded:', v.duration + 's'));
+    v.addEventListener('canplay', ()=> { console.log('✓ BG Video ready'); if(isPlaying) v.play().catch(e=>{}); });
+    videoContainer.appendChild(v); 
+    mediaLayer=v;
+  }
+  else { 
+    const img=document.createElement('img'); 
+    img.className='media'; 
+    img.src=url; 
+    img.style.pointerEvents='none'; 
+    img.crossOrigin='anonymous';
+    img.addEventListener('error', (e)=> console.error('Image error:', e));
+    img.addEventListener('load', ()=> console.log('✓ BG Image loaded'));
+    videoContainer.appendChild(img); 
+    mediaLayer=img;
+  }
 }
 
 /* ---------- reset / present ---------- */
-function resetApp(){ polygons=[]; currentPolygon=null; ui.list.innerHTML=''; if(mediaLayer){ try{ if(mediaLayer.tagName==='VIDEO'){ mediaLayer.pause(); mediaLayer.src=''; } mediaLayer.remove(); }catch(e){} mediaLayer=null; } if(lastMediaURL){ try{ URL.revokeObjectURL(lastMediaURL);}catch(e){} lastMediaURL=null;} if(rafId) cancelAnimationFrame(rafId); ctx.clearRect(0,0,canvas.width,canvas.height); rafId = requestAnimationFrame(loop); }
+function resetApp(){ 
+  polygons=[]; 
+  currentPolygon=null; 
+  ui.list.innerHTML=''; 
+  isPlaying = false;
+  ui.playBtn.classList.remove('active');
+  ui.playBtn.innerText = '⏸ Pause (K)';
+  if(mediaLayer){ 
+    try{ 
+      if(mediaLayer.tagName==='VIDEO'){ mediaLayer.pause(); mediaLayer.src=''; } 
+      mediaLayer.remove(); 
+    }catch(e){} 
+    mediaLayer=null; 
+  } 
+  if(lastMediaURL){ 
+    try{ URL.revokeObjectURL(lastMediaURL);}catch(e){} 
+    lastMediaURL=null;
+  } 
+  if(rafId) cancelAnimationFrame(rafId); 
+  ctx.clearRect(0,0,canvas.width,canvas.height); 
+  rafId = requestAnimationFrame(loop); 
+}
+
 let presentMode=false;
-async function togglePresentation(){ presentMode=!presentMode; if(presentMode){ ui.root.classList.add('hidden-ui'); try{ await enterFullscreen(videoContainer);}catch(e){} ui.presentBtn.innerText='PRESENT (restore)'; } else { ui.root.classList.remove('hidden-ui'); try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){} ui.presentBtn.innerText='PRESENT'; } }
+async function togglePresentation(){ 
+  presentMode=!presentMode; 
+  if(presentMode){ 
+    ui.root.classList.add('hidden-ui'); 
+    try{ await enterFullscreen(videoContainer);}catch(e){} 
+    ui.presentBtn.innerText='PRESENT (restore)'; 
+  } else { 
+    ui.root.classList.remove('hidden-ui'); 
+    try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){} 
+    ui.presentBtn.innerText='PRESENT'; 
+  } 
+}
 
-function openDispatching(){ window.open('izs.dispecing.html', '_blank'); }
-
-/* ========== EFEKTY - spawn/update/draw ========== */
-/* Všechny efekty používají bezpečné beginPath/stroke/fill a respektují polygon[k+'_power'] a polygon.intensity a global EXAGGERATION.
-   Pro každý polygon uchováváme pole částic (např. polygon.sparks) a udržujeme jejich počet pod limitem pro výkon. */
-
-/* helper spawn general */
+/* ========== EFEKTY ========== */
 function spawnParticles(arr, x,y, count, speed, lifeBase, sizeBase, colorFn){
   for(let i=0;i<count;i++){
     const ang = Math.random()*Math.PI*2;
@@ -255,9 +494,6 @@ function spawnParticles(arr, x,y, count, speed, lifeBase, sizeBase, colorFn){
   }
 }
 
-/* sparks (short bright lines) handled inline */
-
-/* fireworks spawn */
 function spawnFirework(polygon){
   if(polygon.fireworks.length > 12) return;
   const c = polygonCentroid(polygon.points);
@@ -268,7 +504,6 @@ function spawnFirework(polygon){
   spawnParticles(polygon.fireworks[polygon.fireworks.length-1].particles, x, y, 20, 6, 40, 3, ()=> `hsla(${hue},90%,60%,1)`);
 }
 
-/* spawn falling particles (rain / confetti) */
 function spawnFalling(polygon){
   if(polygon.falling.length > 80) return;
   const b = polygon.bbox || polygonBBox(polygon.points);
@@ -277,14 +512,12 @@ function spawnFalling(polygon){
   }
 }
 
-/* lightning edge: create short jagged strokes along edges */
 function maybeSpawnLightning(polygon){
   if(Math.random() < 0.01 * (polygon.lightningEdge_power||1)) {
     const data = polygon._edgeData || (polygon._edgeData = computeEdges(polygon.points));
     const total = data.total || 0;
     const pos = Math.random()*total;
     const a = pointAtDistance(data,pos);
-    // simple bolt: small polyline outward
     const len = 20 + Math.random()*40;
     const ang = -Math.PI/2 + (Math.random()-0.5)*Math.PI*0.9;
     const points = [];
@@ -299,7 +532,6 @@ function maybeSpawnLightning(polygon){
   }
 }
 
-/* morph polygon: simple sinusoidal displacement of vertices */
 function morphStep(polygon, t){
   const ms = polygon._morphState;
   if(!polygon.anim.morphPolygon) return;
@@ -313,9 +545,6 @@ function morphStep(polygon, t){
   }
 }
 
-/* noiseDistort: small jitter every frame (non-destructive) applied when drawing */
-
-/* glitchLines: brief horizontal/vertical line artifacts inside bbox */
 function maybeSpawnGlitch(polygon){
   if(Math.random() < 0.004 * (polygon.glitchLines_power||1)){
     const b = polygon.bbox || polygonBBox(polygon.points);
@@ -328,11 +557,9 @@ function maybeSpawnGlitch(polygon){
   }
 }
 
-/* update / draw helpers for each effect - they ensure beginPath per stroke/fill and cap particle counts */
 function updateAndDrawEffects(polygon, t){
   const I = (polygon.intensity||1) * window.EXAGGERATION;
 
-  // SPARKS
   if(polygon.anim.sparks){
     if(Math.random() < 0.18*I) {
       const p0 = polygon.points[Math.floor(Math.random()*polygon.points.length)];
@@ -351,7 +578,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // RGB SMOKE (colorful blobs)
   if(polygon.anim.rgbSmoke){
     if(Math.random() < 0.35*I) {
       const b = polygon.bbox || polygonBBox(polygon.points);
@@ -370,7 +596,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // WHITE FOG (soft white ellipses)
   if(polygon.anim.whiteFog){
     if(Math.random() < 0.6*I){
       const b = polygon.bbox || polygonBBox(polygon.points);
@@ -391,7 +616,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // CENTER RINGS
   if(polygon.anim.centerRings){
     polygon._ringTimer = polygon._ringTimer || 0;
     polygon._ringTimer -= 1;
@@ -415,7 +639,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // SHOCKWAVE
   if(polygon.anim.shockwave){
     if(Math.random() < 0.02 * (polygon.shockwave_power||1) * I) {
       const c = polygonCentroid(polygon.points);
@@ -436,7 +659,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // ZOOM RINGS (center burst expanding filled rings)
   if(polygon.anim.zoomRings){
     if(Math.random() < 0.02 * (polygon.zoomRings_power||1) * I){
       const c = polygonCentroid(polygon.points);
@@ -455,7 +677,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // ROTATING DOTS
   if(polygon.anim.rotatingDots){
     polygon._rotAngle = (polygon._rotAngle || 0) + 0.06*(polygon.rotatingDots_power||1) * I;
     const c = polygonCentroid(polygon.points);
@@ -469,7 +690,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // SPIRAL INSIDE
   if(polygon.anim.spiralInside){
     polygon._spiro = polygon._spiro || 0;
     polygon._spiro += 0.06 * (polygon.spiralInside_power||1) * I;
@@ -484,12 +704,10 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // FIREWORKS
   if(polygon.anim.fireworks){
     if(Math.random() < 0.02*I) spawnFirework(polygon);
     for(let i=polygon.fireworks.length-1;i>=0;i--){
       const fw = polygon.fireworks[i];
-      // draw sub-particles
       for(let j=fw.particles.length-1;j>=0;j--){
         const p = fw.particles[j];
         ctx.beginPath();
@@ -505,7 +723,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // FALLING (rain/confetti)
   if(polygon.anim.fallingParticles){
     spawnFalling(polygon);
     for(let i=polygon.falling.length-1;i>=0;i--){
@@ -517,7 +734,6 @@ function updateAndDrawEffects(polygon, t){
     ctx.globalAlpha = 1;
   }
 
-  // LIGHTNING
   if(polygon.anim.lightningEdge){
     maybeSpawnLightning(polygon);
     for(let i=polygon.lightning.length-1;i>=0;i--){
@@ -533,7 +749,6 @@ function updateAndDrawEffects(polygon, t){
     }
   }
 
-  // GLITCH LINES
   if(polygon.anim.glitchLines){
     maybeSpawnGlitch(polygon);
     for(let i=polygon.glitchParts.length-1;i>=0;i--){
@@ -548,41 +763,70 @@ function updateAndDrawEffects(polygon, t){
     ctx.globalAlpha = 1;
   }
 
-  // MORPH POLYGON
   if(polygon.anim.morphPolygon) morphStep(polygon, t);
 
-  // limit arrays for perf
   if(polygon.smoke.length > 160) polygon.smoke.splice(0, polygon.smoke.length - 140);
   if(polygon.fog.length > 120) polygon.fog.splice(0, polygon.fog.length - 100);
   if(polygon.sparks.length > 200) polygon.sparks.splice(0, polygon.sparks.length - 160);
   if(polygon.fireworks.length > 12) polygon.fireworks.splice(0, polygon.fireworks.length - 12);
 }
 
-/* ---------- kreslení polygonu (vše v jednom, bezpečné) ---------- */
+/* ---------- kreslení polygonu s texture mapping (OPRAVENO) ---------- */
 function drawPolygon(polygon, isFinal, t){
   if(!polygon || !polygon.points || polygon.points.length<1) return;
   ctx.save();
   polygon.bbox = polygon.bbox || polygonBBox(polygon.points);
   const I = (polygon.intensity || 1) * window.EXAGGERATION;
 
-  // stroke color (color cycle)
   let strokeColor = polygon.color;
   if(polygon.anim.colorCycle){
     const hue = ((polygon.colorHue || 0) + (t/20)) % 360;
     strokeColor = `hsl(${Math.round(hue)},85%,60%)`;
   }
 
-  // noiseDistort: create temp pts
   let pts = polygon.points;
   if(polygon.anim.noiseDistort){
     pts = polygon.points.map(p=> ({ x: p.x + (Math.random()-0.5)*1.2*I, y: p.y + (Math.random()-0.5)*1.2*I }));
   }
 
-  // build path
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
   for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
   if(isFinal && pts.length>2) ctx.closePath();
+
+  // TEXTURE MAPPING - KRESLENÍ VIDEA/OBRÁZKU
+  if(polygon.tex && polygon.tex.el && isFinal && pts.length>2){
+    try{
+      ctx.save();
+      ctx.clip();
+      
+      const texEl = polygon.tex.el;
+      const scale = polygon.tex.scale || 1;
+      const offsetX = polygon.tex.offsetX || 0;
+      const offsetY = polygon.tex.offsetY || 0;
+      
+      // zjisti rozměry média
+      let mediaWidth = 100, mediaHeight = 100;
+      if(texEl.tagName === 'VIDEO'){
+        mediaWidth = texEl.videoWidth || 100;
+        mediaHeight = texEl.videoHeight || 100;
+      } else {
+        mediaWidth = texEl.naturalWidth || texEl.width || 100;
+        mediaHeight = texEl.naturalHeight || texEl.height || 100;
+      }
+      
+      const b = polygon.bbox;
+      const scaledWidth = mediaWidth * scale;
+      const scaledHeight = mediaHeight * scale;
+      const drawX = b.minX + (b.width - scaledWidth) / 2 + offsetX;
+      const drawY = b.minY + (b.height - scaledHeight) / 2 + offsetY;
+      
+      ctx.drawImage(texEl, drawX, drawY, scaledWidth, scaledHeight);
+      ctx.restore();
+    } catch(e){
+      console.warn('Texture draw error:', e);
+    }
+  }
 
   // fill
   if(polygon.anim.fill && isFinal && pts.length>2){
@@ -606,7 +850,6 @@ function drawPolygon(polygon, isFinal, t){
     ctx.restore();
   }
 
-  // base stroke
   ctx.save();
   ctx.lineWidth = (polygon.anim.pulse ? (2 + Math.abs(Math.sin(t/200)) * 2) : 2) * Math.max(1, I*0.7) * (polygon.stroke_power||1);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -615,7 +858,6 @@ function drawPolygon(polygon, isFinal, t){
   ctx.stroke();
   ctx.restore();
 
-  // marquee
   if(polygon.anim.marquee){
     ctx.save(); ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
     polygon.animOffset = (polygon.animOffset || 0) + 6 * I * (polygon.marquee_power||1);
@@ -623,14 +865,12 @@ function drawPolygon(polygon, isFinal, t){
     ctx.strokeStyle = strokeColor; ctx.globalAlpha = 0.75; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.restore();
   }
 
-  // movingEdge
   if(polygon.anim.movingEdge){
     ctx.save(); ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
     polygon.animOffset = (polygon.animOffset || 0) + 3 * I * (polygon.movingEdge_power||1);
     ctx.setLineDash([12*I,8*I]); ctx.lineDashOffset = -polygon.animOffset; ctx.lineWidth = 3 * I; ctx.strokeStyle = strokeColor; ctx.stroke(); ctx.setLineDash([]); ctx.restore();
   }
 
-  // edgeRunner
   if(polygon.anim.edgeRunner){
     if(!polygon._edgeData || polygon._edgeData.pointsHash !== polygon.points.length){ polygon._edgeData = computeEdges(polygon.points); polygon._edgeData.pointsHash = polygon.points.length; }
     const data = polygon._edgeData;
@@ -648,29 +888,26 @@ function drawPolygon(polygon, isFinal, t){
     ctx.lineWidth = 4 * I; ctx.lineCap = 'round'; ctx.strokeStyle = strokeColor; ctx.stroke(); ctx.setLineDash([]);
   }
 
-  // wave outline
   if(polygon.anim.wave){
     ctx.save(); ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y + Math.sin(t/300)*6*(polygon.wave_power||1));
     for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y + Math.sin(t/300 + i*0.6)*6*(polygon.wave_power||1));
     ctx.lineWidth = 2 * I; ctx.strokeStyle = strokeColor; ctx.stroke(); ctx.restore();
   }
 
-  // explode short lines on verts
   if(polygon.anim.explode){
     for(const pt of polygon.points){
       if(Math.random() < 0.06){ const len = 6 + Math.random()*28*(polygon.explode_power||1); const ang = Math.random()*Math.PI*2; ctx.beginPath(); ctx.moveTo(pt.x,pt.y); ctx.lineTo(pt.x + Math.cos(ang)*len, pt.y + Math.sin(ang)*len); ctx.strokeStyle = strokeColor; ctx.lineWidth = 1 * I; ctx.stroke(); }
     }
   }
 
-  // draw handles last so they are clickable
-  for(const pt of polygon.points){
-    ctx.beginPath(); ctx.fillStyle = '#fff'; ctx.globalAlpha = 1; ctx.arc(pt.x,pt.y,4*Math.min(1.6,I),0,Math.PI*2); ctx.fill();
+  if(showHandles){
+    for(const pt of polygon.points){
+      ctx.beginPath(); ctx.fillStyle = '#fff'; ctx.globalAlpha = 1; ctx.arc(pt.x,pt.y,4*Math.min(1.6,I),0,Math.PI*2); ctx.fill();
+    }
   }
 
-  // after base drawing, update and draw per-effect particles and other effects
   updateAndDrawEffects(polygon, t);
 
-  // draw lightning, glitched rects etc. handled inside updateAndDrawEffects
   ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.restore();
 }
 
@@ -682,7 +919,6 @@ function loop(now){
 
   for(const p of polygons){
     p.bbox = p.bbox || polygonBBox(p.points);
-    // ensure arrays exist
     p.sparks = p.sparks || []; p.smoke = p.smoke || []; p.fog = p.fog || []; p.rings = p.rings || []; p.shockwaves = p.shockwaves || [];
     p.fireworks = p.fireworks || []; p.falling = p.falling || []; p.lightning = p.lightning || []; p.glitchParts = p.glitchParts || [];
     try{ drawPolygon(p, true, perfNow); } catch(e){ console.error('drawPolygon error', e); }
@@ -691,7 +927,7 @@ function loop(now){
   if(currentPolygon){
     currentPolygon.bbox = polygonBBox(currentPolygon.points || []);
     try{ drawPolygon(currentPolygon, false, perfNow); } catch(e){}
-    if(mousePos && currentPolygon.points.length>0){
+    if(mousePos && currentPolygon.points.length>0 && showHandles){
       const last = currentPolygon.points[currentPolygon.points.length-1];
       ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(mousePos.x, mousePos.y);
       ctx.strokeStyle = currentPolygon.color; ctx.lineWidth = 1; ctx.setLineDash([6,6]); ctx.stroke(); ctx.setLineDash([]);
@@ -702,25 +938,19 @@ function loop(now){
 }
 rafId = requestAnimationFrame(loop);
 
-
-/* === Export PNG s bílými obrysy na černém pozadí === */
+/* === Export PNG === */
 function exportOutlinePNG(){
-  // export canvas at device-pixel resolution
   const exportCanvas = document.createElement('canvas');
-  // match internal (device) pixel size
   exportCanvas.width = canvas.width;
   exportCanvas.height = canvas.height;
   const ectx = exportCanvas.getContext('2d');
-  // use same transform as main canvas so we can draw using CSS px coordinates
   ectx.setTransform(DPR,0,0,DPR,0,0);
 
-  // black background (draw using CSS px coords)
   ectx.fillStyle = '#000';
   ectx.fillRect(0,0,innerWidth,innerHeight);
 
-  // white outlines
   ectx.strokeStyle = '#fff';
-  ectx.lineWidth = 2; // in CSS px (transform scales by DPR)
+  ectx.lineWidth = 2;
   ectx.lineJoin = 'round';
   ectx.lineCap = 'round';
 
@@ -733,7 +963,6 @@ function exportOutlinePNG(){
     ectx.stroke();
   }
 
-  // create download
   exportCanvas.toBlob(function(blob){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -746,5 +975,32 @@ function exportOutlinePNG(){
 }
 
 </script>
+</body>
+</html>
+
+  <!-- Overlay s novými funkcemi -->
+  <div id="overlay">
+    <div id="overlay-content">
+      <h1>Nové funkce v projektu</h1>
+      <ul>
+        <li>Média jako výplň polygonu (texture mapping) s vlastností <code>tex</code>.</li>
+        <li>UI ovládání textur: nahrání obrázku/videa, scale, posun X/Y.</li>
+        <li>Globální přepínač <code>showHandles</code> pro zobrazení editačních bodů.</li>
+        <li>Kalibrační mřížka s možností zapnutí/vypnutí v menu.</li>
+        <li>Zachované HiDPI škálování canvasu a všechny částicové efekty.</li>
+        <li>Při kreslení nového tvaru zůstává viditelná pomocná čára k myši.</li>
+      </ul>
+      <button id="overlay-ok">OK</button>
+    </div>
+  </div>
+
+  <script>
+    const overlay = document.getElementById('overlay');
+    const okButton = document.getElementById('overlay-ok');
+
+    okButton.addEventListener('click', () => {
+      overlay.style.display = 'none';
+    });
+  </script>
 </body>
 </html>
