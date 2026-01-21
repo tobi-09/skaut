@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skaut - Rozcestník projektů</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 { color: #00d4ff; border-bottom: 2px solid #00d4ff; padding-bottom: 10px; }
+        h2 { color: #ffcc00; margin-top: 30px; font-size: 1.2rem; text-transform: uppercase; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        a {
+            background: #333;
+            color: white;
+            text-decoration: none;
+            padding: 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border-left: 5px solid transparent;
+            display: block;
+        }
+        
+        a:hover {
+            background: #444;
+            border-left: 5px solid #00d4ff;
+            transform: translateX(5px);
+        }
+
+        .footer {
+            margin-top: 50px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Skautský Rozcestník</h1>
+        <p>Přehled všech podstránek a projektů na GitHubu.</p>
+
+        <h2>🏠 Hlavní stránky</h2>
+        <div class="grid">
+            <a href="https://tobi-09.github.io/skaut/index.html">Domovská stránka (Index)</a>
+            <a href="https://tobi-09.github.io/skaut/feedback.html">Zpětná vazba (Feedback)</a>
+            <a href="https://tobi-09.github.io/skaut/izs.html">IZS Info</a>
+            <a href="https://tobi-09.github.io/skaut/izs.dispecing.html">IZS Dispečink</a>
+            <a href="https://tobi-09.github.io/skaut/zažitek.html">Zažitek</a>
+        </div>
+
+        <h2>🎬 Videomapping & Media</h2>
+        <div class="grid">
+            <a href="https://tobi-09.github.io/skaut/videomaping.html">Hlavní Videomapping</a>
+            <a href="https://tobi-09.github.io/skaut/rozhaní videomaping.html">Rozhraní Videomappingu</a>
+            <a href="https://tobi-09.github.io/skaut/videomaping-bíladira.html">Videomaping - Bílá díra</a>
+            <a href="https://tobi-09.github.io/skaut/večeře-videomaping.html">Večeře - Videomaping</a>
+            <a href="https://tobi-09.github.io/skaut/vlny-videomaping.html">Vlny - Videomaping</a>
+        </div>
+
+        <h2>🎵 Skautský Skladatel</h2>
+        <div class="grid">
+            <a href="https://tobi-09.github.io/skaut/skautskyskladatel.html">Skladatel (Hlavní)</a>
+            <a href="https://tobi-09.github.io/skaut/skaldateltest.html">Skladatel Test</a>
+        </div>
+
+        <h2>🧪 Testovací soubory</h2>
+        <div class="grid">
+            <a href="https://tobi-09.github.io/skaut/test.html">Základní Test</a>
+            <a href="https://tobi-09.github.io/skaut/testjini.html">Test Jini (Object Detection)</a>
+            <a href="https://tobi-09.github.io/skaut/testovany.html">Testovaný soubor</a>
+            <a href="https://tobi-09.github.io/skaut/zkoška.html">Zkoška (HTML)</a>
+            <a href="https://tobi-09.github.io/skaut/online_viewer_net (56).html">Online Viewer 56</a>
+            <a href="https://tobi-09.github.io/skaut/online_viewer_net (58).html">Online Viewer 58</a>
+        </div>
+
+        <div class="footer">
+            © 2026 tobi-09 | Vytvořeno pro skautský projekt
+        </div>
+    </div>
+
+</body>
+</html>
