@@ -82,94 +82,6 @@
             <p id="notes" class="text-slate-700 whitespace-pre-wrap"></p>
         </div>
 
-        <div class="bg-white rounded-xl p-6 text-center">
-            <p class="text-slate-600 mb-4">Těšíme se na Vás!</p>
-            <button onclick="window.print()" class="no-print bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
-                🖨️ Tisk
-            </button>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAgqIX3_OHPrh27vuMJsIUpKLjVLcxMOaU",
-            authDomain: "skladatel-progrmu-a-her.firebaseapp.com",
-            databaseURL: "https://skladatel-progrmu-a-her-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "skladatel-progrmu-a-her"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const invitationId = urlParams.get('id');
-
-        if (invitationId) {
-            get(ref(db, `invitations/${invitationId}`)).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('app').classList.remove('hidden');
-
-                    // Vyplníme data
-                    document.getElementById('eventName').textContent = data.meta?.name || "Pozvánka";
-                    document.getElementById('location').textContent = data.location || "Místo určeno";
-                    
-                    if (data.date) {
-                        const dateObj = new Date(data.date);
-                        document.getElementById('date').textContent = dateObj.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                    }
-                    
-                    document.getElementById('time').textContent = data.time ? `Začátek v ${data.time}` : 'Čas určen';
-
-                    if (data.description) {
-                        document.getElementById('descriptionCard').classList.remove('hidden');
-                        document.getElementById('description').textContent = data.description;
-                    }
-
-                    if (data.whatToBring) {
-                        document.getElementById('whatToCard').classList.remove('hidden');
-                        document.getElementById('whatToBring').textContent = data.whatToBring;
-                    }
-
-                    if (data.contact) {
-                        document.getElementById('contactCard').classList.remove('hidden');
-                        document.getElementById('contact').textContent = data.contact;
-                    }
-
-        </div>
-
-        <div id="descriptionCard" class="info-section bg-white rounded-xl p-6 mb-6 hidden">
-            <h2 class="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
-                <span>📝 Program</span>
-            </h2>
-            <p id="description" class="text-slate-700 whitespace-pre-wrap leading-relaxed"></p>
-        </div>
-
-        <div id="whatToCard" class="info-section bg-white rounded-xl p-6 mb-6 hidden">
-            <h2 class="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
-                <span>🎒 Co si vzít</span>
-            </h2>
-            <p id="whatToBring" class="text-slate-700 whitespace-pre-wrap leading-relaxed"></p>
-        </div>
-
-        <div id="contactCard" class="info-section bg-blue-50 rounded-xl p-6 mb-6 hidden">
-            <h2 class="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
-                <span>📧 Kontakt</span>
-            </h2>
-            <p id="contact" class="text-slate-700"></p>
-        </div>
-
-        <div id="notesCard" class="info-section bg-yellow-50 rounded-xl p-6 mb-6 hidden">
-            <h2 class="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
-                <span>💡 Poznámky</span>
-            </h2>
-            <p id="notes" class="text-slate-700 whitespace-pre-wrap"></p>
-        </div>
-
         <!-- Confirmation Section -->
         <div class="confirm-section rounded-xl p-8 mb-6 no-print">
             <h2 class="text-2xl font-bold text-blue-900 mb-4 flex items-center gap-2">
@@ -196,7 +108,7 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-xl p-6 text-center mb-6">
+        <div class="bg-white rounded-xl p-6 text-center">
             <button onclick="window.print()" class="no-print bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
                 🖨️ Tisk
             </button>
@@ -227,7 +139,6 @@
                     document.getElementById('loading').classList.add('hidden');
                     document.getElementById('app').classList.remove('hidden');
 
-                    // Vyplníme data
                     document.getElementById('eventName').textContent = data.meta?.name || "Pozvánka";
                     document.getElementById('location').textContent = data.location || "Místo určeno";
                     
@@ -263,7 +174,6 @@
                         document.getElementById('notes').textContent = data.notes;
                     }
 
-                    // Formulář potvrzení
                     document.getElementById('confirmForm').addEventListener('submit', async (e) => {
                         e.preventDefault();
                         const name = document.getElementById('confirmName').value.trim();
