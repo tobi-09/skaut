@@ -96,12 +96,33 @@
                     <label class="block text-sm font-semibold mb-2 text-slate-700">Tvůj email *</label>
                     <input type="email" id="confirmEmail" required placeholder="tvuj@email.com" class="w-full p-3 border-2 border-blue-300 rounded-lg focus:border-blue-600 focus:outline-none"/>
                 </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">Budeš přítomen? *</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" id="attendance_yes" name="attendance" value="jedu" required class="w-4 h-4 accent-blue-600"/>
+                            <span class="text-slate-700">✓ Určitě přijdu</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" id="attendance_late" name="attendance" value="pozde" class="w-4 h-4 accent-blue-600"/>
+                            <span class="text-slate-700">⏱️ Přijdu později</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" id="attendance_no" name="attendance" value="nejedu" class="w-4 h-4 accent-blue-600"/>
+                            <span class="text-slate-700">✗ Nemohu přijít</span>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">Poznámka (volitelné)</label>
+                    <textarea id="confirmNote" placeholder="Např: Budu mít sebou kamaráda..." rows="3" class="w-full p-3 border-2 border-blue-300 rounded-lg focus:border-blue-600 focus:outline-none"></textarea>
+                </div>
                 <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition text-lg">
-                    ✓ Potvrdím účast
+                    ✓ Potvrdím
                 </button>
             </form>
             <div id="confirmSuccess" class="hidden mt-4 p-4 bg-green-100 border-2 border-green-500 rounded-lg">
-                <p class="text-green-800 font-bold">✓ Děkujeme! Tvoje účast byla zaregistrována.</p>
+                <p class="text-green-800 font-bold">✓ Děkujeme! Tvoje odpověď byla zaregistrována.</p>
             </div>
             <div id="confirmError" class="hidden mt-4 p-4 bg-red-100 border-2 border-red-500 rounded-lg">
                 <p id="confirmErrorMsg" class="text-red-800 font-bold"></p>
@@ -178,9 +199,11 @@
                         e.preventDefault();
                         const name = document.getElementById('confirmName').value.trim();
                         const email = document.getElementById('confirmEmail').value.trim();
+                        const attendance = document.querySelector('input[name="attendance"]:checked')?.value;
+                        const note = document.getElementById('confirmNote').value.trim();
 
-                        if (!name || !email) {
-                            showError('Vyplň prosím všechna pole');
+                        if (!name || !email || !attendance) {
+                            showError('Vyplň prosím všechna povinná pole');
                             return;
                         }
 
@@ -188,6 +211,8 @@
                             await push(ref(db, `invitations/${invitationId}/confirmations`), {
                                 name,
                                 email,
+                                attendance,
+                                note,
                                 confirmedAt: new Date().toISOString()
                             });
                             document.getElementById('confirmForm').classList.add('hidden');
