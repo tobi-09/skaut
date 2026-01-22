@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Program</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .header-bar { background: linear-gradient(135deg, #255C9E 0%, #20649B 100%); }
+        .program-card { box-shadow: 0 10px 30px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .program-card:hover { transform: translateY(-2px); }
+        .block-type-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        @print {
+            body { background: white; }
+            .no-print { display: none; }
+            .program-card { page-break-inside: avoid; box-shadow: none; border: 1px solid #e5e7eb; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen">
+    <div class="w-full h-3 header-bar"></div>
+
+    <div id="loading" class="flex justify-center items-center py-32">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-slate-600">Načítám program...</p>
+        </div>
+    </div>
+
+    <div id="app" class="hidden max-w-4xl mx-auto px-4 py-12">
+        <div class="bg-white rounded-2xl p-8 mb-8 shadow-lg">
+            <h1 id="programName" class="text-4xl font-bold text-blue-900 mb-2"></h1>
+            <div class="flex gap-4 text-sm text-slate-600">
+                <span id="authorSpan" class="hidden">👤 <span id="author"></span></span>
+                <span id="ageSpan" class="hidden">👶 <span id="age"></span></span>
+            </div>
+        </div>
+
+        <div id="blocksContainer" class="space-y-6">
+            <!-- Program blocks will be loaded here -->
+        </div>
+
+        <div class="bg-white rounded-xl p-6 text-center mt-12">
+            <button onclick="window.print()" class="no-print bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
+                🖨️ Tisk
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgqIX3_OHPrh27vuMJsIUpKLjVLcxMOaU",
+            authDomain: "skladatel-progrmu-a-her.firebaseapp.com",
+            databaseURL: "https://skladatel-progrmu-a-her-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "skladatel-progrmu-a-her"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const programId = urlParams.get('id');
+
+        if (programId) {
+            get(ref(db, `programs/${programId}`)).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+
+                    // Metadata
+                    document.getElementById('programName').textContent = data.meta?.name || "Program";
+                    if (data.meta?.author) {
+                        document.getElementById('author').textContent = data.meta.author;
+                        document.getElementById('authorSpan').classList.remove('hidden');
+                    }
+                    if (data.meta?.age) {
+                        document.getElementById('age').textContent = data.meta.age;
+                        document.getElementById('ageSpan').classList.remove('hidden');
+                    }
+
+                    // Bloky
+                    const container = document.getElementById('blocksContainer');
+                    const blocks = data.blocks || [];
+
+                    if (blocks.length === 0) {
+                        container.innerHTML = '<p class="text-center text-gray-600">Program neobsahuje žádné bloky.</p>';
+                        return;
+                    }
+
+                    blocks.forEach((block, idx) => {
+                        const card = document.createElement('div');
+                        card.className = 'program-card bg-white rounded-xl p-6 border-l-4';
+                        card.style.borderLeftColor = block.color || '#255C9E';
+
+                        let html = `
+                            <h2 class="text-2xl font-bold mb-2" style="color: ${block.color || '#255C9E'}">${block.title || `Blok ${idx + 1}`}</h2>
+                            <p class="text-sm text-slate-500 mb-3">
+                                <span class="block-type-badge" style="background-color: ${block.color || '#255C9E'}20; color: ${block.color || '#255C9E'}">${block.type || 'Program'}</span>
+                                ${block.duration ? `<span class="ml-2">⏱️ ${block.duration} min</span>` : ''}
+                            </p>
+                        `;
+
+                        // Sekce
+                        if (block.sections && block.sections.length > 0) {
+                            block.sections.forEach(section => {
+                                if (section.content) {
+                                    html += `
+                                        <div class="mb-4">
+                                            <h3 class="font-semibold text-slate-700 mb-2">📌 ${section.type}</h3>
+                                            <p class="text-slate-700 whitespace-pre-wrap">${section.content}</p>
+                                        </div>
+                                    `;
+                                }
+                            });
+                        }
+
+                        // Cíle bloku
+                        if (block.blockGoals && block.blockGoals.length > 0) {
+                            html += `<div class="mt-4 p-3 bg-blue-50 rounded-lg">`;
+                            html += `<h4 class="font-semibold text-blue-900 mb-2">🎯 Cíle:</h4>`;
+                            block.blockGoals.forEach(goal => {
+                                if (goal) html += `<p class="text-sm text-blue-800">✓ ${goal}</p>`;
+                            });
+                            html += `</div>`;
+                        }
+
+                        card.innerHTML = html;
+                        container.appendChild(card);
+                    });
+
+                } else {
+                    document.getElementById('loading').innerHTML = "<p class='text-red-600 font-medium text-xl'>Program nenalezen.</p>";
+                }
+            }).catch(err => {
+                document.getElementById('loading').innerHTML = `<p class='text-red-600 font-medium'>Chyba: ${err.message}</p>`;
+            });
+        }
+    </script>
+</body>
+</html>
