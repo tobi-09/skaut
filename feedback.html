@@ -179,7 +179,8 @@
 
         // Odeslání
         document.getElementById('submitBtn').onclick = async () => {
-            const blockCount = document.querySelectorAll('[data-block], [data-open], [data-closed]').length;
+            // Počítáme počet otázek (div.card prvků s otázkami), nikoliv jednotlivé prvky
+            const blockCount = document.querySelectorAll('#blocks > .card').length;
             if (Object.keys(ratings).length < blockCount) {
                 alert("Prosím vyplň všechny povinné otázky.");
                 return;
@@ -204,4 +205,3 @@
     </script>
 </body>
 </html>
-
