@@ -19,31 +19,45 @@
   const db = getDatabase(app);
 
   // Funkce, která vezme tvá data a pošle je na web
-  window.publishToFirebase = async (type) => {
+  window.publishProgram = async function() {
     const id = Math.random().toString(36).substring(2, 9);
-    
-    const feedbackQuestions = JSON.parse(localStorage.getItem('sg_feedback_questions') || '[]');
     const data = {
       meta: JSON.parse(localStorage.getItem('sg_meta') || '{}'),
       blocks: JSON.parse(localStorage.getItem('sg_blocks') || '[]').map(b => ({ ...b, blockGoals: b.blockGoals || [] })),
       groups: JSON.parse(localStorage.getItem('sg_groups') || '[]'),
-      feedbackQuestions: feedbackQuestions.length > 0 ? feedbackQuestions : [],
-      timestamp: Date.now()
+      feedbackQuestions: JSON.parse(localStorage.getItem('sg_feedback_questions') || '[]'),
+      publishedAt: new Date().toISOString()
     };
 
     try {
-      await set(ref(db, type + '/' + id), data);
-      const url = `https://tobi-09.github.io/skaut/${type}.html?id=${id}`;
-      
-      const shareArea = document.getElementById('fbShareArea');
-      const urlInput = document.getElementById('fbUrlInput');
-      if(shareArea && urlInput) {
-        shareArea.classList.remove('hidden');
-        urlInput.value = url;
-      }
-      alert("Hra byla úspěšně nahrána!");
+      await set(ref(db, `programs/${id}`), data);
+      const url = `https://tobi-09.github.io/skaut/program.html?id=${id}`;
+      window.showShareArea('program', url);
+      alert('Program byl úspěšně zveřejněn!');
     } catch (e) {
-      alert("Chyba: " + e.message + "\nUjisti se, že máš v Rules nastaveno .write: true");
+      alert('Chyba: ' + e.message);
+    }
+  };
+
+  window.showShareArea = function(type, url) {
+    const shareArea = document.getElementById(type + 'ShareArea');
+    const urlInput = document.getElementById(type + 'UrlInput');
+    if(shareArea && urlInput) {
+      shareArea.classList.remove('hidden');
+      urlInput.value = url;
+      
+      const qrContainer = document.getElementById(type + 'QR');
+      if(qrContainer) {
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: url,
+          width: 150,
+          height: 150,
+          colorDark: "#255C9E",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
     }
   };
 
@@ -67,17 +81,58 @@
     try {
       await set(ref(db, `feedback/${id}`), data);
       const url = `https://tobi-09.github.io/skaut/feedback.html?id=${id}`;
-      const shareArea = document.getElementById('fbShareArea');
-      const urlInput = document.getElementById('fbUrlInput');
-      if(shareArea && urlInput) {
-        shareArea.classList.remove('hidden');
-        urlInput.value = url;
+      document.getElementById('feedbackShareArea').classList.remove('hidden');
+      document.getElementById('feedbackUrlInput').value = url;
+      const qrContainer = document.getElementById('feedbackQR');
+      if(qrContainer) {
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: url,
+          width: 150,
+          height: 150,
+          colorDark: "#255C9E",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
       }
       document.getElementById('feedbackModal').classList.remove('open');
       alert(`Feedback publikován!\n\nOdkaz:\n${url}`);
     } catch (e) {
       alert('Chyba: ' + e.message);
     }
+  };
+
+  window.publishInvitation = async function() {
+    const invitationData = {
+      meta: JSON.parse(localStorage.getItem('sg_meta') || '{}'),
+      location: document.getElementById('invLocation').value || 'Místo určeno',
+      mainText: document.getElementById('invMainText').value || '',
+      date: document.getElementById('invDate').value || 'Datum určeno',
+      time: document.getElementById('invTime').value || 'Čas určen',
+      description: document.getElementById('invDescription').value || '',
+      contact: document.getElementById('invContact').value || '',
+      whatToBring: document.getElementById('invWhatToBring').value || '',
+      notes: document.getElementById('invNotes').value || '',
+      publishedAt: new Date().toISOString()
+    };
+    if(!invitationData.meta.name) {
+      alert('Nejdřív vyplň název programu');
+      return;
+    }
+
+    const id = Math.random().toString(36).substring(2, 9);
+    try {
+      await set(ref(db, `invitations/${id}`), invitationData);
+      const url = `https://tobi-09.github.io/skaut/invitation.html?id=${id}`;
+      window.showShareArea('invitation', url);
+      alert('Pozvánka byla úspěšně zveřejněna!');
+    } catch (e) {
+      alert('Chyba: ' + e.message);
+    }
+  };
+
+  window.openInvitationModal = function() {
+    document.getElementById('invitationModal').classList.add('open');
   };
 
   window.loadFeedbackResults = async function(feedbackId) {
@@ -345,6 +400,18 @@
       const url = `https://tobi-09.github.io/skaut/program.html?id=${id}`;
       document.getElementById('programShareArea').classList.remove('hidden');
       document.getElementById('programUrlInput').value = url;
+      const qrContainer = document.getElementById('programQR');
+      if(qrContainer) {
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: url,
+          width: 150,
+          height: 150,
+          colorDark: "#255C9E",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
       alert('Program byl úspěšně zveřejněn!');
     } catch (e) {
       alert('Chyba: ' + e.message);
@@ -379,6 +446,18 @@
       const url = `https://tobi-09.github.io/skaut/invitation.html?id=${id}`;
       document.getElementById('invitationShareArea').classList.remove('hidden');
       document.getElementById('invitationUrlInput').value = url;
+      const qrContainer = document.getElementById('invitationQR');
+      if(qrContainer) {
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: url,
+          width: 150,
+          height: 150,
+          colorDark: "#255C9E",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
       alert('Pozvánka byla úspěšně zveřejněna!');
     } catch (e) {
       alert('Chyba: ' + e.message);
@@ -391,6 +470,7 @@
 <title>Skladatel skautských her </title>
 <link rel="icon" type="image/svg+xml" href="logo-skaut.png">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 /* Tisk */
 @media print {
@@ -732,7 +812,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
     <span>🚀 Zveřejnit program</span>
   </h2>
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-    <button onclick="window.publishProgram()" class="text-[9px] sm:text-[10px] py-2 px-1 sm:px-2 rounded-lg font-bold hover:opacity-90 transition uppercase" style="background: #F6EBD8; color: #255C9E;">📱 Program</button>
+
     <button onclick="window.openInvitationModal()" class="text-[9px] sm:text-[10px] py-2 px-1 sm:px-2 rounded-lg font-bold hover:opacity-90 transition uppercase" style="background: #ECA038; color: white;">📧 Pozvánka</button>
     <button onclick="document.getElementById('feedbackModal').classList.add('open')" class="text-[9px] sm:text-[10px] py-2 px-1 sm:px-2 rounded-lg font-bold hover:opacity-90 transition uppercase col-span-2 sm:col-span-1" style="background: #008836; color: white;">📊 Feedback</button>
   </div>
@@ -740,10 +820,17 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
   <div id="programShareArea" class="mt-3 hidden">
     <p class="text-[8px] sm:text-[9px] mb-1 font-bold uppercase" style="color: #F6EBD8; opacity: 0.8;">Odkaz na program:</p>
     <input id="programUrlInput" readonly class="w-full p-2 text-[9px] sm:text-[10px] rounded border-none shadow-inner" onclick="this.select()" style="background: #F6EBD8; color: #255C9E;">
+    <div id="programQR" class="mt-2 flex justify-center"></div>
   </div>
   <div id="invitationShareArea" class="mt-3 hidden">
     <p class="text-[8px] sm:text-[9px] mb-1 font-bold uppercase" style="color: #F6EBD8; opacity: 0.8;">Odkaz na pozvánku:</p>
     <input id="invitationUrlInput" readonly class="w-full p-2 text-[9px] sm:text-[10px] rounded border-none shadow-inner" onclick="this.select()" style="background: #F6EBD8; color: #255C9E;">
+    <div id="invitationQR" class="mt-2 flex justify-center"></div>
+  </div>
+  <div id="feedbackShareArea" class="mt-3 hidden">
+    <p class="text-[8px] sm:text-[9px] mb-1 font-bold uppercase" style="color: #F6EBD8; opacity: 0.8;">Odkaz na feedback:</p>
+    <input id="feedbackUrlInput" readonly class="w-full p-2 text-[9px] sm:text-[10px] rounded border-none shadow-inner" onclick="this.select()" style="background: #F6EBD8; color: #255C9E;">
+    <div id="feedbackQR" class="mt-2 flex justify-center"></div>
   </div>
 </section>
 
@@ -1028,6 +1115,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 /* ====================
    Utilities & Storage
