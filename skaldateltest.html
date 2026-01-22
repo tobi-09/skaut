@@ -15,18 +15,19 @@
     appId: "1:1088099395066:web:38863cc7963b8a8fc27043"
   };
 
-  const app = initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);fee
   const db = getDatabase(app);
 
   // Funkce, která vezme tvá data a pošle je na web
   window.publishToFirebase = async (type) => {
     const id = Math.random().toString(36).substring(2, 9);
     
-    // Používáme přesně tvoje názvy proměnných z tvého velkého kódu
+    const feedbackQuestions = JSON.parse(localStorage.getItem('sg_feedback_questions') || '[]');
     const data = {
       meta: JSON.parse(localStorage.getItem('sg_meta') || '{}'),
-      blocks: JSON.parse(localStorage.getItem('sg_blocks') || '[]'),
+      blocks: JSON.parse(localStorage.getItem('sg_blocks') || '[]').map(b => ({ ...b, blockGoals: b.blockGoals || [] })),
       groups: JSON.parse(localStorage.getItem('sg_groups') || '[]'),
+      feedbackQuestions: feedbackQuestions.length > 0 ? feedbackQuestions : [],
       timestamp: Date.now()
     };
 
@@ -43,6 +44,39 @@
       alert("Hra byla úspěšně nahrána!");
     } catch (e) {
       alert("Chyba: " + e.message + "\nUjisti se, že máš v Rules nastaveno .write: true");
+    }
+  };
+
+  window.saveFeedbackAndPublish = async function() {
+    const feedbackQuestions = JSON.parse(localStorage.getItem('sg_feedback_questions') || '[]');
+    if(feedbackQuestions.length === 0) {
+      alert('Přidej alespoň jednu otázku!');
+      return;
+    }
+
+    localStorage.setItem('sg_feedback_questions', JSON.stringify(feedbackQuestions));
+    const id = Math.random().toString(36).substring(2, 9);
+    const data = {
+      meta: JSON.parse(localStorage.getItem('sg_meta') || '{}'),
+      blocks: JSON.parse(localStorage.getItem('sg_blocks') || '[]').map(b => ({ ...b, blockGoals: b.blockGoals || [] })),
+      groups: JSON.parse(localStorage.getItem('sg_groups') || '[]'),
+      feedbackQuestions,
+      publishedAt: new Date().toISOString()
+    };
+
+    try {
+      await set(ref(db, `feedback/${id}`), data);
+      const url = `https://tobi-09.github.io/skaut/feedback.html?id=${id}`;
+      const shareArea = document.getElementById('fbShareArea');
+      const urlInput = document.getElementById('fbUrlInput');
+      if(shareArea && urlInput) {
+        shareArea.classList.remove('hidden');
+        urlInput.value = url;
+      }
+      document.getElementById('feedbackModal').classList.remove('open');
+      alert(`Feedback publikován!\n\nOdkaz:\n${url}`);
+    } catch (e) {
+      alert('Chyba: ' + e.message);
     }
   };
 </script>
@@ -318,6 +352,25 @@ body.dark #blocksContainer {
   border-color: #444;     /* tmavší rámeček */
   color: #fff;            /* bílý text */
 }
+
+/* Modal styles */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-content { background: white; border-radius: 16px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+body.dark .modal-content { background: #1A1410; color: #E8DCC4; }
+.modal-header { padding: 24px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+body.dark .modal-header { border-bottom-color: #444; }
+.modal-header h2 { margin: 0; font-size: 24px; }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid #ddd; display: flex; gap: 12px; justify-content: flex-end; }
+body.dark .modal-footer { border-top-color: #444; }
+.question-editor { background: #f9f9f9; padding: 16px; border-radius: 10px; margin-bottom: 16px; border-left: 4px solid #255C9E; }
+body.dark .question-editor { background: #2A241B; border-left-color: #D4C5B0; }
+
+@media (max-width: 768px) {
+  .modal-content { width: 95%; }
+}
 </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -364,7 +417,7 @@ body.dark #blocksContainer {
   </h2>
   <div class="grid grid-cols-2 gap-2">
     <button onclick="window.publishToFirebase('pozvanka')" class="bg-white text-blue-600 text-[10px] py-2 rounded-lg font-bold hover:bg-blue-50 transition uppercase">✉️ Pozvánka</button>
-    <button onclick="window.publishToFirebase('feedback')" class="bg-green-500 text-white text-[10px] py-2 rounded-lg font-bold hover:bg-green-600 transition uppercase">📊 Feedback</button>
+    <button onclick="document.getElementById('feedbackModal').classList.add('open')" class="bg-green-500 text-white text-[10px] py-2 rounded-lg font-bold hover:bg-green-600 transition uppercase">📊 Feedback</button>
   </div>
   <div id="fbShareArea" class="mt-3 hidden">
     <p class="text-[9px] mb-1 font-bold text-blue-200 uppercase">Odkaz pro ostatní:</p>
@@ -462,6 +515,39 @@ body.dark #blocksContainer {
     <div id="calendarContainer" class="mt-4"></div>
   </section>
 </main>
+
+<!-- Feedback Editor Modal -->
+<div id="feedbackModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Nastavení zpětné vazby</h2>
+      <button class="modal-close" onclick="document.getElementById('feedbackModal').classList.remove('open')">x</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <p class="text-sm text-blue-900 font-medium">Tady nastavíte, jaké otázky budou v dotazníku feedback. Každá otázka se vztahuje na jeden blok programu.</p>
+      </div>
+
+      <div id="feedbackQuestionsContainer" class="space-y-4">
+        <!-- Dynamically generated questions -->
+      </div>
+
+      <button onclick="window.addFeedbackQuestion()" class="w-full px-4 py-3 mt-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition">
+        Přidat novou otázku
+      </button>
+    </div>
+
+    <div class="modal-footer">
+      <button onclick="document.getElementById('feedbackModal').classList.remove('open')" class="px-4 py-2 border rounded-lg hover:bg-gray-50 transition">
+        Zrušit
+      </button>
+      <button onclick="window.saveFeedbackAndPublish()" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+        Uložit a publikovat
+      </button>
+    </div>
+  </div>
+</div>
 
 <footer class="mt-6 text-sm text-slate-600 text-center no-print">
   <p>🎲 Skladatel skautských her — demo projekt</p>
@@ -760,6 +846,7 @@ function createBlockCard(b, pairingOptionsHTML){
   if(!('od' in b)) b.od = '';
   if(!('do' in b)) b.do = '';
   if(!('barva' in b)) b.barva = COLORS[0].id;
+  if(!('blockGoals' in b)) b.blockGoals = [];
 
   // group select - includes option '' for none
   const groupOptions = `<option value="">(bez skupiny)</option>` + groups.map(g=>`<option value="${g.id}" ${b.group===g.id?'selected':''}>${escapeHtml(g.name)}</option>`).join('');
@@ -831,6 +918,19 @@ function createBlockCard(b, pairingOptionsHTML){
     <label class="block mb-2 text-sm">Obsah
       <textarea class="w-full p-2 border rounded" rows="3" data-field="content" data-id="${b.id}">${escapeHtml(b.content||'')}</textarea>
     </label>
+
+    <div class="mb-2 p-2 bg-slate-100 rounded border">
+      <label class="block text-xs font-semibold mb-1">Cíle bloku</label>
+      <div class="space-y-1 mb-2">
+        ${(b.blockGoals||[]).map((goal, i) => `
+          <div class="flex gap-1 mb-1">
+            <input type="text" class="flex-1 p-1 rounded border text-xs" value="${escapeHtml(goal)}" data-field="goal" data-goal-idx="${i}" data-id="${b.id}"/>
+            <button class="px-2 py-1 text-red-600 text-xs hover:bg-red-50 rounded" data-action="remove-goal" data-id="${b.id}" data-goal-idx="${i}">x</button>
+          </div>
+        `).join('')}
+      </div>
+      <button class="w-full px-2 py-1 text-xs bg-slate-300 rounded hover:bg-slate-400" data-action="add-goal" data-id="${b.id}">+ Cíl</button>
+    </div>
 
     ${b.type==='materialy' ? `
       <label class="block mb-2 text-sm">Přiložené soubory
@@ -961,6 +1061,42 @@ document.querySelectorAll('.add-pair').forEach(btn=>{
     btn.addEventListener('click', e=>{
       const id = btn.dataset.id; const g = groups.find(x=>x.id===id); if(!g) return;
       g.expanded = !g.expanded; saveAll(); renderAll();
+    });
+  });
+
+  // block goals - add goal
+  document.querySelectorAll('[data-action="add-goal"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const b = blocks.find(x=>x.id===btn.dataset.id);
+      if(b) {
+        if(!b.blockGoals) b.blockGoals = [];
+        b.blockGoals.push('Nový cíl');
+        saveAll(); renderAll();
+      }
+    });
+  });
+
+  // block goals - remove goal
+  document.querySelectorAll('[data-action="remove-goal"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const b = blocks.find(x=>x.id===btn.dataset.id);
+      const idx = parseInt(btn.dataset.goalIdx);
+      if(b && b.blockGoals) {
+        b.blockGoals.splice(idx, 1);
+        saveAll(); renderAll();
+      }
+    });
+  });
+
+  // block goals - update goal text
+  document.querySelectorAll('input[data-field="goal"]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const b = blocks.find(x=>x.id===inp.dataset.id);
+      const idx = parseInt(inp.dataset.goalIdx);
+      if(b && b.blockGoals) {
+        b.blockGoals[idx] = inp.value;
+        saveAll();
+      }
     });
   });
 }
@@ -1230,6 +1366,121 @@ function toMarkdown({meta, blocks}){
   });
   return lines.join('\n');
 }
+
+/* ====================
+   FEEDBACK QUESTIONS EDITOR
+   ==================== */
+let feedbackQuestions = loadFromLocal('sg_feedback_questions', []);
+
+function renderFeedbackQuestions() {
+  const container = document.getElementById('feedbackQuestionsContainer');
+  container.innerHTML = '';
+
+  if(feedbackQuestions.length === 0) {
+    feedbackQuestions = blocks.map((b, idx) => ({
+      id: b.id || `idx_${idx}`,
+      title: b.title || `Otázka ${idx + 1}`,
+      type: b.type || 'príběh',
+      duration: b.duration || '?',
+      questionType: 'stars',
+      options: ['Velmi špatně', 'Špatně', 'Průměrně', 'Dobře', 'Výborně']
+    }));
+  }
+
+  feedbackQuestions.forEach((q, idx) => {
+    const editor = document.createElement('div');
+    editor.className = 'question-editor';
+    editor.innerHTML = `
+      <div class="flex justify-between items-start mb-3">
+        <div class="flex-1">
+          <label class="block text-xs font-semibold mb-1">Název otázky</label>
+          <input type="text" class="feedback-title w-full p-2 rounded border text-sm" 
+            value="${escapeHtml(q.title)}" data-idx="${idx}"/>
+        </div>
+        <button class="feedback-delete px-3 py-2 text-red-600 text-sm hover:bg-red-50 rounded ml-2" data-idx="${idx}">Smazat</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1">Typ bloku (info)</label>
+          <input type="text" class="p-2 rounded border bg-gray-50 w-full" value="${q.type}" disabled/>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Trvání (info)</label>
+          <input type="text" class="p-2 rounded border bg-gray-50 w-full" value="${q.duration} min" disabled/>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold mb-1">Typ otázky</label>
+        <select class="feedback-type w-full p-2 rounded border text-sm" data-idx="${idx}">
+          <option value="stars" ${q.questionType === 'stars' ? 'selected' : ''}>Hvězdičky (1-5)</option>
+          <option value="open" ${q.questionType === 'open' ? 'selected' : ''}>Otevřená otázka</option>
+          <option value="closed" ${q.questionType === 'closed' ? 'selected' : ''}>Uzavřená volba</option>
+        </select>
+      </div>
+
+      <div class="feedback-options mt-3 ${q.questionType === 'closed' ? '' : 'hidden'}">
+        <label class="block text-xs font-semibold mb-2">Možnosti (oddělte novým řádkem)</label>
+        <textarea class="feedback-options-text w-full p-2 rounded border text-sm resize-none" rows="4" data-idx="${idx}">${(q.options || []).join('\n')}</textarea>
+      </div>
+    `;
+    container.appendChild(editor);
+  });
+
+  document.querySelectorAll('.feedback-title').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = parseInt(inp.dataset.idx);
+      feedbackQuestions[idx].title = inp.value;
+      saveToLocal('sg_feedback_questions', feedbackQuestions);
+    });
+  });
+
+  document.querySelectorAll('.feedback-type').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const idx = parseInt(sel.dataset.idx);
+      feedbackQuestions[idx].questionType = sel.value;
+      saveToLocal('sg_feedback_questions', feedbackQuestions);
+      renderFeedbackQuestions();
+    });
+  });
+
+  document.querySelectorAll('.feedback-options-text').forEach(ta => {
+    ta.addEventListener('input', e => {
+      const idx = parseInt(ta.dataset.idx);
+      feedbackQuestions[idx].options = ta.value.split('\n').filter(x => x.trim());
+      saveToLocal('sg_feedback_questions', feedbackQuestions);
+    });
+  });
+
+  document.querySelectorAll('.feedback-delete').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = parseInt(btn.dataset.idx);
+      if(confirm('Smazat tuto otázku?')) {
+        feedbackQuestions.splice(idx, 1);
+        saveToLocal('sg_feedback_questions', feedbackQuestions);
+        renderFeedbackQuestions();
+      }
+    });
+  });
+}
+
+window.addFeedbackQuestion = function() {
+  const newQ = {
+    id: uid(),
+    title: `Otázka ${feedbackQuestions.length + 1}`,
+    type: 'príběh',
+    duration: '?',
+    questionType: 'stars',
+    options: ['Velmi špatně', 'Špatně', 'Průměrně', 'Dobře', 'Výborně']
+  };
+  feedbackQuestions.push(newQ);
+  saveToLocal('sg_feedback_questions', feedbackQuestions);
+  renderFeedbackQuestions();
+};
+
+// Render feedback questions on initial load
+renderFeedbackQuestions();
 
 /* Done */
 </script>
