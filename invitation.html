@@ -77,7 +77,7 @@
 
         <div id="notesCard" class="info-section bg-yellow-50 rounded-xl p-6 mb-6 hidden">
             <h2 class="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
-                <span>💡 Poznámky</span>
+                <span>Poznámky</span>
             </h2>
             <p id="notes" class="text-slate-700 whitespace-pre-wrap"></p>
         </div>
@@ -85,7 +85,7 @@
         <!-- Confirmation Section -->
         <div class="confirm-section rounded-xl p-8 mb-6 no-print">
             <h2 class="text-2xl font-bold text-blue-900 mb-4 flex items-center gap-2">
-                <span>✋ Potvrď svou účast</span>
+                <span>Potvrď svou účast</span>
             </h2>
             <form id="confirmForm" class="space-y-4">
                 <div>
@@ -101,11 +101,11 @@
                     <div class="space-y-2">
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="radio" id="attendance_yes" name="attendance" value="jedu" required class="w-4 h-4 accent-blue-600"/>
-                            <span class="text-slate-700">✓ Určitě přijdu</span>
+                            <span class="text-slate-700">přijdu</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="radio" id="attendance_late" name="attendance" value="pozde" class="w-4 h-4 accent-blue-600"/>
-                            <span class="text-slate-700">⏱️ Přijdu později</span>
+                            <span class="text-slate-700">Přijdu později</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer">
                             <input type="radio" id="attendance_no" name="attendance" value="nejedu" class="w-4 h-4 accent-blue-600"/>
@@ -115,14 +115,14 @@
                 </div>
                 <div>
                     <label class="block text-sm font-semibold mb-2 text-slate-700">Poznámka (volitelné)</label>
-                    <textarea id="confirmNote" placeholder="Např: Budu mít sebou kamaráda..." rows="3" class="w-full p-3 border-2 border-blue-300 rounded-lg focus:border-blue-600 focus:outline-none"></textarea>
+                    <textarea id="confirmNote" placeholder="Např: mám kroužek takž..." rows="3" class="w-full p-3 border-2 border-blue-300 rounded-lg focus:border-blue-600 focus:outline-none"></textarea>
                 </div>
                 <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition text-lg">
                     ✓ Potvrdím
                 </button>
             </form>
             <div id="confirmSuccess" class="hidden mt-4 p-4 bg-green-100 border-2 border-green-500 rounded-lg">
-                <p class="text-green-800 font-bold">✓ Děkujeme! Tvoje odpověď byla zaregistrována.</p>
+                <p class="text-green-800 font-bold">Děkujeme! Tvoje odpověď byla zaregistrována.</p>
             </div>
             <div id="confirmError" class="hidden mt-4 p-4 bg-red-100 border-2 border-red-500 rounded-lg">
                 <p id="confirmErrorMsg" class="text-red-800 font-bold"></p>
