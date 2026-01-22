@@ -5,30 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hodnocení programu</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Google Sans', sans-serif; background-color: #f0f2f5; }
+        body { font-family: sans-serif; background-color: #f0f2f5; }
         .star { cursor: pointer; transition: transform 0.2s, color 0.2s; }
         .star:hover { transform: scale(1.2); }
         .star.active { color: #fabb05; }
         .card { transition: box-shadow 0.3s ease; }
         .card:hover { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .header-bar { background-color: #255C9E; }
+        .header-title { color: #255C9E; }
+        .btn-submit { background-color: #255C9E; }
+        .btn-submit:hover { background-color: #1a3f6f; }
+        .btn-link { color: #255C9E; }
+        .block-type { color: #666; }
     </style>
 </head>
 <body class="text-slate-700 min-h-screen">
 
-    <div class="w-full h-3 bg-blue-700"></div>
+    <div class="w-full h-3 header-bar"></div>
 
     <header class="max-w-2xl mx-auto mt-8 px-4">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 border-t-[10px] border-t-blue-700">
-            <h1 id="gameName" class="text-3xl font-bold text-slate-900 mb-2 italic">Načítání...</h1>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 border-t-[10px] border-t-blue-600" style="border-top-color: #255C9E !important;">
+            <h1 id="gameName" class="text-3xl font-bold text-slate-900 mb-2 italic header-title">Načítání...</h1>
             <p class="text-slate-500 border-b pb-4">Děkujeme, že nám pomáháte zlepšovat naše skautské programy. Vaše odpovědi jsou anonymní.</p>
             <p class="text-red-500 text-sm mt-2 font-medium">* Povinné pole</p>
         </div>
     </header>
 
     <div id="loading" class="flex flex-col justify-center items-center py-20">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-700 mb-4"></div>
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2" style="border-bottom-color: #255C9E;"></div>
         <p class="text-slate-400 animate-pulse">Načítám detaily akce...</p>
     </div>
 
@@ -39,16 +44,17 @@
         <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 card">
             <h2 class="text-lg font-medium mb-4 text-slate-900">Co bychom měli vědět? (Dobrovolné)</h2>
             <textarea id="overallComment" 
-                class="w-full p-4 border-b-2 border-slate-200 bg-slate-50 focus:border-blue-600 outline-none transition rounded-t-lg resize-none" 
+                class="w-full p-4 border-b-2 border-slate-200 bg-slate-50 outline-none transition rounded-t-lg resize-none" 
+                style="border-bottom-color: #BDD4DF !important; focus: border-bottom-color: #255C9E !important;"
                 rows="3" 
                 placeholder="Tvoje zpráva..."></textarea>
         </div>
 
         <div class="flex justify-between items-center pb-12">
-            <button id="submitBtn" class="bg-blue-700 hover:bg-blue-800 text-white font-medium px-8 py-2.5 rounded shadow-md transition-all active:scale-95">
+            <button id="submitBtn" class="btn-submit text-white font-medium px-8 py-2.5 rounded shadow-md transition-all active:scale-95">
                 Odeslat
             </button>
-            <button onclick="location.reload()" class="text-blue-700 text-sm font-medium hover:bg-blue-50 px-4 py-2 rounded transition">Vymazat formulář</button>
+            <button onclick="location.reload()" class="btn-link text-sm font-medium hover:bg-blue-50 px-4 py-2 rounded transition" style="color: #255C9E;">Vymazat formulář</button>
         </div>
     </main>
 
@@ -56,7 +62,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
             <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">✓</div>
             <h2 class="text-2xl font-bold text-slate-900 mb-4">Vaše odpověď byla zaznamenána.</h2>
-            <p class="text-blue-700 underline cursor-pointer hover:text-blue-900" onclick="location.reload()">Odeslat další odpověď</p>
+            <p class="cursor-pointer hover:text-blue-900 font-medium" style="color: #255C9E;" onclick="location.reload()">Odeslat další odpověď</p>
         </div>
     </div>
 
@@ -87,19 +93,50 @@
                     document.getElementById('gameName').innerText = data.meta.name || "Bez názvu";
                     
                     const container = document.getElementById('blocks');
-                    data.blocks.forEach((b, idx) => {
-                        const bId = b.id || `idx_${idx}`;
+                    const blocks = data.blocks || [];
+                    const feedbackQuestions = data.feedbackQuestions || blocks.map((b, idx) => ({
+                        id: b.id || `idx_${idx}`,
+                        title: b.title,
+                        questionType: 'stars',
+                        options: ['Velmi špatně', 'Špatně', 'Průměrně', 'Dobře', 'Výborně']
+                    }));
+                    
+                    feedbackQuestions.forEach((q, idx) => {
+                        const bId = q.id || `idx_${idx}`;
                         const card = document.createElement('div');
                         card.className = "bg-white p-8 rounded-xl shadow-sm border border-slate-200 card";
-                        card.innerHTML = `
-                            <h3 class="text-lg font-medium text-slate-900 mb-1">${b.title} <span class="text-red-500">*</span></h3>
-                            <p class="text-sm text-slate-400 mb-6 font-normal">${b.type || 'Program'} • ${b.duration || '?'} min</p>
-                            <div class="flex gap-2 justify-center sm:justify-start" data-block="${bId}">
-                                ${[1,2,3,4,5].map(num => `
-                                    <span class="star text-4xl text-slate-200" data-val="${num}">★</span>
-                                `).join('')}
-                            </div>
-                        `;
+                        
+                        if(q.questionType === 'stars') {
+                            card.innerHTML = `
+                                <h3 class="text-lg font-medium text-slate-900 mb-1">${q.title} <span class="text-red-500">*</span></h3>
+                                <p class="text-sm text-slate-400 mb-6 font-normal block-type">${q.type || 'Program'} • ${q.duration || '?'} min</p>
+                                <div class="flex gap-2 justify-center sm:justify-start" data-block="${bId}">
+                                    ${[1,2,3,4,5].map(num => `
+                                        <span class="star text-4xl text-slate-200" data-val="${num}">★</span>
+                                    `).join('')}
+                                </div>
+                            `;
+                        } else if(q.questionType === 'open') {
+                            card.innerHTML = `
+                                <h3 class="text-lg font-medium text-slate-900 mb-1">${q.title}</h3>
+                                <p class="text-sm text-slate-400 mb-6 font-normal block-type">${q.type || 'Program'} • ${q.duration || '?'} min</p>
+                                <textarea class="w-full p-3 border border-slate-200 rounded text-sm resize-none" rows="3" placeholder="Napiš svou odpověď..." data-open="${bId}"></textarea>
+                            `;
+                        } else if(q.questionType === 'closed') {
+                            card.innerHTML = `
+                                <h3 class="text-lg font-medium text-slate-900 mb-1">${q.title}</h3>
+                                <p class="text-sm text-slate-400 mb-6 font-normal block-type">${q.type || 'Program'} • ${q.duration || '?'} min</p>
+                                <div class="space-y-2">
+                                    ${(q.options || []).map((opt, i) => `
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="closed_${bId}" value="${opt}" class="closed-input" data-closed="${bId}">
+                                            <span>${opt}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            `;
+                        }
+                        
                         container.appendChild(card);
                     });
 
@@ -110,13 +147,28 @@
                             const val = parseInt(this.dataset.val);
                             ratings[bId] = val;
 
-                            // Vybarvení hvězd
                             const siblings = this.parentElement.querySelectorAll('.star');
                             siblings.forEach((s, i) => {
                                 if(i < val) s.classList.add('active', 'text-yellow-400');
                                 else s.classList.remove('active', 'text-yellow-400');
                             });
                         };
+                    });
+
+                    // Logika otevřených otázek
+                    document.querySelectorAll('[data-open]').forEach(ta => {
+                        ta.addEventListener('input', function() {
+                            const bId = this.dataset.open;
+                            ratings[bId] = this.value;
+                        });
+                    });
+
+                    // Logika uzavřených otázek
+                    document.querySelectorAll('.closed-input').forEach(input => {
+                        input.addEventListener('change', function() {
+                            const bId = this.dataset.closed;
+                            ratings[bId] = this.value;
+                        });
                     });
 
                 } else {
@@ -127,9 +179,9 @@
 
         // Odeslání
         document.getElementById('submitBtn').onclick = async () => {
-            const blockCount = document.querySelectorAll('[data-block]').length;
+            const blockCount = document.querySelectorAll('[data-block], [data-open], [data-closed]').length;
             if (Object.keys(ratings).length < blockCount) {
-                alert("Prosím ohodnoťte všechny části programu označené hvězdičkou.");
+                alert("Prosím vyplň všechny povinné otázky.");
                 return;
             }
 
@@ -152,3 +204,4 @@
     </script>
 </body>
 </html>
+
