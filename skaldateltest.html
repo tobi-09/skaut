@@ -437,6 +437,49 @@
     }
   };
 
+  window.refreshFromFirebase = async function() {
+    const syncId = window.currentSyncId || new URLSearchParams(window.location.search).get('syncId');
+    if(!syncId) return;
+    
+    try {
+      console.log('Aktualizuji z Firebase:', syncId);
+      const snapshot = await get(ref(db, `synced/${syncId}`));
+      if(snapshot.exists()) {
+        const data = snapshot.val();
+        // Aktualizuj globální proměnné PŘÍMO (ne lokální, ne localStorage)
+        if(data.meta) {
+          meta.name = data.meta.name || meta.name;
+          meta.author = data.meta.author || meta.author;
+          meta.age = data.meta.age || meta.age;
+        }
+        if(Array.isArray(data.blocks)) {
+          blocks.length = 0;
+          blocks.push(...data.blocks);
+        }
+        if(Array.isArray(data.groups)) {
+          groups.length = 0;
+          groups.push(...data.groups);
+        }
+        if(Array.isArray(data.feedbackQuestions)) {
+          feedbackQuestions.length = 0;
+          feedbackQuestions.push(...data.feedbackQuestions);
+        }
+        // Ulož do localStorage pro backup
+        localStorage.setItem('sg_meta', JSON.stringify(meta));
+        localStorage.setItem('sg_blocks', JSON.stringify(blocks));
+        localStorage.setItem('sg_groups', JSON.stringify(groups));
+        localStorage.setItem('sg_feedback_questions', JSON.stringify(feedbackQuestions));
+        // Překresli
+        if(typeof window.renderAll === 'function') {
+          window.renderAll();
+        }
+        console.log('Data aktualizována z Firebase');
+      }
+    } catch(e) {
+      console.error('Chyba při aktualizaci z Firebase:', e);
+    }
+  };
+
   window.addEventListener('load', () => {
     const params = new URLSearchParams(window.location.search);
     const shared = params.get('share');
@@ -444,31 +487,15 @@
     
     // Pokud máme syncId, zaregistruj se a načti data z Firebase
     if(syncId && !shared) {
-      (async () => {
-        try {
-          console.log('Načítám data z Firebase pro syncId:', syncId);
-          const snapshot = await get(ref(db, `synced/${syncId}`));
-          if(snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('Úspěšně načtena data z Firebase');
-            if(data && data.meta) localStorage.setItem('sg_meta', JSON.stringify(data.meta));
-            if(data && data.blocks) localStorage.setItem('sg_blocks', JSON.stringify(data.blocks));
-            if(data && data.groups) localStorage.setItem('sg_groups', JSON.stringify(data.groups));
-            if(data && data.feedbackQuestions) localStorage.setItem('sg_feedback_questions', JSON.stringify(data.feedbackQuestions));
-            
-            window.currentSyncId = syncId;
-            if(typeof window.renderAll === 'function') {
-              setTimeout(() => { window.renderAll(); }, 100);
-            }
-          } else {
-            console.warn('Data se nepovedlo načíst - snapshot neexistuje');
-            alert('Chyba: Nepodařilo se najít program s ID: ' + syncId);
-          }
-        } catch(e) {
-          console.error('Chyba při načítání z Firebase:', e);
-          alert('Chyba: Nepodařilo se načíst program: ' + e.message);
-        }
-      })();
+      window.currentSyncId = syncId;
+      // Hned na začátku načti data z Firebase
+      window.refreshFromFirebase();
+      // Pak automaticky každých 30 sekund
+      if(!window.autoRefreshInterval) {
+        window.autoRefreshInterval = setInterval(() => {
+          window.refreshFromFirebase();
+        }, 30000);
+      }
     }
     // Pokud máme Base64 share parametr, použij starý formát
     else if(shared) {
@@ -476,15 +503,24 @@
         const decoded = JSON.parse(decodeURIComponent(escape(atob(shared))));
         
         if(decoded && typeof decoded === 'object') {
-          const meta = decoded.meta || {};
-          const blocks = Array.isArray(decoded.blocks) ? decoded.blocks : [];
-          const groups = Array.isArray(decoded.groups) ? decoded.groups : [];
-          const feedbackQuestions = Array.isArray(decoded.feedbackQuestions) ? decoded.feedbackQuestions : [];
-          
-          localStorage.setItem('sg_meta', JSON.stringify(meta));
-          localStorage.setItem('sg_blocks', JSON.stringify(blocks));
-          localStorage.setItem('sg_groups', JSON.stringify(groups));
-          localStorage.setItem('sg_feedback_questions', JSON.stringify(feedbackQuestions));
+          // Aktualizuj globální proměnné přímo
+          if(decoded.meta) {
+            meta.name = decoded.meta.name || meta.name;
+            meta.author = decoded.meta.author || meta.author;
+            meta.age = decoded.meta.age || meta.age;
+          }
+          if(Array.isArray(decoded.blocks)) {
+            blocks.length = 0;
+            blocks.push(...decoded.blocks);
+          }
+          if(Array.isArray(decoded.groups)) {
+            groups.length = 0;
+            groups.push(...decoded.groups);
+          }
+          if(Array.isArray(decoded.feedbackQuestions)) {
+            feedbackQuestions.length = 0;
+            feedbackQuestions.push(...decoded.feedbackQuestions);
+          }
           
           window.currentSyncId = syncId;
           
@@ -904,6 +940,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
     <div class="flex gap-1 mb-2 text-[9px]">
       <button onclick="window.startSync()" class="flex-1 px-2 py-1 rounded font-bold" style="background: #A4D2B2; color: #0f172a;">🔄 Sync ON</button>
       <button onclick="window.stopSync()" class="flex-1 px-2 py-1 rounded font-bold" style="background: #EA614A; color: white;">⏹ OFF</button>
+      <button onclick="window.refreshFromFirebase()" class="flex-1 px-2 py-1 rounded font-bold" style="background: #255C9E; color: white;">🔄 Refresh</button>
     </div>
     <input id="syncIdInput" hidden>
     <div id="programQR" class="mt-2 flex justify-center"></div>
@@ -2130,4 +2167,3 @@ renderFeedbackQuestions();
 </script>
 </body>
 </html>
-
