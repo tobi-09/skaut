@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projektor - Fullscreen Mapping</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            color: white;
+            font-family: sans-serif;
+        }
+
+        #sceneImg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Obrázek se přizpůsobí obrazovce bez deformace */
+            transition: opacity 0.5s ease; /* Jemné zmizení/objevení */
+        }
+
+        #fullscreenBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            padding: 15px 25px;
+            font-size: 18px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid white;
+            border-radius: 5px;
+        }
+
+        #fullscreenBtn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Třída pro schování tlačítka */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="fullscreenBtn">Spustit Fullscreen</button>
+    <img id="sceneImg" src="" alt="">
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+        // Tvoje Firebase konfigurace
+        const firebaseConfig = {
+            apiKey: "AIzaSyBiax9dVOdtX5k3Ajmq-otnfV6JOlOgS1Q",
+            authDomain: "projekce-0.firebaseapp.com",
+            databaseURL: "https://projekce-0-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "projekce-0",
+            storageBucket: "projekce-0.firebasestorage.app",
+            messagingSenderId: "976431090482",
+            appId: "1:976431090482:web:dabed64e8f20b10bc6252b",
+            measurementId: "G-WH569QMXBN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const sceneImg = document.getElementById("sceneImg");
+        const fsBtn = document.getElementById("fullscreenBtn");
+        let timeoutId;
+
+        const sceneMap = {
+            "1": "https://tobi-09.github.io/skaut/img/1.PNG",
+            "2": "https://tobi-09.github.io/skaut/img/2.PNG",
+            "3": "https://tobi-09.github.io/skaut/img/3.PNG"
+        };
+
+        // Naslouchání změnám v databázi (cesta 'scene')
+        onValue(ref(db, 'scene'), (snap) => {
+            const scene = snap.val();
+            
+            if(scene && sceneMap[scene]) {
+                sceneImg.src = sceneMap[scene];
+                sceneImg.style.opacity = "1";
+
+                // Po 5 sekundách obrázek zmizí (vypne se projekce do černé)
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    sceneImg.style.opacity = "0";
+                    setTimeout(() => { sceneImg.src = ""; }, 500); // Vymaže zdroj po doznění animace
+                }, 5000);
+            } else {
+                sceneImg.src = "";
+                sceneImg.style.opacity = "0";
+            }
+        });
+
+        // Obsluha Fullscreenu
+        fsBtn.addEventListener("click", () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Chyba při vstupu do fullscreenu: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Automatické schování tlačítka při aktivním fullscreenu
+        document.addEventListener("fullscreenchange", () => {
+            if (document.fullscreenElement) {
+                fsBtn.classList.add("hidden");
+            } else {
+                fsBtn.classList.remove("hidden");
+            }
+        });
+    </script>
+</body>
+</html>
