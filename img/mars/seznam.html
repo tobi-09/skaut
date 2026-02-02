@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars Remote Ops - Unique Asset ID</title>
+    <style>
+        :root {
+            --c-0: #27ae60; --c-A: #c0392b; --c-B: #2980b9; --c-C: #8e44ad; --c-D: #f1c40f;
+            --bg: #0d0d0d; --card: #1a1a1a; --text: #00ff41;
+        }
+        body { font-family: 'Consolas', 'Courier New', monospace; background: var(--bg); color: #888; margin: 0; padding: 10px; }
+        .container { max-width: 1600px; margin: 0 auto; }
+        header { border: 1px solid #333; padding: 20px; text-align: center; background: #000; margin-bottom: 20px; }
+        header h1 { color: var(--text); margin: 0; font-size: 1.5rem; text-transform: uppercase; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .card { background: var(--card); border: 1px solid #222; position: relative; display: flex; flex-direction: column; }
+        
+        .img-box { width: 100%; height: 200px; background: #000; position: relative; border-bottom: 1px solid #333; }
+        .img-box img { width: 100%; height: 100%; object-fit: contain; }
+        
+        .badge { position: absolute; top: 10px; left: 10px; padding: 4px 12px; font-size: 10px; font-weight: bold; color: #fff; }
+        
+        .info { padding: 15px; background: #111; }
+        .info h3 { margin: 0; color: #fff; font-size: 1.2rem; }
+        .spec { color: var(--text); font-size: 0.8rem; display: block; margin: 5px 0; }
+        
+        .repairs { padding: 15px; font-size: 11px; flex-grow: 1; }
+        .repairs h4 { color: #555; text-transform: uppercase; margin: 0 0 10px 0; border-bottom: 1px solid #222; }
+        
+        .err-row { margin-bottom: 12px; padding-bottom: 5px; border-bottom: 1px solid #222; }
+        .err-msg { color: #ff5555; display: block; font-weight: bold; }
+        .sol-msg { color: #55ff55; display: block; margin-top: 2px; padding-left: 10px; font-style: italic; }
+
+        .b-0 { background: var(--c-0); } .b-A { background: var(--c-A); }
+        .b-B { background: var(--c-B); } .b-C { background: var(--c-C); } .b-D { background: var(--c-D); color: #000 !important; }
+
+        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Mainframe: Mars Asset Repair Database</h1>
+        <p>Status: Synchronizováno | Protokol: Vzdálené řešení v2.5</p>
+    </header>
+    <div id="main-grid" class="grid"></div>
+</div>
+
+<script>
+    const baseUrl = "https://tobi-09.github.io/skaut/img/mars/";
+    const variants = ["0", "A", "B", "C", "D"];
+    const colors = { "0":"Základní", "A":"Alpha", "B":"Beta", "C":"Gamma", "D":"Delta" };
+
+    const assets = [
+        { id: "3", name: "Rover 1", spec: "Kamera na robotickém rameni", cat: "Vehicle" },
+        { id: "18", name: "Rover 2", spec: "Pevně připevněná kamera", cat: "Vehicle" },
+        { id: "20", name: "Rover 3", spec: "Bez kamery", cat: "Vehicle" },
+        { id: "4", name: "Servisní robot 1", spec: "Humanoid", cat: "Bot" },
+        { id: "16", name: "Servisní robot 2", spec: "Kamera místo hlavy", cat: "Bot" },
+        { id: "6", name: "Geotermální vrt 1", spec: "Jedna obrazovka", cat: "Energy" },
+        { id: "19", name: "Geotermální vrt 2", spec: "Dvě obrazovky", cat: "Energy" },
+        { id: "8", name: "Obytný modul 1", spec: "Rovné stěny, zaoblená střecha", cat: "Hab" },
+        { id: "9", name: "Obytný modul 2", spec: "Kulatý, výstup na straně", cat: "Hab" },
+        { id: "10", name: "Obytný modul 3", spec: "Iglú", cat: "Hab" },
+        { id: "15", name: "Skleník 1", spec: "Klika na dveřích", cat: "Bio" },
+        { id: "23", name: "Skleník 2", spec: "Bez kliky na dveřích", cat: "Bio" },
+        { id: "17", name: "Skleník 3", spec: "Tabule", cat: "Bio" },
+        { id: "2", name: "Dron 1", spec: "Vrtulový průzkumník", cat: "Aerial" },
+        { id: "1", name: "Robotický bagr 1", spec: "Těžební lžíce", cat: "Vehicle" },
+        { id: "15", name: "Solární panel 1", spec: "Křemíkové pole", cat: "Energy", suffix: "_P" },
+        { id: "21", name: "Jaderný reaktor 1", spec: "Generátor energie", cat: "Energy" },
+        { id: "17", name: "Bateriová stanice 1", spec: "Li-Ion úložiště", cat: "Energy", suffix: "_B" }
+    ];
+
+    const errorParts = {
+        Vehicle: ["motoru", "podvozku", "kol", "antény", "ramene", "převodovky", "brzd", "Lidaru", "navigace", "baterie"],
+        Bot: ["kloubu", "procesoru", "mikrofonu", "optiky", "rovnováhy", "paměti", "gyroskopu", "stisku", "chlazení", "řeči"],
+        Energy: ["článku", "měniče", "kabeláže", "jádra", "transformátoru", "izolace", "svorky", "monitoru", "chladiva", "relé"],
+        Hab: ["přechodové komory", "ventilace", "těsnění", "osvětlení", "topení", "filtru", "senzoru tlaku", "zámku", "pláště", "UI terminálu"],
+        Bio: ["hydroponie", "závlahy", "LED spektra", "pH metru", "hnojení", "ventilátoru", "čerpadla", "vlhkosti", "skla", "dveří"],
+        Aerial: ["rotoru", "vztlaku", "výškoměru", "stabilizace", "vysílače", "lopatek", "kompasu", "telemetrie", "kamery", "podvozku"]
+    };
+
+    const actions = ["Restartovat", "Rekalibrovat", "Zvýšit napětí v", "Vyčistit impulsy", "Přepsat registry", "Aktivovat záložní", "Spustit diagnostiku", "Upravit parametry", "Vzdáleně propláchnout", "Nulovat hodnoty"];
+
+    const grid = document.getElementById('main-grid');
+
+    assets.forEach(asset => {
+        variants.forEach(v => {
+            const fileName = `${asset.id}_${v}.jpg`;
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            // Generátor 10 unikátních chyb
+            let repairHtml = '';
+            const parts = errorParts[asset.cat] || errorParts.Vehicle;
+            
+            for(let i=0; i<10; i++) {
+                const part = parts[i % parts.length];
+                const action = actions[(i + v.charCodeAt(0)) % actions.length];
+                const errCode = `${asset.cat[0]}${asset.id}-${v}${i+100}`;
+                
+                repairHtml += `
+                    <div class="err-row">
+                        <span class="err-msg">[ERR-${errCode}] Porucha ${part}</span>
+                        <span class="sol-msg">COMMAND: ${action} ${part}</span>
+                    </div>`;
+            }
+
+            card.innerHTML = `
+                <div class="img-box">
+                    <span class="badge b-${v}">${colors[v]} (${v})</span>
+                    <img src="${baseUrl}${fileName}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x200/111/444?text=Obrázek+nenalezen'">
+                </div>
+                <div class="info">
+                    <h3>${asset.name}</h3>
+                    <span class="spec">${asset.spec}</span>
+                    <small>Sektor: ${asset.cat} | Soubor: ${fileName}</small>
+                </div>
+                <div class="repairs">
+                    <h4>Diagnostický výpis logů:</h4>
+                    ${repairHtml}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    });
+</script>
+
+</body>
+</html>
