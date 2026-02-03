@@ -9,6 +9,8 @@
         body { background: #1a1510; color: var(--ink); font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         #side-menu { width: 420px; background: var(--paper); border-right: 5px double var(--ink); padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; z-index: 300; overflow-y: auto; }
         #operator-panel { background: #000; color: #0f0; padding: 10px; border: 2px inset #444; font-size: 0.7em; border-radius: 5px; min-height: 110px; }
+        #op-res.hidden, #op-stats.hidden, #op-calc.hidden { display: none; }
+        #btn-toggle-calc { background: #555; color: #fff; padding: 6px 10px; cursor: pointer; font-weight: bold; border: 2px outset #333; margin-top: 4px; font-size: 0.75em; }
         .danger { color: #ff3333; font-weight: bold; }
         .ok { color: #00ff00; font-weight: bold; }
         .control-group { display: flex; flex-direction: column; border-bottom: 1px solid rgba(0,0,0,0.1); padding: 2px 0; }
@@ -63,7 +65,7 @@
 
 <div id="side-menu">
     <h2 style="margin:0; font-size: 0.9em; text-align: center;">✈️ AERODYNAMIKA V10.0</h2>
-    <div id="operator-panel"><div id="op-res"></div><div id="op-stats"></div><div id="op-calc" style="font-size:0.7em;margin-top:6px;line-height:1.2em;"></div></div>
+    <div id="operator-panel"><div id="op-res"></div><div id="op-stats"></div><button id="btn-toggle-calc">📋 DETAILY</button><div id="op-calc" style="font-size:0.7em;margin-top:6px;line-height:1.2em;"></div></div>
     
     <div class="control-group"><label>Biom (Lokalita)</label>
         <select id="sel-biome" onchange="initWorldState()"><option value="louka">🌳 LOUKA (standard)</option><option value="hory">🏔️ HORY</option><option value="pust">🏜️ POUŠŤ</option><option value="arktida">❄️ ARKTIDA</option></select>
@@ -71,8 +73,8 @@
     <div class="control-group"><label>Počasí</label>
         <select id="sel-weather" onchange="initWorldState()"><option value="jasno">☀️ JASNO</option><option value="mlha">🌫️ MLHA</option><option value="piesecna">🌪️ PÍSEČNÁ BOUŘE</option><option value="boure">⛈️ BOUŘE</option></select>
     </div>
-    <div class="control-group"><label>Vzdálenost (km)</label><input type="number" id="inp-km" value="120" onchange="updateOperator()"></div>
-    <div class="control-group"><label>Ranvej (m)</label><input type="number" id="inp-rw" value="1700" onchange="updateOperator()"></div>
+    <div class="control-group"><label>Vzdálenost (km)</label><input type="number" id="inp-km" value="1200" onchange="updateOperator()"></div>
+    <div class="control-group"><label>Ranvej (m)</label><input type="number" id="inp-rw" value="1000" onchange="updateOperator()"></div>
 
     <div id="ui-gen"></div>
     <button class="btn-launch" onclick="launchSimulation()">ZAHÁJIT LET</button>
@@ -134,7 +136,7 @@ const DB = {
         { id: "D1", vz:0, va:20, price:30, od:1, ma:0, ry:0 },
         { id: "D2", vz:0, va:35, price:70, od:3, ma:-1, ry:-5 },
         { id: "D3", vz:0, va:30, price:80, od:4, ma:0, ry:-10 },
-        { id: "D4", vz:50, va:120, price:200, od:-30, ma:-3, ry:2 },
+        { id: "D4", vz:50, va:120, price:200, od:2, ma:-3, ry:-30 }, // OPRAVENO ry na -30
         { id: "D5", vz:0, va:150, price:550, od:2, ma:4, ry:25 }
     ] },
     R: { n: "VRTULE", opt: [
@@ -155,15 +157,15 @@ const DB = {
         { id: "N1", vz:0, va:50, price:10, od:0, ma:0, ry:0 },
         { id: "N2", vz:0, va:85, price:100, od:0, ma:0, ry:0 },
         { id: "N3", vz:0, va:170, price:200, od:0, ma:-1, ry:0 },
-        { id: "N4", vz:0, va:400, price:500, od:-3, ma:0, ry:0 },
+        { id: "N4", vz:0, va:400, price:500, od:0, ma:-3, ry:0 }, // OPRAVENO prohození od/ma
         { id: "N5", vz:0, va:900, price:1200, od:0, ma:-6, ry:0 }
     ] },
-    G: { n: "NAVIGACE", opt: [
-        { id: "G1", vz:0, va:1, price:5 },
-        { id: "G2", vz:0, va:2, price:25 },
-        { id: "G3", vz:0, va:15, price:150 },
-        { id: "G4", vz:0, va:25, price:400 },
-        { id: "G5", vz:0, va:5, price:200 }
+    G: { n: "NAVIGACE", opt: [ // DOPLNĚNY CHYBĚJÍCÍ STATY
+        { id: "G1", vz:0, va:1, price:5, od:0, ma:0, ry:0 },
+        { id: "G2", vz:0, va:2, price:25, od:1, ma:1, ry:0 },
+        { id: "G3", vz:0, va:15, price:150, od:1, ma:3, ry:0 },
+        { id: "G4", vz:0, va:25, price:400, od:2, ma:2, ry:0 },
+        { id: "G5", vz:0, va:5, price:200, od:1, ma:0, ry:0 }
     ] },
     C: { n: "CHLAZENÍ", opt: [
         { id: "C1", vz:0, va:5, price:15, od:-2, ma:1, ry:5 },
@@ -314,42 +316,59 @@ function updateOperator() {
     const km = parseInt(document.getElementById('inp-km').value);
     const biome = document.getElementById('sel-biome').value;
     const weather = document.getElementById('sel-weather').value;
+    const inputRw = parseInt(document.getElementById('inp-rw').value) || 1000;
     document.getElementById('plane-img').src = "https://tobi-09.github.io/skaut/img/" + s.IMG;
 
     // Modifikátor spotřeby paliva podle biomu
     let fuelModifier = 1.0;
-    if (biome === "pust") fuelModifier = 1.2; // Poušť: +20% spotřeba
+    if (biome === "pust") fuelModifier = 1.2;
     
     // Vzorec: fuelNeeded = (SP/50 * km/8 + 1.2) * fuelModifier
-    // Lineárně závislá na km (bez nesmyslné konstanty 300)
     let fuelNeeded = (s.SP/50 * (km/8) + 1.2) * fuelModifier;
     let outcome = "DOLETÍ V POŘÁDKU";
     let issues = [];
 
-    // Kontrola výšky a váhy
-    if (s.VZ <= s.VA) { outcome = "NESTIHL VZLETĚT!"; issues.push("VZ ≤ VA"); }
+    // === VÝPOČET POTŘEBNÉ RANVEJE ===
+    const power = s.VZ - s.VA;
+    const acceleration = Math.max(power / 1000, 0.5); // m/s²
+    const v_takeoff = Math.max(20, s.VA / 10); // m/s
+    const t_to_takeoff = v_takeoff / acceleration; // sekundy
+    const requiredRunway = 0.5 * acceleration * t_to_takeoff * t_to_takeoff; // metrů (s = 0.5*a*t²)
+
+    // === KONTROLY ===
+    if (s.VZ <= s.VA) { 
+        outcome = "NESTIHL VZLETĚT!"; 
+        issues.push("VZ ≤ VA"); 
+    }
+    else if (s.PAL < fuelNeeded) { 
+        outcome = "PALIVO - HAVÁRIE!"; 
+        issues.push("Palivo"); 
+    }
+    else if (inputRw < requiredRunway * 0.95) {
+        outcome = "RANVEJ PŘÍLIŠ KRÁTKÁ!";
+        issues.push(`Potřeba: ${Math.ceil(requiredRunway)}m, máš: ${inputRw}m`);
+    }
+    else if (biome === "hory" && s.MA < 2) { 
+        outcome = "NÁRAZ DO HOR!"; 
+        issues.push("MA < 2"); 
+    }
+    else if (biome === "arktida" && s.OD < 12) { 
+        outcome = "TRUP ZKŘEHNE!"; 
+        issues.push("OD < 12"); 
+    }
+    else if (weather === "boure" && s.OD < 10) { 
+        outcome = "BOUŘE - HAVÁRIE!"; 
+        issues.push("OD < 10"); 
+    }
+    else if (weather === "mlha" && s.G*5 < 15) { 
+        outcome = "BLOUDĚNÍ - PALIVO!"; 
+        issues.push("G nízké"); 
+    }
+    else if (weather === "piesecna" && (s.G*5 < 12 || s.OD < 6)) { 
+        outcome = "PÍSEČNÁ BOUŘE - HAVÁRIA!"; 
+        issues.push("G/OD"); 
+    }
     
-    // Kontrola paliva
-    else if (s.PAL < fuelNeeded) { outcome = "PALIVO - HAVÁRIE!"; issues.push("Palivo"); }
-    
-    // Biom: HORY
-    else if (biome === "hory" && s.MA < 2) { outcome = "NÁRAZ DO HOR!"; issues.push("MA < 2"); }
-    
-    // Biom: ARKTIDA
-    else if (biome === "arktida" && s.OD < 12) { outcome = "TRUP ZKŘEHNE!"; issues.push("OD < 12"); }
-    
-    // Počasí: BOUŘE
-    else if (weather === "boure" && s.OD < 10) { outcome = "BOUŘE - HAVÁRIE!"; issues.push("OD < 10"); }
-    
-    // Počasí: MLHA (navigace)
-    else if (weather === "mlha" && s.G*5 < 15) { outcome = "BLOUDĚNÍ - PALIVO!"; issues.push("G nízké"); }
-    
-    // Počasí: PÍSEČNÁ BOUŘE (je kombinace mlhy a vysokého odporu)
-    else if (weather === "piesecna" && (s.G*5 < 12 || s.OD < 6)) { outcome = "PÍSEČNÁ BOUŘE - HAVÁRIA!"; issues.push("G/OD"); }
-    
-    // BIOM: POUŠŤ - Vyžaduje dostatečné chlazení (vysoká tepla v motoru)
-    // V poušti: heatGeneration = 0.1 + 0.15 = 0.25 base; pak se násobí (1 + SP/100) během letu
-    // Chlazení sníží teplotu o C*0.05 per tick
     const baseHeatInDesert = 0.25;
     const coolingPerTick = s.C * 0.05;
     if (biome === "pust" && coolingPerTick < baseHeatInDesert * 0.5) {
@@ -360,23 +379,19 @@ function updateOperator() {
     document.getElementById('op-res').innerHTML = `VÝSLEDEK: <span class="${outcome.includes('POŘÁDKU')?'ok':'danger'}">${outcome}</span>`;
     document.getElementById('op-stats').innerHTML = `VZTLAK: ${s.VZ} | VÁHA: ${s.VA} | OD: ${s.OD} | NAVIGACE: ${s.G} | CHLADIČ: ${s.C} | PAL: ${s.PAL}L`;
 
-    // Detailed calculation breakdown
-    const power = s.VZ - s.VA;
+    // === DETAILNÍ VÝPOČTY ===
     const powerDisplay = Math.round(power);
-    const accel = Math.max(power / 1000, 0.5);
-    const v_takeoff = Math.max(20, s.VA / 10);
-    const t_to_takeoff = +(v_takeoff / accel).toFixed(2);
-    const dist_to_takeoff = +(0.5 * accel * t_to_takeoff * t_to_takeoff).toFixed(1);
+    const accel = acceleration;
+    const v_to = v_takeoff;
+    const t_to = +(t_to_takeoff).toFixed(2);
+    const dist_to = +(requiredRunway).toFixed(1);
     const fuelRemaining = +(s.PAL - fuelNeeded).toFixed(1);
-    const fuelPerKm = +(fuelNeeded / Math.max(1, km)).toFixed(2);
-    const estFrames = Math.round(t_to_takeoff / 0.03);
-
     const partsCost = estimatePartsCost();
+    const rwStatus = inputRw >= requiredRunway * 0.95 ? "✓ OK" : "⚠️ KRÁTKÁ";
 
-    // Diagnostika chlazení a tepla motoru podle biomu
     let heatInfo = "";
     if (biome === "pust") {
-        const baseHeat = 0.25; // 0.1 + 0.15
+        const baseHeat = 0.25;
         const coolingPower = s.C * 0.05;
         const heatBalance = coolingPower - baseHeat;
         const status = heatBalance >= 0 ? "✓ OK" : "⚠️ RIZIKO";
@@ -387,24 +402,24 @@ function updateOperator() {
     }
 
     const calcHtml = `
+        <div><strong>VZLET:</strong></div>
+        <div>Potřebná ranvej: <strong>${Math.ceil(requiredRunway)}m</strong> | Máš: <strong>${inputRw}m</strong> ${rwStatus}</div>
+        <div>Čas do vzletu: ${t_to}s | Akcelerace: ${accel.toFixed(2)} m/s²</div>
+        <div>Rychlost vzletu: ${v_to.toFixed(1)} m/s</div>
+        <hr>
         <div><strong>Výpočty:</strong></div>
         <div>Biom: ${biome.toUpperCase()} (mod: ${(fuelModifier*100).toFixed(0)}%)</div>
         <div>Power margin (VZ-VA): ${powerDisplay}</div>
-        <div>Akcelerace (m/s²): ${accel.toFixed(2)}</div>
-        <div>Požadovaná rychlost vzletu (m/s): ${v_takeoff.toFixed(1)}</div>
         <div>Spotřeba paliva (celkem): ${fuelNeeded.toFixed(1)} L</div>
         <div>Zbývající palivo: ${fuelRemaining} L</div>
         <div>Cena dílů (orient.): ${partsCost} Kč</div>
         ${heatInfo}
         ${issues.length > 0 ? `<div style="color: #ff3333;"><strong>⚠️ Problémy:</strong> ${issues.join(', ')}</div>` : ''}
         <hr>
-        <div><strong>Jak fungují výpočty:</strong></div>
-        <div>- Vztlak vs Váha: porovnává se <em>VZ</em> a <em>VA</em>. Pokud <em>VZ ≤ VA</em>, stroj nezvládne vzlet.</div>
-        <div>- Spotřeba paliva: <em>(SP/50 × km/8 + 1.2) × fuelMod</em>. V poušti se násobí <em>1.2</em>.</div>
-        <div>- Navigace (G): úroveň od 1-5. Při mlze/bouři s G&lt;3 může dojít ke ztracení (missionEnd += 300).</div>
-        <div>- Odolnost (OD): součet atributů T+O+K. Bouře vyžaduje OD≥10; Arktida OD≥8.</div>
-        <div>- Chlazení (C): každé tick sníží teplotu o <em>C×0.05°C</em>. V poušti je base heat 0.25°C/tick.</div>
-        <div>- Přehřátí: pokud <em>engineTemp &gt; 100°C</em> ve vzduchu → pád.</div>
+        <div><strong>Vzorce:</strong></div>
+        <div><em>requiredRunway = 0.5 × a × t²</em></div>
+        <div><em>kde a = (VZ-VA)/1000, t = v_takeoff/a</em></div>
+        <div><em>v_takeoff = max(20, VA/10)</em></div>
     `;
     document.getElementById('op-calc').innerHTML = calcHtml;
 }
@@ -695,7 +710,7 @@ function launchSimulation() {
         if(!falling) {
             // ROZJEZD: akcelerace na runway (0-200)
             if(time < 200) { 
-                px += (s.VZ > s.VA ? 0.7 : 0.05); 
+                px += (s.VZ > s.VA ? 0.7 : 0.05);
                 if(py < 85 && time > 180 && s.VZ <= s.VA) { 
                     falling=true; reason="NESTIHL VZLETĚT!";
                 } 
@@ -895,6 +910,24 @@ document.addEventListener('fullscreenchange', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const b = document.getElementById('btn-full');
     if (b) b.addEventListener('click', toggleFullscreen);
+    
+    // Toggle prediction details
+    const toggleCalc = document.getElementById('btn-toggle-calc');
+    const opRes = document.getElementById('op-res');
+    const opStats = document.getElementById('op-stats');
+    const opCalc = document.getElementById('op-calc');
+    if (toggleCalc && opRes && opStats && opCalc) {
+        // start hidden
+        opRes.classList.add('hidden');
+        opStats.classList.add('hidden');
+        opCalc.classList.add('hidden');
+        toggleCalc.addEventListener('click', () => {
+            opRes.classList.toggle('hidden');
+            opStats.classList.toggle('hidden');
+            opCalc.classList.toggle('hidden');
+            toggleCalc.textContent = opRes.classList.contains('hidden') ? '📋 DETAILY' : '📋 SCHOVAT';
+        });
+    }
 });
 
 initClouds();
