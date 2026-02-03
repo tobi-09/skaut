@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars Asset Repair Database - Terminal v2.6</title>
+    <style>
+        :root { 
+            --green: #00ff41; 
+            --bg: #050505; 
+            --panel: #111; 
+            --red: #ff3131;
+        }
+        
+        body { 
+            font-family: 'Courier New', monospace; 
+            background: var(--bg); 
+            color: #ccc; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0; 
+            transition: background-color 0.05s;
+        }
+
+        #quiz-container { 
+            width: 95%; 
+            max-width: 600px; 
+            background: var(--panel); 
+            border: 2px solid #222; 
+            padding: 25px; 
+            border-radius: 5px; 
+            box-shadow: 0 0 30px rgba(0,255,65,0.05);
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            color: #666;
+        }
+
+        .scoreboard span b { color: var(--green); }
+        .scoreboard span i { color: var(--red); font-style: normal; font-weight: bold; }
+
+        .viewscreen { 
+            width: 100%; 
+            height: 350px; 
+            background: #000; 
+            border: 1px solid #333; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            overflow: hidden;
+            position: relative;
+        }
+
+        .viewscreen img { 
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain; 
+        }
+
+        .status-box { 
+            background: #000; 
+            padding: 15px; 
+            border-left: 4px solid var(--red); 
+            margin-bottom: 20px; 
+        }
+
+        .error-msg { 
+            color: var(--red); 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            display: block; 
+            letter-spacing: 1px;
+        }
+
+        .options-grid { 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 10px; 
+        }
+
+        .option-btn { 
+            background: #0a0a0a; 
+            border: 1px solid #444; 
+            color: #aaa; 
+            padding: 15px; 
+            text-align: left; 
+            cursor: pointer; 
+            font-family: inherit; 
+            transition: 0.2s; 
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .option-btn:hover:not(:disabled) { 
+            border-color: var(--green); 
+            color: var(--green); 
+        }
+
+        .option-btn.correct-locked { 
+            border-color: var(--green) !important; 
+            color: var(--green) !important; 
+            pointer-events: none; 
+        }
+
+        .option-btn.wrong-locked { 
+            border-color: var(--red) !important; 
+            color: var(--red) !important; 
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #feedback { 
+            margin-top: 15px; 
+            min-height: 24px; 
+            font-weight: bold; 
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .next-btn { 
+            width: 100%; 
+            margin-top: 20px; 
+            background: var(--green); 
+            color: #000; 
+            border: none; 
+            padding: 15px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: none; 
+            font-family: inherit;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div class="scoreboard">
+        <span>ÚSPĚCH: <b id="stat-correct">0</b></span>
+        <span>CHYBY: <i id="stat-wrong">0</i></span>
+        <span>KOLO: <span id="stat-total" style="color:#fff">1</span></span>
+    </div>
+
+    <div class="viewscreen">
+        <img id="asset-img" src="" alt="MARS_ASSET_LOADING">
+    </div>
+
+    <div class="status-box">
+        <span class="error-msg" id="error-desc">DEŠIFRUJI DATA...</span>
+    </div>
+
+    <div id="options" class="options-grid"></div>
+    <div id="feedback"></div>
+    <button id="next-btn" class="next-btn">NAČÍST DALŠÍ SEKTOR</button>
+</div>
+
+<script>
+    const baseUrl = "https://tobi-09.github.io/skaut/img/mars/";
+    
+    let scoreCorrect = 0;
+    let scoreWrong = 0;
+    let currentRound = 1;
+
+    const banks = {
+        motor: ["Vzdáleně propláchnout motoru", "Aktivovat záložní motoru", "Spustit diagnostiku motoru", "Upravit parametry motoru"],
+        podvozek: ["Nulovat hodnoty podvozku", "Spustit diagnostiku podvozku", "Upravit parametry podvozku", "Vzdáleně propláchnout podvozku"],
+        antena: ["Rekalibrovat antény", "Vzdáleně propláchnout antény", "Nulovat hodnoty antény", "Restartovat antény"],
+        ventilace: ["Nulovat hodnoty ventilace", "Spustit diagnostiku ventilace", "Upravit parametry ventilace", "Vzdáleně propláchnout ventilace"],
+        tesneni: ["Restartovat těsnění", "Upravit parametry těsnění", "Vzdáleně propláchnout těsnění", "Nulovat hodnoty těsnění"],
+        optika: ["Rekalibrovat optiky", "Vzdáleně propláchnout optiky", "Nulovat hodnoty optiky", "Restartovat optiky"],
+        kabelaz: ["Restartovat kabeláže", "Upravit parametry kabeláže", "Vzdáleně propláchnout kabeláže", "Nulovat hodnoty kabeláže"]
+    };
+
+    const quizData = [
+        { id: "3", v: "0", err: "Porucha motoru", cmd: "Vzdáleně propláchnout motoru", type: "motor" },
+        { id: "3", v: "A", err: "Porucha podvozku", cmd: "Spustit diagnostiku podvozku", type: "podvozek" },
+        { id: "3", v: "B", err: "Porucha motoru", cmd: "Spustit diagnostiku motoru", type: "motor" },
+        { id: "18", v: "0", err: "Porucha motoru", cmd: "Vzdáleně propláchnout motoru", type: "motor" },
+        { id: "18", v: "C", err: "Porucha antény", cmd: "Restartovat antény", type: "antena" },
+        { id: "4", v: "A", err: "Porucha optiky", cmd: "Vzdáleně propláchnout optiky", type: "optika" },
+        { id: "6", v: "0", err: "Porucha kabeláže", cmd: "Restartovat kabeláže", type: "kabelaz" },
+        { id: "19", v: "C", err: "Porucha monitoru", cmd: "Přepsat registry monitoru", type: "optika" },
+        { id: "8", v: "A", err: "Porucha ventilace", cmd: "Spustit diagnostiku ventilace", type: "ventilace" },
+        { id: "9", v: "B", err: "Porucha těsnění", cmd: "Vzdáleně propláchnout těsnění", type: "tesneni" }
+    ];
+
+    function playWarningSound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+            oscillator.frequency.linearRampToValueAtTime(500, audioCtx.currentTime + 0.1);
+            oscillator.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.2);
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        } catch(e) {}
+    }
+
+    function triggerAlarm() {
+        let flashes = 0;
+        const interval = setInterval(() => {
+            document.body.style.backgroundColor = (flashes % 2 === 0) ? "#ff0000" : "#ffffff";
+            flashes++;
+            if (flashes > 10) {
+                clearInterval(interval);
+                document.body.style.backgroundColor = "#050505";
+            }
+        }, 80);
+    }
+
+    function loadQuestion() {
+        const data = quizData[Math.floor(Math.random() * quizData.length)];
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const optionsDiv = document.getElementById('options');
+        
+        document.getElementById('asset-img').src = `${baseUrl}${data.id}_${data.v}.jpg`;
+        document.getElementById('error-desc').innerText = `KRITICKÁ CHYBA: ${data.err.toUpperCase()}`;
+        document.getElementById('stat-total').innerText = currentRound;
+        
+        optionsDiv.innerHTML = "";
+        feedback.innerText = "";
+        nextBtn.style.display = "none";
+
+        const bankKey = banks[data.type] ? data.type : "optika";
+        let choices = [...banks[bankKey]];
+        if(!choices.includes(data.cmd)) choices[0] = data.cmd;
+        choices.sort(() => Math.random() - 0.5);
+
+        choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = "CMD:> " + choice;
+            btn.onclick = () => {
+                if(choice === data.cmd) {
+                    btn.classList.add('correct-locked');
+                    scoreCorrect++;
+                    document.getElementById('stat-correct').innerText = scoreCorrect;
+                    handleCorrect();
+                } else {
+                    btn.classList.add('wrong-locked');
+                    btn.disabled = true;
+                    scoreWrong++;
+                    document.getElementById('stat-wrong').innerText = scoreWrong;
+                    feedback.innerText = "SPOJENÍ ZAMÍTNUTO: NEPLATNÝ PROTOKOL";
+                    feedback.style.color = "var(--red)";
+                }
+            };
+            optionsDiv.appendChild(btn);
+        });
+    }
+
+    function handleCorrect() {
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const waitTime = Math.floor(Math.random() * 29000) + 1000; 
+        
+        feedback.innerText = "PŘÍKAZ PŘIJAT. ČEKÁM NA POTVRZENÍ Z MARSU...";
+        feedback.style.color = "var(--green)";
+        document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+        setTimeout(() => {
+            playWarningSound();
+            triggerAlarm();
+            feedback.innerText = "SPOJENÍ ÚSPĚŠNĚ NAVÁZÁNO. SYSTÉM RESETOVÁN.";
+            nextBtn.style.display = "block";
+            currentRound++;
+        }, waitTime);
+    }
+
+    document.getElementById('next-btn').onclick = loadQuestion;
+    window.onload = loadQuestion;
+</script>
+
+</body>
+</html>
