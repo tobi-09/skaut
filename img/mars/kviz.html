@@ -2,54 +2,54 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mars Operational Terminal v3.3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mars Operational Terminal v3.4</title>
     <style>
         :root { --green: #00ff41; --bg: #050505; --red: #ff3131; --panel: #111; --blue: #008cff; }
+        
         body { 
             font-family: 'Consolas', monospace; background: var(--bg); color: #ccc; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            min-height: 100vh; margin: 0; touch-action: manipulation; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            height: 100vh; margin: 0; touch-action: manipulation; overflow: hidden;
         }
-        /* Počítadlo statistik */
-        #stats-bar {
-            width: 95%; max-width: 500px; display: flex; justify-content: space-between;
-            padding: 10px 20px; background: #000; border: 1px solid #333;
-            border-bottom: none; border-radius: 5px 5px 0 0; box-sizing: border-box;
-            font-size: 0.8rem; letter-spacing: 1px;
-        }
-        .stat-item span { font-weight: bold; }
-        .stat-correct { color: var(--green); }
-        .stat-wrong { color: var(--red); }
-        .stat-total { color: var(--blue); }
 
-        #flash-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 9999; background-color: transparent;
+        #stats-bar {
+            width: 100%; max-width: 500px; display: flex; justify-content: space-between;
+            padding: 8px 15px; background: #000; border-bottom: 1px solid #333;
+            box-sizing: border-box; font-size: 0.75rem; z-index: 100;
         }
+
         #quiz-container { 
-            width: 95%; max-width: 500px; background: var(--panel); border: 2px solid #222; 
-            padding: 20px; border-radius: 0 0 5px 5px; position: relative; z-index: 10;
+            width: 100%; max-width: 500px; flex-grow: 1; display: flex; flex-direction: column;
+            background: var(--panel); position: relative; overflow-y: auto; padding: 10px; box-sizing: border-box;
         }
+
         .viewscreen { 
-            width: 100%; height: 260px; background: #000; border: 1px solid #333; 
-            display: flex; justify-content: center; align-items: center; margin-bottom: 20px;
+            width: 100%; min-height: 150px; max-height: 220px; background: #000; border: 1px solid #333; 
+            display: flex; justify-content: center; align-items: center; margin-bottom: 10px; flex-shrink: 1;
         }
         .viewscreen img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .status-box { background: #000; padding: 15px; border-left: 4px solid var(--red); margin-bottom: 20px; }
-        .error-msg { color: var(--red); font-weight: bold; font-size: 1.1rem; text-transform: uppercase; }
-        .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+
+        .status-box { background: #000; padding: 10px; border-left: 4px solid var(--red); margin-bottom: 10px; flex-shrink: 0; }
+        .error-msg { color: var(--red); font-weight: bold; font-size: 0.95rem; text-transform: uppercase; }
+
+        .options-grid { display: grid; grid-template-columns: 1fr; gap: 8px; flex-shrink: 0; }
         .option-btn { 
-            background: #0a0a0a; border: 1px solid #444; color: #aaa; padding: 15px; 
-            text-align: left; cursor: pointer; font-family: inherit; font-size: 0.85rem;
+            background: #0a0a0a; border: 1px solid #444; color: #aaa; padding: 12px; 
+            text-align: left; cursor: pointer; font-family: inherit; font-size: 0.8rem; border-radius: 4px;
         }
-        .option-btn.correct { border-color: var(--green); color: var(--green); }
+        .option-btn.correct { border-color: var(--green); color: var(--green); background: rgba(0, 255, 65, 0.05); }
         .option-btn.wrong { border-color: var(--red); color: var(--red); opacity: 0.3; }
+
         .next-btn { 
-            width: 100%; margin-top: 20px; background: var(--green); color: #000; 
-            border: none; padding: 18px; font-weight: bold; cursor: pointer; display: none; 
+            width: 100%; margin-top: 15px; background: var(--green); color: #000; 
+            border: none; padding: 16px; font-weight: bold; cursor: pointer; display: none; 
+            border-radius: 4px; font-size: 1rem; box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
         }
-        #feedback { text-align: center; margin-top: 15px; font-weight: bold; min-height: 1.2rem; font-size: 0.8rem; }
+
+        #feedback { text-align: center; margin-top: 10px; font-weight: bold; min-height: 1.2rem; font-size: 0.75rem; }
+        #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
+
         .loading-dots:after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
         @keyframes dots { 0%, 20% { color: rgba(0,0,0,0); text-shadow: .5em 0 0 rgba(0,0,0,0), 1em 0 0 rgba(0,0,0,0); }
           40% { color: var(--green); text-shadow: .5em 0 0 rgba(0,0,0,0), 1em 0 0 rgba(0,0,0,0); }
@@ -62,27 +62,26 @@
 <div id="flash-overlay"></div>
 
 <div id="stats-bar">
-    <div class="stat-item">SPRÁVNĚ: <span id="count-correct" class="stat-correct">0</span></div>
-    <div class="stat-item">ŠPATNĚ: <span id="count-wrong" class="stat-wrong">0</span></div>
-    <div class="stat-item">CELKEM: <span id="count-total" class="stat-total">0</span></div>
+    <div class="stat-item">OK: <span id="count-correct" style="color:var(--green)">0</span></div>
+    <div class="stat-item">ERR: <span id="count-wrong" style="color:var(--red)">0</span></div>
+    <div class="stat-item">SUM: <span id="count-total" style="color:var(--blue)">0</span></div>
 </div>
 
 <div id="quiz-container">
     <div class="viewscreen">
-        <img id="asset-img" src="" alt="DATOVÝ PŘENOS...">
+        <img id="asset-img" src="" alt="SYNC...">
     </div>
     <div class="status-box">
-        <span class="error-msg" id="display-err-text">SYSTÉMOVÁ ANALÝZA...</span>
+        <span class="error-msg" id="display-err-text">ANALÝZA...</span>
     </div>
     <div id="options" class="options-grid"></div>
     <div id="feedback"></div>
-    <button id="next-btn" class="next-btn">NAČÍST DALŠÍ SEKTOR</button>
+    <button id="next-btn" class="next-btn">POKRAČOVAT</button>
 </div>
 
 <script>
     const baseUrl = "https://tobi-09.github.io/skaut/img/mars/";
     const variants = ["0", "A", "B", "C", "D"];
-    
     const assets = [
         { id: "1", cat: "Vehicle" }, { id: "2", cat: "Aerial" }, { id: "3", cat: "Vehicle" },
         { id: "4", cat: "Bot" },     { id: "5", cat: "Energy" },  { id: "6", cat: "Energy" },
@@ -105,10 +104,7 @@
 
     const actions = ["Restartovat", "Rekalibrovat", "Zvýšit napětí v", "Vyčistit impulsy", "Přepsat registry", "Aktivovat záložní", "Spustit diagnostiku", "Upravit parametry", "Vzdáleně propláchnout", "Nulovat hodnoty"];
 
-    let correctCount = 0;
-    let wrongCount = 0;
-    let totalCount = 0;
-    let audioCtx = null;
+    let correctCount = 0, wrongCount = 0, totalCount = 0, audioCtx = null;
 
     function updateStats() {
         document.getElementById('count-correct').innerText = correctCount;
@@ -116,28 +112,25 @@
         document.getElementById('count-total').innerText = totalCount;
     }
 
-    function playSound() {
+    function triggerFinalEffects() {
+        if (navigator.vibrate) navigator.vibrate([150, 50, 150]);
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(140, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
         gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.5);
-    }
 
-    function triggerFinalEffects() {
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-        playSound();
         const overlay = document.getElementById('flash-overlay');
         let count = 0;
         const interval = setInterval(() => {
-            overlay.style.backgroundColor = (count % 2 === 0) ? "rgba(255, 0, 0, 0.7)" : "rgba(255, 255, 255, 0.7)";
+            overlay.style.backgroundColor = (count % 2 === 0) ? "rgba(255, 0, 0, 0.4)" : "rgba(255, 255, 255, 0.4)";
             count++;
-            if (count > 12) { clearInterval(interval); overlay.style.backgroundColor = "transparent"; }
+            if (count > 8) { clearInterval(interval); overlay.style.backgroundColor = "transparent"; }
         }, 70);
     }
 
@@ -145,7 +138,6 @@
         const asset = assets[Math.floor(Math.random() * assets.length)];
         const v = variants[Math.floor(Math.random() * variants.length)];
         const errorIndex = Math.floor(Math.random() * 10);
-        
         const parts = errorParts[asset.cat];
         const targetPart = parts[errorIndex % parts.length];
         const correctAction = actions[(errorIndex + v.charCodeAt(0)) % actions.length];
@@ -161,7 +153,6 @@
 
         let choices = [solution];
         let usedActions = [correctAction];
-
         while(choices.length < 4) {
             let randAction = actions[Math.floor(Math.random() * actions.length)];
             if(!usedActions.includes(randAction)) {
@@ -174,35 +165,28 @@
         choices.forEach(choice => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
-            btn.innerText = `COMMAND: ${choice}`;
+            btn.innerText = `CMD: ${choice}`;
             btn.onclick = () => {
                 if(choice === solution) {
-                    correctCount++;
-                    totalCount++;
-                    updateStats();
-                    
+                    correctCount++; totalCount++; updateStats();
                     document.querySelectorAll('.option-btn').forEach(b => {
                         b.disabled = true;
                         if(b.innerText.includes(choice)) b.classList.add('correct');
                     });
-                    
                     const fb = document.getElementById('feedback');
                     fb.style.color = "var(--green)";
-                    fb.innerHTML = "<span class='loading-dots'>VYSÍLÁM OPRAVNÝ PAKET</span>";
-                    
+                    fb.innerHTML = "<span class='loading-dots'>VYSÍLÁM PAKET</span>";
                     setTimeout(() => {
-                        fb.innerText = "OPRAVA ÚSPĚŠNÁ";
+                        fb.innerText = "POTVRZENO";
                         triggerFinalEffects();
                         document.getElementById('next-btn').style.display = "block";
+                        // Scroll k tlačítku
+                        document.getElementById('quiz-container').scrollTo({top: 1000, behavior: 'smooth'});
                     }, Math.floor(Math.random() * 25000) + 5000);
                 } else {
-                    wrongCount++;
-                    totalCount++;
-                    updateStats();
-                    
-                    btn.classList.add('wrong');
-                    btn.disabled = true;
-                    document.getElementById('feedback').innerText = "ODMÍTNUTO - CHYBNÁ OPERACE";
+                    wrongCount++; totalCount++; updateStats();
+                    btn.classList.add('wrong'); btn.disabled = true;
+                    document.getElementById('feedback').innerText = "CHYBA - ODMÍTNUTO";
                     document.getElementById('feedback').style.color = "var(--red)";
                 }
             };
