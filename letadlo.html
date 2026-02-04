@@ -103,6 +103,11 @@
 </div>
 
 <script>
+// ============================================================
+// 🔴 VŠECHNY DEKLARACE GLOBÁLNÍCH PROMĚNNÝCH NA ZAČÁTKU
+// ============================================================
+let clouds = [], currentSpeed = 0, stormActive = false;
+
 const DB = {
     M: { n: "MOTOR", opt: [
         { id: "M1", vz:150, va:40, price:100, sp:10, od:1, ma:2, ry:60 },
@@ -136,7 +141,7 @@ const DB = {
         { id: "D1", vz:0, va:20, price:30, od:1, ma:0, ry:0 },
         { id: "D2", vz:0, va:35, price:70, od:3, ma:-1, ry:-5 },
         { id: "D3", vz:0, va:30, price:80, od:4, ma:0, ry:-10 },
-        { id: "D4", vz:50, va:120, price:200, od:2, ma:-3, ry:-30 }, // OPRAVENO ry na -30
+        { id: "D4", vz:50, va:120, price:200, od:-30, ma:-3, ry:2 },
         { id: "D5", vz:0, va:150, price:550, od:2, ma:4, ry:25 }
     ] },
     R: { n: "VRTULE", opt: [
@@ -157,15 +162,15 @@ const DB = {
         { id: "N1", vz:0, va:50, price:10, od:0, ma:0, ry:0 },
         { id: "N2", vz:0, va:85, price:100, od:0, ma:0, ry:0 },
         { id: "N3", vz:0, va:170, price:200, od:0, ma:-1, ry:0 },
-        { id: "N4", vz:0, va:400, price:500, od:0, ma:-3, ry:0 }, // OPRAVENO prohození od/ma
+        { id: "N4", vz:0, va:400, price:500, od:-3, ma:0, ry:0 },
         { id: "N5", vz:0, va:900, price:1200, od:0, ma:-6, ry:0 }
     ] },
-    G: { n: "NAVIGACE", opt: [ // DOPLNĚNY CHYBĚJÍCÍ STATY
-        { id: "G1", vz:0, va:1, price:5, od:0, ma:0, ry:0 },
-        { id: "G2", vz:0, va:2, price:25, od:1, ma:1, ry:0 },
-        { id: "G3", vz:0, va:15, price:150, od:1, ma:3, ry:0 },
-        { id: "G4", vz:0, va:25, price:400, od:2, ma:2, ry:0 },
-        { id: "G5", vz:0, va:5, price:200, od:1, ma:0, ry:0 }
+    G: { n: "NAVIGACE", opt: [
+        { id: "G1", vz:0, va:1, price:5 },
+        { id: "G2", vz:0, va:2, price:25 },
+        { id: "G3", vz:0, va:15, price:150 },
+        { id: "G4", vz:0, va:25, price:400 },
+        { id: "G5", vz:0, va:5, price:200 }
     ] },
     C: { n: "CHLAZENÍ", opt: [
         { id: "C1", vz:0, va:5, price:15, od:-2, ma:1, ry:5 },
@@ -176,6 +181,11 @@ const DB = {
     ] }
 };
 
+console.log("🚀 SIMULATOR.HTML LOADED!");
+console.log("currentSpeed initialized:", currentSpeed);
+console.log("DB initialized:", typeof DB);
+
+// Naplnit UI generátor
 const ui = document.getElementById('ui-gen');
 for(let k in DB){
     let d = document.createElement('div'); d.className='control-group';
@@ -183,7 +193,9 @@ for(let k in DB){
     ui.appendChild(d);
 }
 
-let clouds = [], currentSpeed = 0, stormActive = false;
+// ============================================================
+// VŠECHNY FUNKCE
+// ============================================================
 
 function getStats() {
     let s = {VZ:0, VA:0, OD:0, RY:0, PAL:0, SP:0, MA:0, G:0, C:0, IMG:"letadlo.png"};
@@ -192,7 +204,6 @@ function getStats() {
         let o = DB[k].opt.find(x=>x.id===val);
         for(let key in s) if(key!=="IMG") s[key] += o[key.toLowerCase()]||0;
     }
-    // Explicitně nastavit úroveň Navigace (G) a Chlazení (C) podle vybrané položky (G1..G5, C1..C5)
     try {
         const gsel = document.getElementById('s-G') && document.getElementById('s-G').value;
         s.G = gsel ? parseInt(gsel.replace(/\D/g,'')) || 0 : s.G;
@@ -201,12 +212,10 @@ function getStats() {
         const csel = document.getElementById('s-C') && document.getElementById('s-C').value;
         s.C = csel ? parseInt(csel.replace(/\D/g,'')) || 0 : s.C;
     } catch(e) { s.C = s.C; }
-
     if(document.getElementById('s-T').value === "T5") s.IMG = "letadlo2.png";
     return s;
 }
 
-// Odhad ceny dílů na základě vybraných úrovní komponent
 function estimatePartsCost() {
     let total = 0;
     for (let k in DB) {
@@ -214,12 +223,11 @@ function estimatePartsCost() {
             const sel = document.getElementById('s-'+k).value;
             const opt = DB[k].opt.find(x => x.id === sel);
             if(opt && typeof opt.price === 'number') total += opt.price;
-        } catch(e) { /* ignore if missing */ }
+        } catch(e) { }
     }
     return Math.round(total);
 }
 
-// OKAMŽITÉ NAČTENÍ SVĚTA
 function initWorldState() {
     const biome = document.getElementById('sel-biome').value;
     const weather = document.getElementById('sel-weather').value;
@@ -228,24 +236,18 @@ function initWorldState() {
     const s = getStats();
     const overlay = document.getElementById('overlay-fx');
 
-    // Generuj runwey až do vzletu (zvýšit pixelovou šířku podle vstupu)
     const inputRw = parseInt(document.getElementById('inp-rw').value) || 1000;
-    const scale = 1.5; // škálovací faktor pixelů na metr pro širší runvej
-    const estimatedTakeoffPixels = (s.VZ > s.VA) ? Math.round(200 * 0.7 + 100) : 1500;
-    const rwPixels = Math.round(Math.max(inputRw * scale, estimatedTakeoffPixels));
-    rw_s.style.width = Math.min(rwPixels, 4000) + "px"; // omezit maximálně
+    const rwPixels = Math.round(inputRw * 2);
+    rw_s.style.width = Math.min(rwPixels, 4000) + "px";
     rw_s.style.left = "0px";
-    // Nižší pozice runwaye tak, aby textura/green blok byly pod ní
     const runwayBottom = 60;
     const runwayHeight = 30;
     rw_s.style.bottom = runwayBottom + "px";
     if(document.getElementById('rw-f')) document.getElementById('rw-f').style.bottom = runwayBottom + "px";
-    // Nastav zelený blok tak, aby jeho horní hrana byla na úrovni horní hrany runwaye
     const green = document.getElementById('green-bg');
     if(green){
         green.style.bottom = '0px';
         green.style.height = (runwayBottom + runwayHeight) + 'px';
-        // Barva země podle biomu
         const worldEl = document.getElementById('world');
         if(biome === 'louka') {
             green.style.background = '#4caf50';
@@ -262,7 +264,6 @@ function initWorldState() {
         }
     }
 
-    // BIOM LOGIKA: Nastavení hor a terénu
     const setM = (el) => {
         if(biome === "hory") {
             el.style.display = "block";
@@ -273,12 +274,9 @@ function initWorldState() {
     };
     setM(m1); setM(m2); m1.style.left="0px"; m2.style.left="851px";
 
-    // POČASÍ LOGIKA: Overlay FX nastavení
     overlay.className = '';
     overlay.style.display = 'none';
-    
-    let weatherFilter = 'brightness(1.8)'; // Default jasno
-    
+    let weatherFilter = 'brightness(1.8)';
     if(weather === "mlha") {
         overlay.className = 'overlay-fog';
         overlay.style.display = 'block';
@@ -292,11 +290,9 @@ function initWorldState() {
         overlay.style.display = 'block';
         weatherFilter = 'brightness(0.3) hue-rotate(220deg)';
     }
-    
     clouds.forEach(c => {
         c.el.style.filter = weatherFilter;
     });
-    // Pokud je biom arktida nebo poušť, skryj dlažděnou zemní texturu (použij čistou barvu)
     const g1El = document.getElementById('g1'), g2El = document.getElementById('g2');
     if (biome === 'arktida' || biome === 'pust') {
         if (g1El) g1El.style.display = 'none';
@@ -305,8 +301,6 @@ function initWorldState() {
         if (g1El) g1El.style.display = 'block';
         if (g2El) g2El.style.display = 'block';
     }
-    
-    // Umístit letadlo níže nad ranvejí
     document.getElementById('plane-container').style.bottom = "75px";
     updateOperator();
 }
@@ -319,23 +313,18 @@ function updateOperator() {
     const inputRw = parseInt(document.getElementById('inp-rw').value) || 1000;
     document.getElementById('plane-img').src = "https://tobi-09.github.io/skaut/img/" + s.IMG;
 
-    // Modifikátor spotřeby paliva podle biomu
     let fuelModifier = 1.0;
     if (biome === "pust") fuelModifier = 1.2;
-    
-    // Vzorec: fuelNeeded = (SP/50 * km/8 + 1.2) * fuelModifier
     let fuelNeeded = (s.SP/50 * (km/8) + 1.2) * fuelModifier;
     let outcome = "DOLETÍ V POŘÁDKU";
     let issues = [];
 
-    // === VÝPOČET POTŘEBNÉ RANVEJE ===
     const power = s.VZ - s.VA;
-    const acceleration = Math.max(power / 1000, 0.5); // m/s²
-    const v_takeoff = Math.max(20, s.VA / 10); // m/s
-    const t_to_takeoff = v_takeoff / acceleration; // sekundy
-    const requiredRunway = 0.5 * acceleration * t_to_takeoff * t_to_takeoff; // metrů (s = 0.5*a*t²)
+    const acceleration = Math.max(power / 1000, 0.5);
+    const v_takeoff = Math.max(20, s.VA / 10);
+    const t_to_takeoff = v_takeoff / acceleration;
+    const requiredRunway = 0.5 * acceleration * t_to_takeoff * t_to_takeoff;
 
-    // === KONTROLY ===
     if (s.VZ <= s.VA) { 
         outcome = "NESTIHL VZLETĚT!"; 
         issues.push("VZ ≤ VA"); 
@@ -379,12 +368,10 @@ function updateOperator() {
     document.getElementById('op-res').innerHTML = `VÝSLEDEK: <span class="${outcome.includes('POŘÁDKU')?'ok':'danger'}">${outcome}</span>`;
     document.getElementById('op-stats').innerHTML = `VZTLAK: ${s.VZ} | VÁHA: ${s.VA} | OD: ${s.OD} | NAVIGACE: ${s.G} | CHLADIČ: ${s.C} | PAL: ${s.PAL}L`;
 
-    // === DETAILNÍ VÝPOČTY ===
     const powerDisplay = Math.round(power);
     const accel = acceleration;
     const v_to = v_takeoff;
     const t_to = +(t_to_takeoff).toFixed(2);
-    const dist_to = +(requiredRunway).toFixed(1);
     const fuelRemaining = +(s.PAL - fuelNeeded).toFixed(1);
     const partsCost = estimatePartsCost();
     const rwStatus = inputRw >= requiredRunway * 0.95 ? "✓ OK" : "⚠️ KRÁTKÁ";
@@ -395,32 +382,12 @@ function updateOperator() {
         const coolingPower = s.C * 0.05;
         const heatBalance = coolingPower - baseHeat;
         const status = heatBalance >= 0 ? "✓ OK" : "⚠️ RIZIKO";
-        heatInfo = `<div><strong>🔥 Chlazení v poušti:</strong></div>
-                   <div>Heat Gen.: ${baseHeat} L/tick | Cooling: ${coolingPower.toFixed(2)} L/tick | Bilance: ${heatBalance.toFixed(2)} ${status}</div>`;
+        heatInfo = `<div><strong>🔥 Chlazení v poušti:</strong></div><div>Heat Gen.: ${baseHeat} L/tick | Cooling: ${coolingPower.toFixed(2)} L/tick | Bilance: ${heatBalance.toFixed(2)} ${status}</div>`;
     } else if (biome === "arktida") {
         heatInfo = `<div><strong>❄️ Arktida:</strong> Nízké teplo, chlazení není kritické. OD ≥ 12 = potřeba odolnosti.</div>`;
     }
 
-    const calcHtml = `
-        <div><strong>VZLET:</strong></div>
-        <div>Potřebná ranvej: <strong>${Math.ceil(requiredRunway)}m</strong> | Máš: <strong>${inputRw}m</strong> ${rwStatus}</div>
-        <div>Čas do vzletu: ${t_to}s | Akcelerace: ${accel.toFixed(2)} m/s²</div>
-        <div>Rychlost vzletu: ${v_to.toFixed(1)} m/s</div>
-        <hr>
-        <div><strong>Výpočty:</strong></div>
-        <div>Biom: ${biome.toUpperCase()} (mod: ${(fuelModifier*100).toFixed(0)}%)</div>
-        <div>Power margin (VZ-VA): ${powerDisplay}</div>
-        <div>Spotřeba paliva (celkem): ${fuelNeeded.toFixed(1)} L</div>
-        <div>Zbývající palivo: ${fuelRemaining} L</div>
-        <div>Cena dílů (orient.): ${partsCost} Kč</div>
-        ${heatInfo}
-        ${issues.length > 0 ? `<div style="color: #ff3333;"><strong>⚠️ Problémy:</strong> ${issues.join(', ')}</div>` : ''}
-        <hr>
-        <div><strong>Vzorce:</strong></div>
-        <div><em>requiredRunway = 0.5 × a × t²</em></div>
-        <div><em>kde a = (VZ-VA)/1000, t = v_takeoff/a</em></div>
-        <div><em>v_takeoff = max(20, VA/10)</em></div>
-    `;
+    const calcHtml = `<div><strong>VZLET:</strong></div><div>Potřebná ranvej: <strong>${Math.ceil(requiredRunway)}m</strong> | Máš: <strong>${inputRw}m</strong> ${rwStatus}</div><div>Čas do vzletu: ${t_to}s | Akcelerace: ${accel.toFixed(2)} m/s²</div><div>Rychlost vzletu: ${v_to.toFixed(1)} m/s</div><hr><div><strong>Výpočty:</strong></div><div>Biom: ${biome.toUpperCase()} (mod: ${(fuelModifier*100).toFixed(0)}%)</div><div>Power margin (VZ-VA): ${powerDisplay}</div><div>Spotřeba paliva (celkem): ${fuelNeeded.toFixed(1)} L</div><div>Zbývající palivo: ${fuelRemaining} L</div><div>Cena dílů (orient.): ${partsCost} Kč</div>${heatInfo}${issues.length > 0 ? `<div style="color: #ff3333;"><strong>⚠️ Problémy:</strong> ${issues.join(', ')}</div>` : ''}<hr><div><strong>Vzorce:</strong></div><div><em>requiredRunway = 0.5 × a × t²</em></div><div><em>kde a = (VZ-VA)/1000, t = v_takeoff/a</em></div><div><em>v_takeoff = max(20, VA/10)</em></div>`;
     document.getElementById('op-calc').innerHTML = calcHtml;
 }
 
@@ -442,7 +409,6 @@ function initClouds() {
     }, 30);
 }
 
-// Fallback detailed prediction generator used if original is missing
 function predictFlightDetailed() {
     const s = getStats();
     const km = parseInt(document.getElementById('inp-km').value);
@@ -450,9 +416,6 @@ function predictFlightDetailed() {
     const weather = document.getElementById('sel-weather').value;
     const biome = document.getElementById('sel-biome').value;
 
-    // quick pre-checks (match updateOperator rules)
-    // VZOREC: fuelNeeded = (s.SP/50 * km/8 + 1.2) * fuelModifier
-    // Lineárně závislá na km, bez konstanty
     let fuelModifier = (biome === "pust") ? 1.2 : 1.0;
     let fuelNeeded = (s.SP/50 * (km/8) + 1.2) * fuelModifier;
     if (s.VZ <= s.VA) return { success:false, reason: 'NESTIHL VZLETĚT!' };
@@ -461,46 +424,38 @@ function predictFlightDetailed() {
     if (weather === 'boure' && s.OD < 8) return { success:false, reason: 'BOUŘE - NEBEZPEČÍ' };
 
     const frames = [];
-    const dt = 0.03; // seconds per frame (playback uses 30ms)
-    let v = 0; // m/s
-    let x = 0; // meters travelled along runway
-    // visual mapping: ensure predicted px stays inside the world
+    const dt = 0.03;
+    let v = 0, x = 0;
     const worldWidth = (document.getElementById('world') && document.getElementById('world').clientWidth) || 850;
     const planeWidth = (document.getElementById('plane-container') && document.getElementById('plane-container').clientWidth) || 120;
     const maxPx = Math.max(100, worldWidth - planeWidth - 10);
     let px = 80;
 
-    // simple physics tuning based on stat difference
     const power = Math.max(s.VZ - s.VA, 50);
-    const a = Math.max(power / 1000, 0.5); // m/s^2
-    const v_takeoff = Math.max(20, s.VA / 10); // heuristic
+    const a = Math.max(power / 1000, 0.5);
+    const v_takeoff = Math.max(20, s.VA / 10);
 
-    // ground roll frames
     let t = 0;
     const initialBottom = 75;
     while (t < 20000 && x < rw_m && frames.length < 10000) {
         v += a * dt;
         x += v * dt;
         t += dt;
-        const cs = v * 0.08; // convert m/s -> visual unit for background movement
+        const cs = v * 0.08;
         const tilt = Math.min(12, v * 0.4);
-        // advance visual x, clamp to world
         px += Math.min(4, Math.max(0.3, v * 0.06));
         if(px > maxPx) px = maxPx;
         frames.push({ time: Math.round(t), py: initialBottom, cs: cs, tilt: tilt, falling: false, px: Math.round(px) });
-        if (v >= v_takeoff && x >= Math.min(rw_m, Math.max(50, rw_m * 0.2))) break; // allow short run to accelerate
+        if (v >= v_takeoff && x >= Math.min(rw_m, Math.max(50, rw_m * 0.2))) break;
     }
 
-    // if runway exhausted and still not reached takeoff speed -> failure
     if (x < rw_m && v < v_takeoff) {
         return { success: false, reason: 'NEDOSTATEK RYCHLOSTI NA KONCI RANVEJE' };
     }
 
-    // liftoff and climb frames
     const climbFrames = 80;
     for (let i=0;i<climbFrames;i++){
         const climbProgress = (i+1)/climbFrames;
-        // climb: increase bottom (py) so plane appears to rise on screen
         const py = initialBottom + Math.round( 60 * Math.sin(climbProgress * Math.PI/2) );
         const cs = v * 0.08;
         const tilt = Math.min(12, v * 0.4) - Math.round(climbProgress*6);
@@ -510,11 +465,11 @@ function predictFlightDetailed() {
     }
 
     const partsCost = estimatePartsCost();
-
     return { success: true, frames: frames, partsCost: partsCost, fuelNeeded: Math.round(fuelNeeded) };
 }
 
 function launchSimulation() {
+    console.log("🚀 launchSimulation SPUŠTĚNA!");
     updateOperator();
     const s = getStats(), km = parseInt(document.getElementById('inp-km').value);
     const biome = document.getElementById('sel-biome').value;
@@ -524,133 +479,121 @@ function launchSimulation() {
     
     document.getElementById('explosion').style.display="none";
     document.getElementById('plane-container').style.display="block";
-    // ensure propeller visible at start
     const propStart = document.getElementById('propeller'); if(propStart) propStart.style.display='block';
     rw_f.style.display = "none";
-    rw_s.style.left = "0px"; // reset runway position
-    rw_s.style.bottom = "60px"; // nižší ranvej pro shodu s texturou
+    rw_s.style.left = "0px";
+    rw_s.style.bottom = "60px";
     if(rw_f) rw_f.style.bottom = "60px";
 
-    // Generate runway to takeoff point (increase pixel width)
     const inputRw2 = parseInt(document.getElementById('inp-rw').value) || 1000;
-    const scale = 1.5; // local scale (pixels per meter heuristic)
-    const estimatedTakeoffPixels = (s.VZ > s.VA) ? Math.round(200 * 0.7 + 100) : 1500;
+    const rwPixels2 = Math.round(inputRw2 * 2);
     const runwayBottom = 60;
     const runwayHeight = 30;
-    const rwPixels2 = Math.round(Math.max(inputRw2 * scale, estimatedTakeoffPixels));
     if (s.VZ > s.VA) {
         rw_s.style.width = Math.min(rwPixels2, 4000) + "px";
     } else {
-        rw_s.style.width = Math.round(200 * scale) + "px";
+        rw_s.style.width = Math.round(inputRw2 * 2) + "px";
     }
     rw_s.style.bottom = runwayBottom + "px";
     if(rw_f) rw_f.style.bottom = runwayBottom + "px";
     const green = document.getElementById('green-bg');
     if (green) green.style.height = (runwayBottom + runwayHeight) + 'px';
+    
+    const rolloutTicks = Math.round((inputRw2 / 1000) * 200);
+    
+    const power = s.VZ - s.VA;
+    const acceleration = Math.max(power / 1000, 0.5);
+    const v_takeoff = Math.max(20, s.VA / 10);
+    const t_to_takeoff = v_takeoff / acceleration;
+    const requiredRunway = 0.5 * acceleration * t_to_takeoff * t_to_takeoff;
+    const insufficientRunway = inputRw2 < requiredRunway * 0.95;
+    
+    console.log("📊 FYZIKA VZLETU: inputRw2=", inputRw2, "requiredRunway=", Math.round(requiredRunway), "insufficientRunway=", insufficientRunway);
 
     let px=80, py=75, time=0, falling=false, reason="", g1x=0, g2x=851, h1x=0, h2x=851;
     let fuel=s.PAL, targetSpeed=10+(s.RY/35);
-    let fallRotation = 0; // extra nose-down rotation applied during fall
-    let fallRotationTarget = 0;
-    let takeoffTick = null; // tick when climb/takeoff started
-    let flipToOtherSide = false; // flip plane horizontally on storm crash
-    let engineTemp = 20; // Teplota motoru (počáteční 20°C)
-    let navigationLost = false; // Je letadlo ztracené?
+    let fallRotation = 0, fallRotationTarget = 0;
+    let takeoffTick = null;
+    
+    const globalInsufficientRunway = insufficientRunway;
+    let flipToOtherSide = false;
+    let engineTemp = 20;
+    let navigationLost = false;
     stormActive = false;
-    let stormImpactCountdown = null; // pokud se bouře aktivuje, začne odpočet k zásahu oka
+    let stormImpactCountdown = null;
     let severeStorm = false;
     let severeStormTicks = 0;
     let stormCrashCountdown = null;
 
-    // SYSTÉM NAVIGACE: Pokud je počasí špatné a navigace slabá, letadlo se ztratí
     if((weather === "mlha" || weather === "piesecna" || weather === "boure") && s.G < 3) {
         navigationLost = true;
     }
 
-    // Vypočti očekávanou celkovou spotřebu dle predikčního vzorce
-    // fuelNeeded = (SP/50 * (km/8) + 1.2) * fuelModifier
     let launchFuelModifier = (biome === "pust") ? 1.2 : 1.0;
     let expectedFuelNeeded = (s.SP/50 * (km/8) + 1.2) * launchFuelModifier;
-    // Rozložení spotřeby bude nyní závislé na skutečně ujeté vzdálenosti (L na metr)
     const totalDistanceMeters = Math.max(1, km * 1000);
-    const fuelPerMeter = expectedFuelNeeded / totalDistanceMeters; // L per meter
+    const fuelPerMeter = expectedFuelNeeded / totalDistanceMeters;
 
-    // Odhad délky mise v tickech (dt = 0.03s na tick). Použij průměrnou rychlost založenou na targetSpeed
     const dt = 0.03;
-    const avgSpeed = Math.max(10, targetSpeed); // m/s (konzervativní odhad)
-    // Omezit délku mise na maximálně 60 sekund (nezávisle na vzdálenosti)
-    const maxMissionTicks = Math.round(60 / dt); // ~2000 ticků
-    let missionEnd = Math.round((totalDistanceMeters / avgSpeed) / dt) + 500; // ticks (+rezerva pro start/climb)
+    const avgSpeed = Math.max(10, targetSpeed);
+    const maxMissionTicks = Math.round(60 / dt);
+    let missionEnd = Math.round((totalDistanceMeters / avgSpeed) / dt) + 500;
     missionEnd = Math.min(missionEnd, maxMissionTicks);
-    // Pokud se letadlo ztratí v mlze/písku, prodluž misi o ~300 ticků
-    // (navigationLost je nastaveno výše)
     if((weather === "mlha" || weather === "piesecna" || weather === "boure") && s.G < 3) {
         missionEnd += 300;
     }
 
-    // Sleduj skutečně ujetou vzdálenost pro korektní zobrazení a logiku
     let distanceTravelled = 0;
 
     const loop = setInterval(() => {
         time++;
         document.getElementById('propeller').style.transform = `rotate(${time * 30}deg)`;
         if(currentSpeed < targetSpeed && !falling) currentSpeed += 0.1;
-        // fullscreen scaling available for climb/cruise calculations
+        
         const worldEl_top = document.getElementById('world');
         const fullscreen_top = document.body.classList.contains('fullscreen-mode');
         const worldH_top = worldEl_top ? worldEl_top.clientHeight : 500;
         const fsScale_top = fullscreen_top ? (worldH_top / 500) : 1;
 
-        // MOTOR - TEPLOTA A CHLAZENÍ
-        // Motor se přehřívá POUZE při dlouhých letech (>500km) nebo v extrémních podmínkách
         const shouldGenerateHeat = (km > 500) || (biome === "pust") || (weather === "piesecna") || (weather === "boure");
         if (shouldGenerateHeat) {
-            let heatGeneration = 0.1; // Základní teplo
-            if(biome === "pust") heatGeneration += 0.15; // Poušť = +50% více tepla
-            if(time > 200) heatGeneration *= (1 + s.SP/100); // Čím větší motor, tím více tepla
+            let heatGeneration = 0.1;
+            if(biome === "pust") heatGeneration += 0.15;
+            if(time > 200) heatGeneration *= (1 + s.SP/100);
             engineTemp += heatGeneration;
         }
-        // Chlazení: Vychladit motor
-        engineTemp = Math.max(20, engineTemp - s.C * 0.05); // Chlazení sníží teplotu
+        engineTemp = Math.max(20, engineTemp - s.C * 0.05);
         
-        // Pokud motor přehřeje, způsobí pád pouze pokud je letadlo už ve vzduchu (a když má smysl)
         if(shouldGenerateHeat && engineTemp > 100 && py > 120) {
             falling = true;
             reason = "PŘEHŘÁTÝ MOTOR!";
         }
 
-        // POČASÍ - OKO BOUŘE
-            // Aktivuj bouři až po vzletu (po rampě)
-            if(weather === "boure" && !stormActive && time > 200) {
-                stormActive = true;
-                stormImpactCountdown = 30; // ~30 ticks do zásahu oka
-                for(let i=0; i<30; i++){
-                    let c = document.createElement('img'); c.src="https://tobi-09.github.io/skaut/img/mrak.png";
-                    c.className='cloud'; c.style.filter="brightness(0.2)";
-                    let cx = 850+Math.random()*400; let ct = Math.random()*350;
-                    c.style.left=cx+"px"; c.style.top=ct+"px";
-                    document.getElementById('world').appendChild(c);
-                    clouds.push({el:c, x:cx, s:1.5, baseTop: ct});
+        if(weather === "boure" && !stormActive && time > 200) {
+            stormActive = true;
+            stormImpactCountdown = 30;
+            for(let i=0; i<30; i++){
+                let c = document.createElement('img'); c.src="https://tobi-09.github.io/skaut/img/mrak.png";
+                c.className='cloud'; c.style.filter="brightness(0.2)";
+                let cx = 850+Math.random()*400; let ct = Math.random()*350;
+                c.style.left=cx+"px"; c.style.top=ct+"px";
+                document.getElementById('world').appendChild(c);
+                clouds.push({el:c, x:cx, s:1.5, baseTop: ct});
+            }
+        }
+
+        if(stormActive && stormImpactCountdown !== null) {
+            stormImpactCountdown--;
+            if(stormImpactCountdown <= 0 && (time > 200 || py > 75)) {
+                stormImpactCountdown = null;
+                severeStorm = true;
+                severeStormTicks = 180;
+                if (s.OD < 10) {
+                    stormCrashCountdown = 10;
                 }
             }
+        }
 
-            // Pokud bouře byla aktivována, začne odpočítávání k zásahu oka bouře.
-            if(stormActive && stormImpactCountdown !== null) {
-                stormImpactCountdown--;
-                // Po vypršení odpočtu nevypouštíme okamžitý pád, ale aktivujeme fázi silné turbulence
-                if(stormImpactCountdown <= 0 && (time > 200 || py > 75)) {
-                    stormImpactCountdown = null;
-                    // severeStorm trvá určitou dobu; pokud není OD dostatečná, může po ukončení selhat
-                    severeStorm = true;
-                    severeStormTicks = 180; // ~několik sekund velmi silné turbulence
-                    // Pokud je odolnost pod prahem, spusť krátký odpočet do možného selhání
-                    if (s.OD < 10) {
-                        stormCrashCountdown = 10; // ~10 ticků do pádu
-                    }
-                }
-            }
-
-        // POHYB TERÉNU
         g1x -= currentSpeed; g2x -= currentSpeed;
         if(g1x<=-851) g1x=g2x+851; if(g2x<=-851) g2x=g1x+851;
         document.getElementById('g1').style.left=g1x+"px"; document.getElementById('g2').style.left=g2x+"px";
@@ -662,17 +605,14 @@ function launchSimulation() {
             document.getElementById('mount1').style.left=h1x+"px"; document.getElementById('mount2').style.left=h2x+"px";
         }
 
-        // LOGIKA PÁDU - Všechny selhání
         if(!falling){
-            // Spotřeba paliva založená na ujeté vzdálenosti (v metrech)
-            const dt_local = 0.03; // seconds per tick (shodné s loop interval)
-            // Během fáze cestování (po stoupání) necháme vzdálenost ubíhat lineárně podle missionEnd
+            const dt_local = 0.03;
             let distanceThisTick;
             if (time >= 500 && missionEnd > 0) {
-                const perTickDistance = totalDistanceMeters / missionEnd; // garantuje, že do missionEnd uběhne celá vzdálenost
+                const perTickDistance = totalDistanceMeters / missionEnd;
                 distanceThisTick = perTickDistance;
             } else {
-                distanceThisTick = currentSpeed * dt_local; // při rozjezdu a stoupání použij reálnou rychlost
+                distanceThisTick = currentSpeed * dt_local;
             }
             distanceTravelled += distanceThisTick;
             fuel -= fuelPerMeter * distanceThisTick;
@@ -680,51 +620,42 @@ function launchSimulation() {
             if (fuel <= 0 && py > 75) {
                 falling = true; reason = "PALIVO VYČERPÁNO!";
             }
-            
-            // BIOM: HORY - Vyžaduje MA >= 2
             if(biome==="hory" && s.MA < 2 && time > 400) { 
                 falling=true; reason="NÁRAZ DO HOR!";
             }
-            
-            // BIOM: ARKTIDA - Vyžaduje OD >= 12, trup zkřehne v polovině letu
             if(biome==="arktida" && s.OD < 12 && time > missionEnd * 0.5) {
                 falling=true; reason="TRUP ZKŘEHNE!";
             }
-            
-            // POČASÍ: BOUŘE - Vyžaduje OD >= 10 (pád až po polovině mise)
             if(weather==="boure" && s.OD < 10 && stormActive && time > missionEnd * 0.5) {
                 falling = true; reason = "BOUŘE - HAVÁRIE!";
             }
-            
-            // POČASÍ: MLHA - Nízká navigace znamená kolizi
             if(weather==="mlha" && navigationLost && time > missionEnd * 0.8 && s.G < 3) {
                 falling=true; reason="BLOUDĚNÍ - KOLIZE!";
             }
-            
-            // POČASÍ: PÍSEČNÁ BOUŘE - Kombinace slabé navigace a slabé odolnosti
             if(weather==="piesecna" && (s.G < 2 || s.OD < 6) && time > 400) {
                 falling=true; reason="PÍSEČNÁ BOUŘE - HAVÁRIE!";
             }
         }
 
         if(!falling) {
-            // ROZJEZD: akcelerace na runway (0-200)
-            if(time < 200) { 
+            if(time < rolloutTicks) { 
                 px += (s.VZ > s.VA ? 0.7 : 0.05);
-                if(py < 85 && time > 180 && s.VZ <= s.VA) { 
+                if(py < 85 && time > rolloutTicks - 20 && s.VZ <= s.VA) { 
                     falling=true; reason="NESTIHL VZLETĚT!";
                 } 
             }
-            // STOUPÁNÍ: zvyšování výšky (200-500)
-            else if(time < 500) { 
-                // zvyšte rychlost stoupání při fullscreen proporčně
-                const climbTarget = Math.min(worldH_top * 0.65, 320 * fsScale_top);
-                py = Math.min(py + 2 * fsScale_top, climbTarget); 
-                // zaznamenat okamžik vzletu (první tick stoupání)
-                if (!takeoffTick) takeoffTick = time;
+            else if(time < rolloutTicks + 300) { 
+                if (globalInsufficientRunway && !falling) {
+                    console.log("💥 CRASH: Insufficient runway!");
+                    falling = true;
+                    reason = "NEDOSTATEK RYCHLOSTI NA RANVEJI!";
+                    takeoffTick = time;
+                } else if (!globalInsufficientRunway) {
+                    const climbTarget = Math.min(worldH_top * 0.65, 320 * fsScale_top);
+                    py = Math.min(py + 2 * fsScale_top, climbTarget);
+                }
             }
-            // CESTOVÁNÍ: stabilní let v uvedené výšce (500-missionEnd)
-                else if(time < missionEnd) { 
+            else if(time < missionEnd) { 
                 const cruiseAlt = Math.min(worldH_top * 0.65, 320 * fsScale_top);
                 py = cruiseAlt + Math.sin(time*0.1) * 5 * fsScale_top;
                 const remainMeters = Math.max(0, totalDistanceMeters - distanceTravelled);
@@ -732,7 +663,6 @@ function launchSimulation() {
                 let navInfo = navigationLost ? " ⚠️ ZTRACENO!" : "";
                 log.innerText="VZDÁLENOST: "+remainKm+"km" + navInfo;
             }
-            // PŘISTÁNÍ: sestup k ranveji (missionEnd+)
             else {
                 rw_f.style.display="block"; 
                 rw_f.style.width="1500px";
@@ -751,7 +681,6 @@ function launchSimulation() {
                 }
             }
         } else {
-            // PÁD: snížení výšky a brzda (rychlejší sestup při pádu)
             py -= 12; 
             currentSpeed *= 0.95; 
             if(py <= 10) {
@@ -765,14 +694,14 @@ function launchSimulation() {
                 log.innerText=reason;
             }
         }
-        // Turbulence and visual storm effects (milder)
+
         const planeEl = document.getElementById('plane-container');
         const worldEl = document.getElementById('world');
-        // fullscreen scale factor (1 = normal, >1 = fullscreen taller world)
         const fullscreen = document.body.classList.contains('fullscreen-mode');
         const worldH = worldEl ? worldEl.clientHeight : 500;
         const fsScale = fullscreen ? (worldH / 500) : 1;
         let tiltLocal = Math.min(12 * fsScale, currentSpeed * 0.4 * fsScale);
+        
         if (weather === "boure") {
             const turbStrength = severeStorm ? 4 : (stormActive ? 2 : 1);
             const jitterX = (Math.random() - 0.5) * turbStrength;
@@ -781,14 +710,11 @@ function launchSimulation() {
             py += jitterY;
             const stormTilt = (Math.random() - 0.5) * turbStrength * 0.8;
             tiltLocal += stormTilt;
-            // subtle world shake
             if (worldEl) worldEl.style.transform = `translate(${(Math.random()-0.5)*turbStrength/2}px, ${(Math.random()-0.5)*turbStrength/2}px)`;
-            // clouds: faster movement and gentle vertical bobbing, scale positions/sizes in fullscreen
             clouds.forEach(c => {
                 c.x -= (0.6 + turbStrength*0.12 + Math.random()*0.6) * fsScale;
                 const brightness = Math.max(0.35, 0.9 - turbStrength*0.08);
                 c.el.style.filter = `brightness(${brightness})`;
-                // scale baseTop and bob amplitude
                 const base = (c.baseTop || 100) * fsScale;
                 const bob = Math.sin((time*0.06 + c.x)*0.02) * (2 + turbStrength) * fsScale;
                 const newTop = base + bob;
@@ -798,59 +724,48 @@ function launchSimulation() {
                 c.el.style.left = c.x + 'px';
             });
 
-            // severeStorm duration handling
             if (severeStorm) {
                 severeStormTicks--;
                 if (severeStormTicks <= 0) {
-                    // end of severe phase
                     severeStorm = false;
                     stormActive = false;
                 }
             }
 
-            // Pokud je nastaven krátký odpočet do pádu kvůli slabé OD, snižuj ho a spust pád pokud dojde na nulu
             if (typeof stormCrashCountdown === 'number' && stormCrashCountdown !== null) {
                 stormCrashCountdown--;
-                // Počkej minimálně 10 sekund (≈333 ticků) od vzletu než umožníme pád
                 const minTicksAfterTakeoff = Math.round(10 / dt);
                 const canCrash = takeoffTick ? (time > takeoffTick + minTicksAfterTakeoff) : (time > 200 + minTicksAfterTakeoff);
                 if (stormCrashCountdown <= 0 && canCrash) {
                     stormCrashCountdown = null;
                     falling = true; reason = "BOUŘE - SELHÁNÍ ODOLNOSTI";
-                    // při bouřkovém selhání otočit letadlo na druhou stranu (horizontální zrcadlení)
                     flipToOtherSide = true;
                 }
             }
         } else {
             if (worldEl) worldEl.style.transform = '';
-            // ensure clouds scale back when not fullscreen
             if (!fullscreen) clouds.forEach(c => c.el.style.width = '120px');
         }
-        // Update fallRotation target when falling begins
+
         if (falling && fallRotationTarget === 0) {
-            fallRotationTarget = 120 * fsScale; // degrees of nose-down tilt to reach, larger in fullscreen
+            fallRotationTarget = 120 * fsScale;
         }
-        // animate fallRotation towards target
         if (fallRotation < fallRotationTarget) fallRotation = Math.min(fallRotationTarget, fallRotation + 6);
         if (!falling && fallRotation > 0) fallRotation = Math.max(0, fallRotation - 6);
 
         if (planeEl) {
             planeEl.style.left = px + "px";
-            // adjust bottom target according to fullscreen scale
             planeEl.style.bottom = py + "px";
             const extra = falling ? fallRotation : 0;
             const scaleXValue = flipToOtherSide ? 1 : -1;
             planeEl.style.transform = `scaleX(${scaleXValue}) rotate(${ -335 + tiltLocal + extra }deg)`;
-            // scale plane size dynamically if not handled by CSS
             if (fullscreen) planeEl.style.width = (220) + 'px';
             else planeEl.style.width = '';
         }
     }, 30);
 }
 
-// FULLSCREEN: toggle and handlers
 function toggleFullscreen() {
-    // request fullscreen for the whole document so side-panel stays part of layout
     const el = document.documentElement;
     if (!document.fullscreenElement) {
         if (el.requestFullscreen) el.requestFullscreen();
@@ -870,14 +785,11 @@ function applyFullscreenScale(){
     const sideW = sideEl ? sideEl.clientWidth : 0;
     const availW = window.innerWidth - sideW;
     const availH = window.innerHeight;
-    // base design size used in layout
     const baseW = 850, baseH = 500;
     const scale = Math.min(Math.max(1, availW / baseW), Math.max(1, availH / baseH));
-    // position and scale world so it appears as a zoomed window to the right of the side-panel
     worldEl.style.position = 'absolute';
     worldEl.style.transformOrigin = 'left top';
     worldEl.style.transform = `scale(${scale})`;
-    // place it to the right of the side panel and center vertically
     const left = sideW + Math.max(0, (availW - baseW * scale) / 2);
     const top = Math.max(0, (availH - baseH * scale) / 2);
     worldEl.style.left = left + 'px';
@@ -906,18 +818,15 @@ document.addEventListener('fullscreenchange', () => {
     }
 });
 
-// attach button after DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const b = document.getElementById('btn-full');
     if (b) b.addEventListener('click', toggleFullscreen);
     
-    // Toggle prediction details
     const toggleCalc = document.getElementById('btn-toggle-calc');
     const opRes = document.getElementById('op-res');
     const opStats = document.getElementById('op-stats');
     const opCalc = document.getElementById('op-calc');
     if (toggleCalc && opRes && opStats && opCalc) {
-        // start hidden
         opRes.classList.add('hidden');
         opStats.classList.add('hidden');
         opCalc.classList.add('hidden');
@@ -935,3 +844,4 @@ initWorldState();
 </script>
 </body>
 </html>
+
