@@ -55,29 +55,29 @@
     const colors = { "0":"Základní", "A":"Alpha", "B":"Beta", "C":"Gamma", "D":"Delta" };
 
     const assets = [
-        { id: "1", name: "Robotický bagr 1", spec: "Těžební lžíce", cat: "Vehicle" },
-        { id: "2", name: "Dron 1", spec: "Vrtulový průzkumník", cat: "Aerial" },
-        { id: "3", name: "Rover 1", spec: "Kamera na robotickém rameni", cat: "Vehicle" },
-        { id: "4", name: "Servisní robot 1", spec: "Humanoid", cat: "Bot" },
-        { id: "5", name: "Solární panel 1", spec: "Křemíkové pole", cat: "Energy" },
-        { id: "6", name: "Geotermální vrt 1", spec: "Jedna obrazovka", cat: "Energy" },
-        { id: "7", name: "Bateriová stanice 1", spec: "Li-Ion úložiště", cat: "Energy" },
-        { id: "8", name: "Obytný modul 1", spec: "Rovné stěny, zaoblená střecha", cat: "Hab" },
-        { id: "9", name: "Obytný modul 2", spec: "Kulatý, výstup na straně", cat: "Hab" },
-        { id: "10", name: "Obytný modul 3", spec: "Iglú", cat: "Hab" },
-        { id: "11", name: "Skladovací modul 1", spec: "Nákladní kontejner", cat: "Hab" }, // DOPLNĚNO
-        { id: "12", name: "Hydroponická věž 1", spec: "Vertikální pěstování", cat: "Bio" }, // DOPLNĚNO
-        { id: "13", name: "Laboratoř 1", spec: "Výzkumné pracoviště", cat: "Bio" }, // DOPLNĚNO
-        { id: "14", name: "Recyklátor vody 1", spec: "Filtrace kapalin", cat: "Bio" }, // DOPLNĚNO
-        { id: "15", name: "Skleník 1", spec: "Klika na dveřích", cat: "Bio" },
-        { id: "16", name: "Servisní robot 2", spec: "Kamera místo hlavy", cat: "Bot" },
-        { id: "17", name: "Skleník 3", spec: "Tabule", cat: "Bio" },
-        { id: "18", name: "Rover 2", spec: "Pevně připevněná kamera", cat: "Vehicle" },
-        { id: "19", name: "Geotermální vrt 2", spec: "Dvě obrazovky", cat: "Energy" },
-        { id: "20", name: "Rover 3", spec: "Bez kamery", cat: "Vehicle" },
-        { id: "21", name: "Jaderný reaktor 1", spec: "Generátor energie", cat: "Energy" },
-        { id: "23", name: "Skleník 2", spec: "Bez kliky na dveřích", cat: "Bio" }
-    ];
+    { id: "1", name: "Robotický bagr 1", spec: "Těžební lžíce", cat: "Vehicle" },
+    { id: "2", name: "Dron 1", spec: "Vrtulový průzkumník", cat: "Aerial" },
+    { id: "3", name: "Rover 1", spec: "Kamera na robotickém rameni", cat: "Vehicle" },
+    { id: "4", name: "Servisní robot 1", spec: "Humanoid", cat: "Bot" },
+    { id: "5", name: "Solární panel 1", spec: "Křemíkové pole", cat: "Energy" },
+    { id: "6", name: "Geotermální vrt 1", spec: "Jedna obrazovka", cat: "Energy" },
+    { id: "7", name: "Bateriová stanice 1", spec: "Li-Ion úložiště", cat: "Energy" },
+    { id: "8", name: "Obytný modul 1", spec: "Rovné stěny, zaoblená střecha", cat: "Hab" },
+    { id: "9", name: "Obytný modul 2", spec: "Kulatý, výstup na straně", cat: "Hab" },
+    { id: "10", name: "Obytný modul 3", spec: "Iglú", cat: "Hab" },
+    { id: "11", name: "Bagrový vrt 1", spec: "Vrt do země", cat: "Energy" }, 
+    { id: "12", name: "Bagrový vrt 2", spec: "Vrt do země", cat: "Energy" }, 
+    { id: "13", name: "Bagrový těžař ledu 1", spec: "Těžba H2O", cat: "Vehicle" }, 
+    { id: "14", name: "Bagrový těžař ledu 2", spec: "Těžba H2O", cat: "Vehicle" }, 
+    { id: "15", name: "Skleník 1", spec: "Klika na dveřích", cat: "Bio" },
+    { id: "16", name: "Servisní robot 2", spec: "Kamera místo hlavy", cat: "Bot" },
+    { id: "17", name: "Skleník 3", spec: "Tabule", cat: "Bio" },
+    { id: "18", name: "Rover 2", spec: "Pevně připevněná kamera", cat: "Vehicle" },
+    { id: "19", name: "Geotermální vrt 2", spec: "Dvě obrazovky", cat: "Energy" },
+    { id: "20", name: "Rover 3", spec: "Bez kamery", cat: "Vehicle" },
+    { id: "21", name: "Jaderný reaktor 1", spec: "Generátor energie", cat: "Energy" },
+    { id: "23", name: "Skleník 2", spec: "Bez kliky na dveřích", cat: "Bio" }
+];
 
     const errorParts = {
         Vehicle: ["motoru", "podvozku", "kol", "antény", "ramene", "převodovky", "brzd", "Lidaru", "navigace", "baterie"],
