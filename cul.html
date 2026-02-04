@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Letecký Inženýr - Kalkulačka V10.0</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #1a1510; color: #f4e4bc; padding: 20px; }
+        .calc-container { max-width: 800px; margin: 0 auto; background: #2a2018; padding: 20px; border: 3px double #f4e4bc; }
+        h2 { border-bottom: 2px solid #f4e4bc; padding-bottom: 10px; color: #e67e22; }
+        .input-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .input-item { display: flex; flex-direction: column; }
+        label { font-size: 0.8em; margin-bottom: 3px; color: #bdc3c7; }
+        select, input { background: #1a1510; color: #0f0; border: 1px solid #f4e4bc; padding: 5px; }
+        #results { background: #000; color: #0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-size: 0.9em; }
+        .btn { background: #e67e22; color: #fff; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        .btn:hover { background: #d35400; }
+        .crit { color: #ff3333; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="calc-container">
+    <h2>🛠️ INŽENÝRSKÁ KALKULAČKA V10.0</h2>
+    
+    <div class="input-grid" id="selectors">
+        </div>
+
+    <hr>
+    <h3>🌍 PARAMETRY MISE</h3>
+    <div class="input-grid">
+        <div class="input-item">
+            <label>Vzdálenost (km)</label>
+            <input type="number" id="m-dist" value="80">
+        </div>
+        <div class="input-item">
+            <label>Ranvej (m)</label>
+            <input type="number" id="m-rw" value="1000">
+        </div>
+        <div class="input-item">
+            <label>Biom</label>
+            <select id="m-biom">
+                <option value="LOUKA">🌳 Louka</option>
+                <option value="HORY">🏔️ Hory</option>
+                <option value="POUST">🏜️ Poušť</option>
+                <option value="ARKTIDA">❄️ Arktida</option>
+            </select>
+        </div>
+        <div class="input-item">
+            <label>Počasí</label>
+            <select id="m-weather">
+                <option value="JASNO">☀️ Jasno</option>
+                <option value="MLHA">🌫️ Mlha</option>
+                <option value="PISEK">🌪️ Písečná bouře</option>
+                <option value="BOURA">⛈️ Bouře</option>
+            </select>
+        </div>
+    </div>
+
+    <button class="btn" onclick="runAnalysis()">PROVÉST ANALÝZU LETU</button>
+
+    <h3>📊 VÝSLEDEK ANALÝZY:</h3>
+    <div id="results">Zadejte parametry a klikněte na tlačítko...</div>
+</div>
+
+<script>
+// Kompletní databáze dílů z tvého zadání
+const DB = {
+    M: { 
+        "1": { name: "Jednopíst", vz: 150, va: 40, sp: 10, od: 1, ma: 2, ry: 60 },
+        "2": { name: "Rotační", vz: 400, va: 90, sp: 25, od: 2, ma: 3, ry: 110 },
+        "3": { name: "Hvězdicový", vz: 800, va: 180, sp: 45, od: 3, ma: 1, ry: 160 },
+        "4": { name: "Řadový", vz: 1200, va: 310, sp: 70, od: 4, ma: 0, ry: 220 },
+        "5": { name: "Dvojitý Bizon", vz: 1800, va: 550, sp: 110, od: 5, ma: -3, ry: 280 }
+    },
+    K: {
+        "1": { vz: 100, va: 20, od: -1, ma: 5, ry: -30 },
+        "2": { vz: 300, va: 60, od: -2, ma: 4, ry: 20 },
+        "3": { vz: 700, va: 150, od: -4, ma: 2, ry: -10 },
+        "4": { vz: 1100, va: 280, od: -3, ma: 1, ry: 0 },
+        "5": { vz: 2200, va: 600, od: -2, ma: -4, ry: -60 }
+    },
+    T: {
+        "1": { vz: 0, va: 15, od: 5, ma: 4, ry: 10 },
+        "2": { vz: 0, va: 80, od: 2, ma: 2, ry: 0 },
+        "3": { vz: 0, va: 160, od: 4, ma: 1, ry: -10 },
+        "4": { vz: 0, va: 350, od: 8, ma: -1, ry: -25 },
+        "5": { vz: 0, va: 800, od: 15, ma: -5, ry: -80 }
+    },
+    P: {
+        "1": { cap: 20, va: 30 }, "2": { cap: 50, va: 100 }, "3": { cap: 100, va: 250 },
+        "4": { cap: 250, va: 500 }, "5": { cap: 80, va: 300, od: 8 }
+    },
+    D: {
+        "1": { va: 20, ry: 0 }, "2": { va: 35, od: 3, ma: -1, ry: -5 },
+        "3": { va: 30, od: 4, ry: -10 }, "4": { vz: 50, va: 120, od: 2, ma: -3, ry: -30 },
+        "5": { va: 150, od: 2, ma: 4, ry: 25 }
+    },
+    R: {
+        "1": { vz: 20, va: 5, ry: 10 }, "2": { vz: 50, va: 15, ry: 30 },
+        "3": { vz: 100, va: 25, ry: 50 }, "4": { vz: 200, va: 45, od: -2, ma: -1, ry: 70 },
+        "5": { vz: 350, va: 80, od: -3, ma: 1, ry: 100 }
+    },
+    O: {
+        "1": { va: 5, od: -3, ma: 2, ry: 5 }, "2": { va: 15, od: 0, ry: 10 },
+        "3": { va: 40, od: -2, ry: -5 }, "4": { va: 70, od: -5, ma: -1, ry: -15 },
+        "5": { va: 180, od: -10, ma: -4, ry: -40 }
+    },
+    N: {
+        "1": { va: 50 }, "2": { va: 85 }, "3": { va: 170, ma: -10 },
+        "4": { va: 400, ry: -30 }, "5": { va: 900, ry: -60 }
+    },
+    G: { "1": { lvl: 1 }, "2": { lvl: 2 }, "3": { lvl: 3 }, "4": { lvl: 4 }, "5": { lvl: 5 } },
+    C: { "1": { lvl: 1 }, "2": { lvl: 2 }, "3": { lvl: 3 }, "4": { lvl: 4 }, "5": { lvl: 5 } }
+};
+
+const labels = {M:"Motor", K:"Křídla", T:"Trup", P:"Palivo", D:"Podvozek", R:"Vrtule", O:"Kokpit", N:"Náklad", G:"Navigace", C:"Chlazení"};
+
+// Inicializace UI
+const selDiv = document.getElementById('selectors');
+for(let k in labels) {
+    let div = document.createElement('div');
+    div.className = "input-item";
+    div.innerHTML = `<label>${labels[k]}</label><select id="sel-${k}">
+        ${Object.keys(DB[k]).map(num => `<option value="${num}">${k}${num}</option>`).join('')}
+    </select>`;
+    selDiv.appendChild(div);
+}
+
+function runAnalysis() {
+    let VZ=0, VA=0, SP=0, OD=0, MA=0, G=0, C=0, PAL=0, RY=0;
+
+    // Sčítání statů
+    for(let k in labels) {
+        let val = document.getElementById('sel-'+k).value;
+        let d = DB[k][val];
+        if(d.vz) VZ += d.vz;
+        if(d.va) VA += d.va;
+        if(d.sp) SP += d.sp;
+        if(d.od) OD += d.od;
+        if(d.ma) MA += d.ma;
+        if(d.ry) RY += d.ry;
+        if(d.cap) PAL = d.cap;
+        if(k === 'G') G = d.lvl;
+        if(k === 'C') C = d.lvl;
+    }
+
+    const dist = parseFloat(document.getElementById('m-dist').value);
+    const rwLimit = parseFloat(document.getElementById('m-rw').value);
+    const biom = document.getElementById('m-biom').value;
+    const weather = document.getElementById('m-weather').value;
+
+    let log = [];
+    let fail = false;
+
+    // VZLET
+    let PM = VZ - VA;
+    let a = Math.max(0.5, PM / 1000);
+    let v = Math.max(20, VA / 10);
+    let t = v / a;
+    let s = 0.5 * a * (t * t);
+
+    log.push(`VZTLAK: ${VZ} kg | VÁHA: ${VA} kg | POWER MARGIN: ${PM}`);
+    if(PM <= 0) { log.push("❌ KRITICKÉ: Letadlo je těžší než vztlak! Nevzlétne."); fail=true; }
+    else {
+        log.push(`VZLET: Potřebná ranvej ${s.toFixed(0)}m (při akceleraci ${a.toFixed(2)}m/s²)`);
+        if(s > rwLimit) { log.push(`❌ HAVÁRIE: Ranvej je příliš krátká!`); fail=true; }
+    }
+
+    // PROSTŘEDÍ
+    if(biom === "ARKTIDA" && OD < 12) { log.push("❌ HAVÁRIE: V Arktidě trup zkřehne a praskne (OD < 12)!"); fail=true; }
+    if(biom === "HORY" && MA < 2) { log.push("❌ HAVÁRIE: V horách narazíš do štítu (MA < 2)!"); fail=true; }
+    if(weather === "BOURA" && OD < 10) { log.push("❌ HAVÁRIE: Bouře roztrhá konstrukci (OD < 10)!"); fail=true; }
+
+    // SAHARA / TEPLO
+    if(biom === "POUST") {
+        let heat = 0.25;
+        let cooling = C * 0.05;
+        log.push(`TEPLO: Generování ${heat} | Chlazení ${cooling.toFixed(2)}`);
+        if(cooling < heat) { log.push("🔥 RIZIKO: Motor se v poušti přehřívá!"); if(dist > 50) { log.push("❌ VÝBUCH: Při této vzdálenosti motor shoří."); fail=true; } }
+    }
+
+    // PALIVO
+    let finalDist = dist;
+    if((weather === "MLHA" || weather === "PISEK" || weather === "BOURA") && G < 3) {
+        finalDist += 300;
+        log.push("⚠️ ZABLOUDĚNÍ: Špatná navigace v bouři/mlze přidává 300km.");
+    }
+    let mod = (biom === "POUST") ? 1.2 : 1.0;
+    let fuelNeed = ((SP / 50) * (finalDist / 8) + 1.2) * mod;
+    log.push(`PALIVO: Potřeba ${fuelNeed.toFixed(1)}L | V nádrži ${PAL}L`);
+    if(fuelNeed > PAL) { log.push("❌ HAVÁRIE: Palivo vyčerpáno před cílem!"); fail=true; }
+
+    // FINÁLNÍ VERDIKT
+    const resDiv = document.getElementById('results');
+    resDiv.innerHTML = log.map(line => line.includes('❌') ? `<span class="crit">${line}</span>` : line).join('\n');
+    resDiv.innerHTML += `\n\n--- VERDIKT: ${fail ? "NELETĚT (SEBEVRAŽDA)" : "LET POVOLEN (BEZPEČNÉ)"} ---`;
+}
+</script>
+</body>
+</html>
