@@ -3,234 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mars Asset Repair Database - Mobile Ready</title>
+    <title>Mars Operational Terminal v3.3</title>
     <style>
-        :root { 
-            --green: #00ff41; 
-            --bg: #050505; 
-            --panel: #111; 
-            --red: #ff3131;
-        }
-        
+        :root { --green: #00ff41; --bg: #050505; --red: #ff3131; --panel: #111; --blue: #008cff; }
         body { 
-            font-family: 'Courier New', monospace; 
-            background: var(--bg); 
-            color: #ccc; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0; 
-            overflow-x: hidden;
+            font-family: 'Consolas', monospace; background: var(--bg); color: #ccc; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; touch-action: manipulation; overflow: hidden;
         }
+        /* Počítadlo statistik */
+        #stats-bar {
+            width: 95%; max-width: 500px; display: flex; justify-content: space-between;
+            padding: 10px 20px; background: #000; border: 1px solid #333;
+            border-bottom: none; border-radius: 5px 5px 0 0; box-sizing: border-box;
+            font-size: 0.8rem; letter-spacing: 1px;
+        }
+        .stat-item span { font-weight: bold; }
+        .stat-correct { color: var(--green); }
+        .stat-wrong { color: var(--red); }
+        .stat-total { color: var(--blue); }
 
-        /* Speciální vrstva pro blikání na mobilu */
         #flash-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 9999;
-            background-color: transparent;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 9999; background-color: transparent;
         }
-
         #quiz-container { 
-            width: 90%; 
-            max-width: 500px; 
-            background: var(--panel); 
-            border: 2px solid #222; 
-            padding: 20px; 
-            border-radius: 5px; 
-            position: relative;
-            z-index: 10;
+            width: 95%; max-width: 500px; background: var(--panel); border: 2px solid #222; 
+            padding: 20px; border-radius: 0 0 5px 5px; position: relative; z-index: 10;
         }
-
-        .scoreboard {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            font-size: 0.75rem;
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
-        }
-
         .viewscreen { 
-            width: 100%; 
-            height: 250px; 
-            background: #000; 
-            border: 1px solid #333; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            margin-bottom: 15px; 
+            width: 100%; height: 260px; background: #000; border: 1px solid #333; 
+            display: flex; justify-content: center; align-items: center; margin-bottom: 20px;
         }
-
-        .viewscreen img { max-width: 100%; max-height: 100%; }
-
-        .status-box { 
-            background: #000; 
-            padding: 12px; 
-            border-left: 4px solid var(--red); 
-            margin-bottom: 15px; 
-        }
-
-        .error-msg { color: var(--red); font-weight: bold; font-size: 0.9rem; }
-
-        .options-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-
+        .viewscreen img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .status-box { background: #000; padding: 15px; border-left: 4px solid var(--red); margin-bottom: 20px; }
+        .error-msg { color: var(--red); font-weight: bold; font-size: 1.1rem; text-transform: uppercase; }
+        .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
         .option-btn { 
-            background: #0a0a0a; border: 1px solid #444; color: #aaa; padding: 12px; 
+            background: #0a0a0a; border: 1px solid #444; color: #aaa; padding: 15px; 
             text-align: left; cursor: pointer; font-family: inherit; font-size: 0.85rem;
-            -webkit-tap-highlight-color: transparent; /* Odstraní modrý stín na mobilu */
         }
-
-        .option-btn.correct-locked { border-color: var(--green) !important; color: var(--green); }
-        .option-btn.wrong-locked { border-color: var(--red) !important; color: var(--red); opacity: 0.5; }
-
-        #feedback { margin-top: 10px; font-size: 0.8rem; text-align: center; min-height: 20px; }
-
+        .option-btn.correct { border-color: var(--green); color: var(--green); }
+        .option-btn.wrong { border-color: var(--red); color: var(--red); opacity: 0.3; }
         .next-btn { 
-            width: 100%; margin-top: 15px; background: var(--green); color: #000; 
-            border: none; padding: 15px; font-weight: bold; cursor: pointer; display: none; 
+            width: 100%; margin-top: 20px; background: var(--green); color: #000; 
+            border: none; padding: 18px; font-weight: bold; cursor: pointer; display: none; 
         }
+        #feedback { text-align: center; margin-top: 15px; font-weight: bold; min-height: 1.2rem; font-size: 0.8rem; }
+        .loading-dots:after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
+        @keyframes dots { 0%, 20% { color: rgba(0,0,0,0); text-shadow: .5em 0 0 rgba(0,0,0,0), 1em 0 0 rgba(0,0,0,0); }
+          40% { color: var(--green); text-shadow: .5em 0 0 rgba(0,0,0,0), 1em 0 0 rgba(0,0,0,0); }
+          60% { text-shadow: .5em 0 0 var(--green), 1em 0 0 rgba(0,0,0,0); }
+          80%, 100% { text-shadow: .5em 0 0 var(--green), 1em 0 0 var(--green); } }
     </style>
 </head>
 <body>
 
 <div id="flash-overlay"></div>
 
+<div id="stats-bar">
+    <div class="stat-item">SPRÁVNĚ: <span id="count-correct" class="stat-correct">0</span></div>
+    <div class="stat-item">ŠPATNĚ: <span id="count-wrong" class="stat-wrong">0</span></div>
+    <div class="stat-item">CELKEM: <span id="count-total" class="stat-total">0</span></div>
+</div>
+
 <div id="quiz-container">
-    <div class="scoreboard">
-        <span>ÚSPĚCH: <b id="stat-correct" style="color:var(--green)">0</b></span>
-        <span>CHYBY: <b id="stat-wrong" style="color:var(--red)">0</b></span>
-        <span>KOLO: <b id="stat-total" style="color:#fff">1</b></span>
-    </div>
-
     <div class="viewscreen">
-        <img id="asset-img" src="" alt="LOADING...">
+        <img id="asset-img" src="" alt="DATOVÝ PŘENOS...">
     </div>
-
     <div class="status-box">
-        <span class="error-msg" id="error-desc">DEŠIFRUJI...</span>
+        <span class="error-msg" id="display-err-text">SYSTÉMOVÁ ANALÝZA...</span>
     </div>
-
     <div id="options" class="options-grid"></div>
     <div id="feedback"></div>
-    <button id="next-btn" class="next-btn">NAČÍST DALŠÍ DATA</button>
+    <button id="next-btn" class="next-btn">NAČÍST DALŠÍ SEKTOR</button>
 </div>
 
 <script>
     const baseUrl = "https://tobi-09.github.io/skaut/img/mars/";
-    let scoreCorrect = 0;
-    let scoreWrong = 0;
-    let currentRound = 1;
-    let audioCtx = null; // Inicializace až po interakci
+    const variants = ["0", "A", "B", "C", "D"];
+    
+    const assets = [
+        { id: "1", cat: "Vehicle" }, { id: "2", cat: "Aerial" }, { id: "3", cat: "Vehicle" },
+        { id: "4", cat: "Bot" },     { id: "5", cat: "Energy" },  { id: "6", cat: "Energy" },
+        { id: "7", cat: "Energy" },  { id: "8", cat: "Hab" },     { id: "9", cat: "Hab" },
+        { id: "10", cat: "Hab" },    { id: "11", cat: "Energy" }, { id: "12", cat: "Energy" }, 
+        { id: "13", cat: "Vehicle" }, { id: "14", cat: "Vehicle" }, { id: "15", cat: "Bio" },
+        { id: "16", cat: "Bot" },    { id: "17", cat: "Bio" },    { id: "18", cat: "Vehicle" },
+        { id: "19", cat: "Energy" }, { id: "20", cat: "Vehicle" }, { id: "21", cat: "Energy" },
+        { id: "23", cat: "Bio" }
+    ];
 
-    const banks = {
-        motor: ["Vzdáleně propláchnout motoru", "Aktivovat záložní motoru", "Spustit diagnostiku motoru", "Upravit parametry motoru"],
-        podvozek: ["Nulovat hodnoty podvozku", "Spustit diagnostiku podvozku", "Upravit parametry podvozku", "Vzdáleně propláchnout podvozku"],
-        antena: ["Rekalibrovat antény", "Vzdáleně propláchnout antény", "Nulovat hodnoty antény", "Restartovat antény"],
-        ventilace: ["Nulovat hodnoty ventilace", "Spustit diagnostiku ventilace", "Upravit parametry ventilace", "Vzdáleně propláchnout ventilace"],
-        tesneni: ["Restartovat těsnění", "Upravit parametry těsnění", "Vzdáleně propláchnout těsnění", "Nulovat hodnoty těsnění"],
-        optika: ["Rekalibrovat optiky", "Vzdáleně propláchnout optiky", "Nulovat hodnoty optiky", "Restartovat optiky"]
+    const errorParts = {
+        Vehicle: ["motoru", "podvozku", "kol", "antény", "ramene", "převodovky", "brzd", "Lidaru", "navigace", "baterie"],
+        Bot: ["kloubu", "procesoru", "mikrofonu", "optiky", "rovnováhy", "paměti", "gyroskopu", "stisku", "chlazení", "řeči"],
+        Energy: ["článku", "měniče", "kabeláže", "jádra", "transformátoru", "izolace", "svorky", "monitoru", "chladiva", "relé"],
+        Hab: ["přechodové komory", "ventilace", "těsnění", "osvětlení", "topení", "filtru", "senzoru tlaku", "zámku", "pláště", "UI terminálu"],
+        Bio: ["hydroponie", "závlahy", "LED spektra", "pH metru", "hnojení", "ventilátoru", "čerpadla", "vlhkosti", "skla", "dveří"],
+        Aerial: ["rotoru", "vztlaku", "výškoměru", "stabilizace", "vysílače", "lopatek", "kompasu", "telemetrie", "kamery", "podvozku"]
     };
 
-    const quizData = [
-        { id: "3", v: "0", err: "Porucha motoru", cmd: "Vzdáleně propláchnout motoru", type: "motor" },
-        { id: "3", v: "A", err: "Porucha podvozku", cmd: "Spustit diagnostiku podvozku", type: "podvozek" },
-        { id: "18", v: "C", err: "Porucha antény", cmd: "Restartovat antény", type: "antena" },
-        { id: "8", v: "A", err: "Porucha ventilace", cmd: "Spustit diagnostiku ventilace", type: "ventilace" },
-        { id: "9", v: "B", err: "Porucha těsnění", cmd: "Vzdáleně propláchnout těsnění", type: "tesneni" }
-    ];
+    const actions = ["Restartovat", "Rekalibrovat", "Zvýšit napětí v", "Vyčistit impulsy", "Přepsat registry", "Aktivovat záložní", "Spustit diagnostiku", "Upravit parametry", "Vzdáleně propláchnout", "Nulovat hodnoty"];
+
+    let correctCount = 0;
+    let wrongCount = 0;
+    let totalCount = 0;
+    let audioCtx = null;
+
+    function updateStats() {
+        document.getElementById('count-correct').innerText = correctCount;
+        document.getElementById('count-wrong').innerText = wrongCount;
+        document.getElementById('count-total').innerText = totalCount;
+    }
 
     function playSound() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+        osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.1);
         gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.4);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.5);
     }
 
-    function triggerFlash() {
+    function triggerFinalEffects() {
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        playSound();
         const overlay = document.getElementById('flash-overlay');
-        let flashes = 0;
+        let count = 0;
         const interval = setInterval(() => {
-            overlay.style.backgroundColor = (flashes % 2 === 0) ? "rgba(255,0,0,0.8)" : "rgba(255,255,255,0.8)";
-            flashes++;
-            if (flashes > 10) {
-                clearInterval(interval);
-                overlay.style.backgroundColor = "transparent";
-            }
+            overlay.style.backgroundColor = (count % 2 === 0) ? "rgba(255, 0, 0, 0.7)" : "rgba(255, 255, 255, 0.7)";
+            count++;
+            if (count > 12) { clearInterval(interval); overlay.style.backgroundColor = "transparent"; }
         }, 70);
     }
 
     function loadQuestion() {
-        const data = quizData[Math.floor(Math.random() * quizData.length)];
-        document.getElementById('asset-img').src = `${baseUrl}${data.id}_${data.v}.jpg`;
-        document.getElementById('error-desc').innerText = `CHYBA: ${data.err.toUpperCase()}`;
-        document.getElementById('stat-total').innerText = currentRound;
+        const asset = assets[Math.floor(Math.random() * assets.length)];
+        const v = variants[Math.floor(Math.random() * variants.length)];
+        const errorIndex = Math.floor(Math.random() * 10);
+        
+        const parts = errorParts[asset.cat];
+        const targetPart = parts[errorIndex % parts.length];
+        const correctAction = actions[(errorIndex + v.charCodeAt(0)) % actions.length];
+        const solution = `${correctAction} ${targetPart}`;
+        
+        document.getElementById('asset-img').src = `${baseUrl}${asset.id}_${v}.jpg`;
+        document.getElementById('display-err-text').innerText = `PORUCHA ${targetPart}`;
         
         const optionsDiv = document.getElementById('options');
         optionsDiv.innerHTML = "";
         document.getElementById('feedback').innerText = "";
         document.getElementById('next-btn').style.display = "none";
 
-        let choices = [...banks[data.type]];
+        let choices = [solution];
+        let usedActions = [correctAction];
+
+        while(choices.length < 4) {
+            let randAction = actions[Math.floor(Math.random() * actions.length)];
+            if(!usedActions.includes(randAction)) {
+                choices.push(`${randAction} ${targetPart}`);
+                usedActions.push(randAction);
+            }
+        }
         choices.sort(() => Math.random() - 0.5);
 
         choices.forEach(choice => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
-            btn.innerText = "CMD:> " + choice;
+            btn.innerText = `COMMAND: ${choice}`;
             btn.onclick = () => {
-                // Aktivace audia na mobilu při prvním kliku
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-                if(choice === data.cmd) {
-                    btn.classList.add('correct-locked');
-                    scoreCorrect++;
-                    document.getElementById('stat-correct').innerText = scoreCorrect;
-                    handleSuccess();
+                if(choice === solution) {
+                    correctCount++;
+                    totalCount++;
+                    updateStats();
+                    
+                    document.querySelectorAll('.option-btn').forEach(b => {
+                        b.disabled = true;
+                        if(b.innerText.includes(choice)) b.classList.add('correct');
+                    });
+                    
+                    const fb = document.getElementById('feedback');
+                    fb.style.color = "var(--green)";
+                    fb.innerHTML = "<span class='loading-dots'>VYSÍLÁM OPRAVNÝ PAKET</span>";
+                    
+                    setTimeout(() => {
+                        fb.innerText = "OPRAVA ÚSPĚŠNÁ";
+                        triggerFinalEffects();
+                        document.getElementById('next-btn').style.display = "block";
+                    }, Math.floor(Math.random() * 25000) + 5000);
                 } else {
-                    btn.classList.add('wrong-locked');
+                    wrongCount++;
+                    totalCount++;
+                    updateStats();
+                    
+                    btn.classList.add('wrong');
                     btn.disabled = true;
-                    scoreWrong++;
-                    document.getElementById('stat-wrong').innerText = scoreWrong;
+                    document.getElementById('feedback').innerText = "ODMÍTNUTO - CHYBNÁ OPERACE";
+                    document.getElementById('feedback').style.color = "var(--red)";
                 }
             };
             optionsDiv.appendChild(btn);
         });
     }
 
-    function handleSuccess() {
-        document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
-        const fb = document.getElementById('feedback');
-        fb.innerText = "NAVAZUJI SPOJENÍ S MARSEM...";
-        fb.style.color = "var(--green)";
-
-        const wait = Math.floor(Math.random() * 5000) + 1000; // Na mobilu raději kratší (1-6s)
-        
-        setTimeout(() => {
-            playSound();
-            triggerFlash();
-            fb.innerText = "SPOJENÍ POTVRZENO.";
-            document.getElementById('next-btn').style.display = "block";
-            currentRound++;
-        }, wait);
-    }
-
     document.getElementById('next-btn').onclick = loadQuestion;
     window.onload = loadQuestion;
 </script>
-
 </body>
 </html>
