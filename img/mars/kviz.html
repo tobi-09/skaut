@@ -3,100 +3,1272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mars Operational Terminal v3.4</title>
+    <title>Mars Terminal - Quiz & Database</title>
     <style>
-        :root { --green: #00ff41; --bg: #050505; --red: #ff3131; --panel: #111; --blue: #008cff; }
-        
-        body { 
-            font-family: 'Consolas', monospace; background: var(--bg); color: #ccc; 
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            height: 100vh; margin: 0; touch-action: manipulation; overflow: hidden;
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --accent: #FFE66D;
+            --purple: #A29BFE;
+            --pink: #FD79A8;
+            --bg-dark: #0F0F2E;
+            --bg-light: #16213E;
+            --card-bg: #1D3557;
+            --text-light: #E8F4F8;
+            --text-muted: #A8B8C8;
         }
 
-        #stats-bar {
-            width: 100%; max-width: 500px; display: flex; justify-content: space-between;
-            padding: 8px 15px; background: #000; border-bottom: 1px solid #333;
-            box-sizing: border-box; font-size: 0.75rem; z-index: 100;
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1A2847 50%, #0F2438 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
         }
 
-        #quiz-container { 
-            width: 100%; max-width: 500px; flex-grow: 1; display: flex; flex-direction: column;
-            background: var(--panel); position: relative; overflow-y: auto; padding: 10px; box-sizing: border-box;
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255,107,107,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -100px;
+            left: -100px;
+            animation: float 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
         }
 
-        .viewscreen { 
-            width: 100%; min-height: 150px; max-height: 220px; background: #000; border: 1px solid #333; 
-            display: flex; justify-content: center; align-items: center; margin-bottom: 10px; flex-shrink: 1;
-        }
-        .viewscreen img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        .status-box { background: #000; padding: 10px; border-left: 4px solid var(--red); margin-bottom: 10px; flex-shrink: 0; }
-        .error-msg { color: var(--red); font-weight: bold; font-size: 0.95rem; text-transform: uppercase; }
-
-        .options-grid { display: grid; grid-template-columns: 1fr; gap: 8px; flex-shrink: 0; }
-        .option-btn { 
-            background: #0a0a0a; border: 1px solid #444; color: #aaa; padding: 12px; 
-            text-align: left; cursor: pointer; font-family: inherit; font-size: 0.8rem; border-radius: 4px;
-        }
-        .option-btn.correct { border-color: var(--green); color: var(--green); background: rgba(0, 255, 65, 0.05); }
-        .option-btn.wrong { border-color: var(--red); color: var(--red); opacity: 0.3; }
-
-        .next-btn { 
-            width: 100%; margin-top: 15px; background: var(--green); color: #000; 
-            border: none; padding: 16px; font-weight: bold; cursor: pointer; display: none; 
-            border-radius: 4px; font-size: 1rem; box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+        body::after {
+            content: '';
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(78,205,196,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -80px;
+            right: -80px;
+            animation: float 10s ease-in-out infinite reverse;
+            pointer-events: none;
+            z-index: 1;
         }
 
-        #feedback { text-align: center; margin-top: 10px; font-weight: bold; min-height: 1.2rem; font-size: 0.75rem; }
-        #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
+        /* Particles (small flying stars) */
+        #particles { position: fixed; inset: 0; pointer-events: none; z-index: 50; overflow: visible; }
+        .particle {
+            position: absolute;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #fff, #ffd66d 60%);
+            opacity: 0.95; transform: translateX(-20vw);
+            animation: flyLinear linear infinite;
+            filter: drop-shadow(0 0 6px rgba(255,230,109,0.6));
+        }
+        @keyframes flyLinear {
+            0% { transform: translateX(-10vw) translateY(0) scale(0.6); opacity: 0.9 }
+            100% { transform: translateX(120vw) translateY(-40px) scale(1.2); opacity: 0 }
+        }
 
-        .loading-dots:after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
-        @keyframes dots { 0%, 20% { color: rgba(0,0,0,0); text-shadow: .5em 0 0 rgba(0,0,0,0), 1em 0 0 rgba(0,0,0,0); }
-          40% { color: var(--green); text-shadow: .5em 0 0 rgba(0,0,0,0), 1em 0 0 rgba(0,0,0,0); }
-          60% { text-shadow: .5em 0 0 var(--green), 1em 0 0 rgba(0,0,0,0); }
-          80%, 100% { text-shadow: .5em 0 0 var(--green), 1em 0 0 var(--green); } }
+        /* 30s demo timer */
+        #timer-wrap { width: 100%; height: 12px; background: rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.03); }
+        #timer-progress { width: 100%; height: 100%; background: #00ff41; transition: width 0.2s linear; }
+        .timer-running { animation: timerFill 30s linear forwards; }
+        @keyframes timerFill {
+            0% { width: 100%; background: #00ff41; }
+            33% { background: #ffe66d; }
+            66% { background: #ff8c42; }
+            100% { width: 0%; background: #ff3131; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(30px); }
+        }
+
+        /* Mode selection screen */
+        #mode-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1A2847 50%, #0F2438 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        #mode-screen.hidden {
+            display: none;
+        }
+
+        .mode-content {
+            text-align: center;
+            animation: fadeInScale 0.6s ease-out;
+        }
+
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .mode-content h2 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .mode-content p {
+            color: var(--text-muted);
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 600px;
+            margin-bottom: 40px;
+        }
+
+        .mode-card {
+            background: linear-gradient(135deg, var(--card-bg), rgba(29,53,87,0.6));
+            border: 2px solid var(--secondary);
+            padding: 30px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .mode-card:nth-child(2) { animation-delay: 0.1s; }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            left: -100%;
+            transition: left 0.6s;
+            top: 0;
+        }
+
+        .mode-card:hover::before {
+            left: 100%;
+        }
+
+        .mode-card:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(78, 205, 196, 0.3);
+            border-color: var(--accent);
+        }
+
+        .mode-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        .mode-card:nth-child(2) .mode-icon {
+            animation-delay: 0.2s;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .mode-card h3 {
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+
+        .mode-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .difficulty-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            max-width: 500px;
+            margin-bottom: 30px;
+        }
+
+        .difficulty-btn {
+            background: linear-gradient(135deg, rgba(78,205,196,0.1), rgba(162,155,254,0.1));
+            border: 2px solid var(--secondary);
+            color: var(--text-light);
+            padding: 15px 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 0.95rem;
+            position: relative;
+            overflow: hidden;
+            animation: slideUpBounce 0.5s ease-out;
+        }
+
+        .difficulty-btn:nth-child(1) { animation-delay: 0s; }
+        .difficulty-btn:nth-child(2) { animation-delay: 0.1s; }
+        .difficulty-btn:nth-child(3) { animation-delay: 0.2s; }
+
+        .difficulty-btn::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            left: -100%;
+            transition: left 0.5s;
+        }
+
+        .difficulty-btn:hover::before {
+            left: 100%;
+        }
+
+        .difficulty-btn:hover {
+            background: linear-gradient(135deg, rgba(78,205,196,0.2), rgba(162,155,254,0.2));
+            box-shadow: 0 8px 20px rgba(78, 205, 196, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .difficulty-btn.selected {
+            background: linear-gradient(135deg, var(--secondary), #3FB9B0);
+            color: var(--bg-dark);
+            box-shadow: 0 8px 25px rgba(78, 205, 196, 0.4);
+            animation: pulse 0.6s ease-out;
+        }
+
+        .menu-btn.locked {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, var(--primary), #FF5555);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .back-btn.show {
+            display: inline-block;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUpBounce {
+            0% { opacity: 0; transform: translateY(20px); }
+            50% { opacity: 1; transform: translateY(-5px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Header */
+        header {
+            background: rgba(29, 53, 87, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--secondary);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            font-weight: 300;
+        }
+
+        /* Menu */
+        nav {
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(15, 15, 46, 0.5);
+            backdrop-filter: blur(5px);
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 100;
+            align-items: center;
+        }
+
+        .menu-left {
+            display: flex;
+            gap: 12px;
+        }
+
+        .menu-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .menu-btn {
+            padding: 12px 24px;
+            border: 2px solid var(--secondary);
+            background: rgba(78, 205, 196, 0.1);
+            color: var(--text-light);
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .menu-btn:hover::before {
+            left: 100%;
+        }
+
+        .menu-btn:hover {
+            background: rgba(78, 205, 196, 0.25);
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .menu-btn.active {
+            background: linear-gradient(135deg, var(--secondary), #3FB9B0);
+            box-shadow: 0 8px 20px rgba(78, 205, 196, 0.5);
+            color: var(--bg-dark);
+            font-weight: 700;
+            animation: pulse 0.6s ease-out;
+        }
+
+        .reset-btn {
+            background: linear-gradient(135deg, var(--accent), #FFD966);
+            color: var(--bg-dark);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(255, 230, 109, 0.3);
+        }
+
+        /* Difficulty indicator */
+        .difficulty-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(78, 205, 196, 0.1);
+            padding: 8px 15px;
+            border-radius: 50px;
+            border: 1px solid var(--secondary);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .sound-btn {
+            background: rgba(162, 155, 254, 0.15);
+            border: 2px solid var(--purple);
+            color: var(--text-light);
+            padding: 8px 14px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .sound-btn:hover {
+            background: rgba(162, 155, 254, 0.25);
+            box-shadow: 0 0 15px rgba(162, 155, 254, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .sound-btn.muted {
+            opacity: 0.5;
+            background: rgba(162, 155, 254, 0.05);
+        }
+
+        .star-sprite {
+            width: 20px;
+            height: 20px;
+            background: url('https://tobi-09.github.io/skaut/TESTY/progress-empty-sprite.png') no-repeat;
+            background-size: 200px 20px;
+            animation: starBlink 1s steps(10) infinite;
+            display: inline-block;
+        }
+
+        @keyframes starBlink {
+            0% { background-position: 0 0; }
+            100% { background-position: -200px 0; }
+        }
+
+        .stat-stars {
+            display: flex;
+            gap: 4px;
+        }
+
+        /* Main container */
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 140px);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Quiz Mode */
+        #quiz-mode {
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            gap: 15px;
+            overflow-y: auto;
+            align-items: center;
+        }
+
+        #quiz-mode.active {
+            display: flex;
+        }
+
+        #quiz-container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, var(--card-bg), rgba(29, 53, 87, 0.6));
+            padding: 15px 25px;
+            border-radius: 30px;
+            border: 2px solid var(--secondary);
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+            animation: slideIn 0.6s ease-out;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-item:nth-child(1) { animation-delay: 0s; }
+        .stat-item:nth-child(2) { animation-delay: 0.1s; }
+        .stat-item:nth-child(3) { animation-delay: 0.2s; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-correct .stat-value { color: var(--secondary); }
+        .stat-wrong .stat-value { color: var(--primary); }
+        .stat-total .stat-value { color: var(--accent); }
+
+        /* Viewscreen */
+        .viewscreen {
+            width: 100%;
+            min-height: 180px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(29,53,87,0.3));
+            border: 2px solid var(--secondary);
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 8px 25px rgba(78, 205, 196, 0.2), inset 0 0 20px rgba(78, 205, 196, 0.1);
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 8px 25px rgba(78, 205, 196, 0.2), inset 0 0 20px rgba(78, 205, 196, 0.1); }
+            50% { box-shadow: 0 12px 35px rgba(78, 205, 196, 0.35), inset 0 0 30px rgba(78, 205, 196, 0.15); }
+        }
+
+        /* More background animations */
+        @keyframes rotateGlow {
+            0% { transform: rotate(0deg) scale(1); }
+            100% { transform: rotate(360deg) scale(1.1); }
+        }
+
+        @keyframes fadePulse {
+            0%, 100% { opacity: 0.05; }
+            50% { opacity: 0.15; }
+        }
+
+        @keyframes drift {
+            0%, 100% { transform: translateX(0) translateY(0); }
+            25% { transform: translateX(30px) translateY(-20px); }
+            50% { transform: translateX(0) translateY(-40px); }
+            75% { transform: translateX(-30px) translateY(-20px); }
+        }
+
+        .viewscreen img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Status box */
+        .status-box {
+            background: linear-gradient(135deg, rgba(255,107,107,0.1), rgba(255,107,107,0.05));
+            padding: 15px;
+            border-left: 4px solid var(--primary);
+            border-radius: 10px;
+            border-right: 1px solid var(--primary);
+            border-top: 1px solid var(--primary);
+            border-bottom: 1px solid var(--primary);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.15);
+        }
+
+        .error-msg {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 49%, 100% { opacity: 1; }
+            50%, 99% { opacity: 0.7; }
+        }
+
+        /* Options grid */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: linear-gradient(135deg, rgba(78,205,196,0.1), rgba(162,155,254,0.1));
+            border: 2px solid var(--secondary);
+            color: var(--text-light);
+            padding: 15px;
+            text-align: left;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(78, 205, 196, 0.1);
+            animation: slideUpBounce 0.5s ease-out;
+        }
+
+        .option-btn:nth-child(1) { animation-delay: 0s; }
+        .option-btn:nth-child(2) { animation-delay: 0.1s; }
+        .option-btn:nth-child(3) { animation-delay: 0.2s; }
+        .option-btn:nth-child(4) { animation-delay: 0.3s; }
+
+        .option-btn::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            left: -100%;
+            transition: left 0.6s;
+            top: 0;
+        }
+
+        .option-btn:hover::before {
+            left: 100%;
+        }
+
+        .option-btn:hover:not(.correct):not(.wrong) {
+            background: linear-gradient(135deg, rgba(78,205,196,0.2), rgba(162,155,254,0.2));
+            box-shadow: 0 8px 20px rgba(78, 205, 196, 0.3);
+            transform: translateX(8px);
+            border-color: var(--secondary);
+        }
+
+        .option-btn.correct {
+            background: linear-gradient(135deg, rgba(78,205,196,0.3), rgba(78,205,196,0.2));
+            border-color: var(--secondary);
+            color: var(--secondary);
+            box-shadow: 0 8px 25px rgba(78, 205, 196, 0.4);
+            animation: correctPulse 0.6s ease-out !important;
+        }
+
+        @keyframes correctPulse {
+            0% { transform: scale(0.98); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .option-btn.wrong {
+            border-color: var(--primary);
+            color: var(--primary);
+            opacity: 0.5;
+            animation: shake 0.4s ease-out !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Feedback */
+        #feedback {
+            text-align: center;
+            font-weight: 600;
+            min-height: 1.5rem;
+            font-size: 0.95rem;
+            color: var(--secondary);
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        /* Next button */
+        .next-btn {
+            width: 300px;
+            max-width: 90%;
+            background: linear-gradient(135deg, var(--secondary), #3FB9B0);
+            color: var(--bg-dark);
+            border: none;
+            padding: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-family: 'Poppins', sans-serif;
+            display: none;
+            box-shadow: 0 8px 25px rgba(78, 205, 196, 0.3);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            overflow: hidden;
+            z-index: 3602;
+        }
+
+        .next-btn::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            left: -100%;
+            transition: left 0.6s;
+        }
+
+        .next-btn:hover::before {
+            left: 100%;
+        }
+
+        .next-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(78, 205, 196, 0.4);
+        }
+
+        .next-btn:active {
+            transform: translateY(-1px);
+        }
+
+
+
+        /* Database Mode */
+        #database-mode {
+            display: none;
+            overflow-y: auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        #database-mode.active {
+            display: block;
+        }
+
+        .db-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .db-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            gap: 20px;
+        }
+
+        .db-card {
+            background: linear-gradient(135deg, var(--card-bg), rgba(29,53,87,0.6));
+            border: 2px solid var(--secondary);
+            border-radius: 15px;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .db-card:hover {
+            transform: none;
+            box-shadow: 0 15px 40px rgba(78, 205, 196, 0.25);
+            border-color: var(--accent);
+        }
+
+        .db-img-box {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(29,53,87,0.3));
+            position: relative;
+            overflow: hidden;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        .db-img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.4s ease-out;
+        }
+
+        .db-card:hover .db-img-box img {
+            transform: scale(1.08);
+        }
+
+        .db-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #fff;
+            border-radius: 50px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .badge-0 { background: linear-gradient(135deg, var(--secondary), #3FB9B0); }
+        .badge-A { background: linear-gradient(135deg, var(--primary), #FF5555); }
+        .badge-B { background: linear-gradient(135deg, var(--purple), #7F78FF); }
+        .badge-C { background: linear-gradient(135deg, var(--pink), #FD6FA8); }
+        .badge-D { background: linear-gradient(135deg, var(--accent), #FFD966); color: #000; }
+
+        .db-info {
+            padding: 15px;
+            background: rgba(15, 15, 46, 0.6);
+        }
+
+        .db-info h3 {
+            margin: 0 0 8px 0;
+            color: var(--accent);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .db-spec {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .db-meta {
+            font-size: 0.75rem;
+            color: #888;
+            border-top: 1px solid rgba(78, 205, 196, 0.2);
+            padding-top: 8px;
+        }
+
+        .db-repairs {
+            padding: 15px;
+            font-size: 0.8rem;
+            max-height: none;
+            overflow-y: hidden;
+        }
+
+        .db-repairs h4 {
+            color: var(--secondary);
+            text-transform: uppercase;
+            margin: 0 0 10px 0;
+            border-bottom: 1px solid rgba(78, 205, 196, 0.3);
+            padding-bottom: 8px;
+            font-size: 0.75rem;
+        }
+
+        .db-err-row {
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(78, 205, 196, 0.1);
+        }
+
+        .db-err-msg {
+            color: var(--primary);
+            display: block;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .db-sol-msg {
+            color: var(--secondary);
+            display: block;
+            margin-top: 3px;
+            padding-left: 10px;
+            font-style: italic;
+            font-size: 0.7rem;
+        }
+
+        /* Loading animation */
+        .loading-dots::after {
+            content: ' .';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { color: rgba(0,0,0,0); text-shadow: 0.5em 0 0 rgba(0,0,0,0), 1em 0 0 rgba(0,0,0,0); }
+            40% { color: var(--secondary); text-shadow: 0.5em 0 0 rgba(0,0,0,0), 1em 0 0 rgba(0,0,0,0); }
+            60% { text-shadow: 0.5em 0 0 var(--secondary), 1em 0 0 rgba(0,0,0,0); }
+            80%, 100% { text-shadow: 0.5em 0 0 var(--secondary), 1em 0 0 var(--secondary); }
+        }
+
+        /* Flash overlay */
+        #flash-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* UI blur/lock overlay */
+        #ui-blur-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backdrop-filter: blur(4px) saturate(1.05);
+            background: rgba(10,10,12,0.18);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 220ms ease;
+            z-index: 2500;
+        }
+
+        /* Tutorial prompt (startup) */
+        #tutorial-prompt {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2,6,23,0.6);
+            z-index: 4000;
+            color: white;
+            font-family: inherit;
+            padding: 24px;
+        }
+        #tutorial-prompt .card {
+            background: linear-gradient(180deg, rgba(12,18,34,0.96), rgba(8,12,20,0.92));
+            border-radius: 12px;
+            padding: 22px;
+            max-width: 780px;
+            width: calc(100% - 48px);
+            box-shadow: 0 10px 40px rgba(2,8,24,0.6);
+            text-align: center;
+        }
+        #tutorial-prompt h3 { margin: 0 0 8px 0; font-size: 1.25rem; }
+        #tutorial-prompt p { margin: 0 0 18px 0; color: #dbeafe; }
+        #tutorial-prompt .btns { display:flex; gap:12px; justify-content:center; }
+        #tutorial-prompt .btn { padding:10px 14px; border-radius:8px; cursor:pointer; border:0; }
+        #tutorial-prompt .btn.confirm { background: #00b894; color: white; }
+        #tutorial-prompt .btn.cancel { background: transparent; color: #cbd5e1; border:1px solid rgba(255,255,255,0.06); }
+
+        /* Fullscreen tutorial overlay & spotlight */
+        #tutorial-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 3500;
+            display: none;
+        }
+        #tutorial-box {
+            position: fixed;
+            min-width: 260px;
+            max-width: 420px;
+            background: rgba(5,8,16,0.95);
+            color: white;
+            padding: 14px 16px;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+            pointer-events: auto;
+            transition: transform 160ms ease, opacity 160ms ease;
+            z-index: 3601;
+        }
+        #spotlight {
+            position: absolute;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.85);
+            box-shadow: 0 0 30px rgba(255,255,255,0.06), 0 0 8px rgba(0,0,0,0.6) inset;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: none;
+            transition: left 260ms ease, top 260ms ease, transform 260ms ease, width 260ms ease, height 260ms ease;
+            display: none;
+            z-index: 3600;
+        }
+        @keyframes spinPulse { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(60deg) scale(1.04); } 100% { transform: rotate(120deg) scale(1); } }
+        #spotlight::after { content: ''; position:absolute; inset: -6px; border-radius: 50%; box-shadow: 0 0 30px rgba(78,205,196,0.12); animation: spinPulse 2200ms linear infinite; }
+        .tutorial-step-hint { font-size: 0.95rem; color: #e6eef8; }
+        .tutorial-controls { margin-top: 8px; display:flex; gap:8px; justify-content:flex-end; }
+        .tutorial-controls button { padding:6px 10px; border-radius:8px; border:0; cursor:pointer; }
+        .tutorial-controls .next { background:#00b894; color:white; }
+        .tutorial-controls #tutorial-ok-btn { background:#00b894; color:white; }
+        .tutorial-controls .close { background:transparent; color:#cbd5e1; border:1px solid rgba(255,255,255,0.06); }
+        /* DB highlight and arrow for tutorial/test */
+        .db-card.tutorial-greyed { opacity: 0.35; filter: brightness(0.6); pointer-events: none; box-shadow: none; }
+        .db-card.db-highlight { 
+            opacity: 1 !important; 
+            filter: none !important; 
+            box-shadow: 0 0 40px rgba(78,205,196,0.5), 0 8px 28px rgba(0,150,136,0.25) !important; 
+            border: 3px solid rgba(78,205,196,0.6) !important; 
+            transform: translateY(-4px) scale(1.02) !important;
+            pointer-events: auto !important;
+        }
+        .db-card.tutorial-greyed.db-highlight {
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .db-arrow {
+            position: absolute; right: 12px; top: 8px; width: 48px; height: 48px; border-radius: 50%;
+            background: linear-gradient(180deg, rgba(78,205,196,0.95), rgba(0,176,145,0.9));
+            display:flex;align-items:center;justify-content:center;color:#021018;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.25);
+            z-index:80;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(29, 53, 87, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.5rem; }
+            nav { flex-direction: column; gap: 8px; padding: 10px; }
+            .menu-btn { padding: 10px 18px; font-size: 0.85rem; }
+            .db-grid { grid-template-columns: 1fr; }
+            .stats-bar { gap: 10px; }
+            .stat-item { padding: 12px 20px; font-size: 0.85rem; }
+            .mode-card { padding: 20px; }
+            .difficulty-indicator { font-size: 0.7rem; padding: 6px 10px; }
+        }
     </style>
 </head>
-<body>
+<body> 
 
 <div id="flash-overlay"></div>
+<div id="ui-blur-overlay"></div>
 
-<div id="stats-bar">
-    <div class="stat-item">OK: <span id="count-correct" style="color:var(--green)">0</span></div>
-    <div class="stat-item">ERR: <span id="count-wrong" style="color:var(--red)">0</span></div>
-    <div class="stat-item">SUM: <span id="count-total" style="color:var(--blue)">0</span></div>
+<!-- Tutorial prompt shown at startup asking whether to show the guided tour -->
+<div id="tutorial-prompt" style="display:none;">
+    <div class="card">
+        <h3>Chcete projít krátký návod?</h3>
+        <p>Rychlý průvodce ukáže nejdůležitější části rozhraní a jak spustit test.</p>
+        <div class="btns">
+            <button class="btn cancel" id="tutorial-no">Ne, děkuji</button>
+            <button class="btn confirm" id="tutorial-yes">Ano, ukaž mi to</button>
+        </div>
+    </div>
 </div>
 
-<div id="quiz-container">
-    <div class="viewscreen">
-        <img id="asset-img" src="" alt="SYNC...">
+<!-- Tutorial overlay used during guided steps -->
+<div id="tutorial-overlay">
+    <div id="spotlight"></div>
+    <div id="tutorial-box" style="display:none;">
+        <div class="tutorial-step-hint" id="tutorial-text">Text kroku</div>
+        <div class="tutorial-controls">
+            <button class="next" id="tutorial-ok-btn" style="display:none;">OK</button>
+            <button class="close" id="tutorial-skip">Ukončit</button>
+            <button class="next" id="tutorial-next">Další</button>
+        </div>
     </div>
-    <div class="status-box">
-        <span class="error-msg" id="display-err-text">ANALÝZA...</span>
+</div>
+<div id="particles"></div>
+<audio id="bg-music" preload="auto" style="display:none;">
+    <source src="https://tobi-09.github.io/skaut/TESTY/audio.ogg" type="audio/ogg"> <!-- vyše uvedený odkaz je pouze kopie na git uložení z odkazu https://www.google.com/logos/2024/moon/novr2/audio.ogg a pochazi z hry od společnosti google a je to jeí vlasnictvy  -->
+</audio>
+
+<!-- MODE SELECTION SCREEN -->
+<div id="mode-screen">
+    <div class="mode-content">
+        <h2>🚀MARS OPERACE🚀</h2>
+        <p>Vyberte režim činnosti</p>
+        
+        <div class="mode-grid">
+            <div class="mode-card" data-mode="single">
+                <div class="mode-icon">1 osoba </div>
+                <h3>Individuální</h3>
+                <p>Jeden operátor</p>
+            </div>
+            <div class="mode-card" data-mode="multi">
+                <div class="mode-icon">2 osoby</div>
+                <h3>Tým</h3>
+                <p>Dva operátoři</p>
+            </div>
+        </div>
+
+        <div id="difficulty-section" style="display: none;">
+            <p style="color: var(--text-light); margin-bottom: 20px;">Zvolte úroveň obtížnosti:</p>
+                <div class="difficulty-grid">
+                <button class="difficulty-btn" data-difficulty="basic">Základní</button>
+                <button class="difficulty-btn" data-difficulty="time">Čas</button>
+                <button class="difficulty-btn" data-difficulty="hard">Hardcore</button>
+            </div>
+            <div id="time-slider-section" style="display:none; margin-top:20px; text-align:center;">
+                <p style="color:var(--text-light); margin-bottom:15px;">Nastavte čas (v sekundách):</p>
+                <input type="range" id="time-slider" min="20" max="60" value="40" style="width: 80%; max-width: 300px; cursor: pointer;">
+                <p style="color:var(--text-muted); margin-top:10px; font-size:0.9rem;">Aktuální čas: <span id="time-display">40</span>s</p>
+                <button class="difficulty-btn" id="start-game-btn" style="margin-top:18px; min-width:160px;">Vstoupit do hry</button>
+            </div>
+            <div id="multi-choice" style="display:none; margin-top:20px;">
+                <p style="color:var(--text-muted); margin-bottom:10px;">Režim týmu: zvolte, zda bude pouze KVIZ nebo pouze DATABÁZE</p>
+                <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                    <button class="difficulty-btn" id="lock-quiz" style="min-width:140px;">Pouze KVIZ</button>
+                    <button class="difficulty-btn" id="lock-db" style="min-width:140px;">Pouze DATABÁZE</button>
+                </div>
+            </div>
+            <button class="back-btn show" id="back-to-modes">Zpět</button>
+        </div>
     </div>
-    <div id="options" class="options-grid"></div>
-    <div id="feedback"></div>
-    <button id="next-btn" class="next-btn">POKRAČOVAT</button>
+</div>
+
+<header>
+    <h1>MARS TERMINAL</h1>
+    <p>Vzdálené operace a správa aktiv</p>
+</header>
+
+<nav>
+        <div class="menu-left">
+        <button class="menu-btn active" data-mode="quiz">KVIZ</button>
+        <button class="menu-btn" data-mode="database">DATABÁZE</button>
+    </div>
+    <div class="menu-right">
+        <div class="difficulty-indicator">
+            <span id="mode-display">Individuální</span>
+            <span id="difficulty-display">Základní</span>
+            <div class="stat-stars" id="level-stars"></div>
+        </div>
+        <button class="sound-btn" id="sound-toggle">ZVUK</button>
+        <button class="reset-btn" id="reset-game">NOVÉ</button>
+    </div>
+</nav>
+
+<div class="main-wrapper">
+    
+    <!-- QUIZ MODE -->
+    <div id="quiz-mode" class="active">
+        <div class="stats-bar">
+            <div class="stat-item stat-correct">
+                <span class="stat-label">SPRÁVNĚ</span>
+                <span class="stat-value">
+                    <span id="count-correct">0</span>
+                </span>
+            </div>
+            <div class="stat-item stat-wrong">
+                <span class="stat-label">CHYBA</span>
+                <span class="stat-value" id="count-wrong">0</span>
+            </div>
+            <div class="stat-item stat-total">
+                <span class="stat-label">CELKEM</span>
+                <span class="stat-value" id="count-total">0</span>
+            </div>
+        </div>
+
+        <div id="quiz-container">
+            <div class="viewscreen">
+                <img id="asset-img" src="" alt="SYNC...">
+            </div>
+            <div class="status-box">
+                <span class="error-msg" id="display-err-text">ANALÝZA...</span>
+            </div>
+            <div id="timer-wrap"><div id="timer-progress"></div></div>
+            <div id="options" class="options-grid"></div>
+            <div id="feedback"></div>
+            <div style="display:flex; gap:8px; flex-direction:column; align-items:stretch;">
+                <button id="next-btn" class="next-btn">POKRAČOVAT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATABASE MODE -->
+    <div id="database-mode">
+        <div class="db-container">
+            <div id="db-grid" class="db-grid"></div>
+        </div>
+    </div>
+
 </div>
 
 <script>
     const baseUrl = "https://tobi-09.github.io/skaut/img/mars/";
     const variants = ["0", "A", "B", "C", "D"];
+    const variantNames = { "0": "Základní", "A": "Alpha", "B": "Beta", "C": "Gamma", "D": "Delta" };
+
+    let gameMode = 'single';
+    let gameDifficulty = 'basic';
+
     const assets = [
-        { id: "1", cat: "Vehicle" }, { id: "2", cat: "Aerial" }, { id: "3", cat: "Vehicle" },
-        { id: "4", cat: "Bot" },     { id: "5", cat: "Energy" },  { id: "6", cat: "Energy" },
-        { id: "7", cat: "Energy" },  { id: "8", cat: "Hab" },     { id: "9", cat: "Hab" },
-        { id: "10", cat: "Hab" },    { id: "11", cat: "Energy" }, { id: "12", cat: "Energy" }, 
-        { id: "13", cat: "Vehicle" }, { id: "14", cat: "Vehicle" }, { id: "15", cat: "Bio" },
-        { id: "16", cat: "Bot" },    { id: "17", cat: "Bio" },    { id: "18", cat: "Vehicle" },
-        { id: "19", cat: "Energy" }, { id: "20", cat: "Vehicle" }, { id: "21", cat: "Energy" },
-        { id: "23", cat: "Bio" }
+        { id: "1", name: "Robotický bagr 1", spec: "Těžební lžíce", cat: "Vehicle" },
+        { id: "2", name: "Dron 1", spec: "Vrtulový průzkumník", cat: "Aerial" },
+        { id: "3", name: "Rover 1", spec: "Kamera na robotickém rameni", cat: "Vehicle" },
+        { id: "4", name: "Servisní robot 1", spec: "Humanoid", cat: "Bot" },
+        { id: "5", name: "Solární panel 1", spec: "Křemíkové pole", cat: "Energy" },
+        { id: "6", name: "Geotermální vrt 1", spec: "Jedna obrazovka", cat: "Energy" },
+        { id: "7", name: "Bateriová stanice 1", spec: "Li-Ion úložiště", cat: "Energy" },
+        { id: "8", name: "Obytný modul 1", spec: "Rovné stěny, zaoblená střecha", cat: "Hab" },
+        { id: "9", name: "Obytný modul 2", spec: "Kulatý, výstup na straně", cat: "Hab" },
+        { id: "10", name: "Obytný modul 3", spec: "Iglú", cat: "Hab" },
+        { id: "11", name: "Bagrový vrt 1", spec: "Vrt do země", cat: "Energy" },
+        { id: "12", name: "Bagrový vrt 2", spec: "Vrt do země", cat: "Energy" },
+        { id: "13", name: "Bagrový těžař ledu 1", spec: "Těžba H2O", cat: "Vehicle" },
+        { id: "14", name: "Bagrový těžař ledu 2", spec: "Těžba H2O", cat: "Vehicle" },
+        { id: "15", name: "Skleník 1", spec: "Klika na dveřích", cat: "Bio" },
+        { id: "16", name: "Servisní robot 2", spec: "Kamera místo hlavy", cat: "Bot" },
+        { id: "17", name: "Skleník 3", spec: "Tabule", cat: "Bio" },
+        { id: "18", name: "Rover 2", spec: "Pevně připevněná kamera", cat: "Vehicle" },
+        { id: "19", name: "Geotermální vrt 2", spec: "Dvě obrazovky", cat: "Energy" },
+        { id: "20", name: "Rover 3", spec: "Bez kamery", cat: "Vehicle" },
+        { id: "21", name: "Jaderný reaktor 1", spec: "Generátor energie", cat: "Energy" },
+        { id: "23", name: "Skleník 2", spec: "Bez kliky na dveřích", cat: "Bio" }
     ];
 
     const errorParts = {
         Vehicle: ["motoru", "podvozku", "kol", "antény", "ramene", "převodovky", "brzd", "Lidaru", "navigace", "baterie"],
         Bot: ["kloubu", "procesoru", "mikrofonu", "optiky", "rovnováhy", "paměti", "gyroskopu", "stisku", "chlazení", "řeči"],
-        Energy: ["článku", "měniče", "kabeláže", "jádra", "transformátoru", "izolace", "svorky", "monitoru", "chladiva", "relé"],
+        Energy: ["články", "měniče", "kabeláže", "jádra", "transformátoru", "izolace", "svorky", "monitoru", "chladiva", "relé"],
         Hab: ["přechodové komory", "ventilace", "těsnění", "osvětlení", "topení", "filtru", "senzoru tlaku", "zámku", "pláště", "UI terminálu"],
         Bio: ["hydroponie", "závlahy", "LED spektra", "pH metru", "hnojení", "ventilátoru", "čerpadla", "vlhkosti", "skla", "dveří"],
         Aerial: ["rotoru", "vztlaku", "výškoměru", "stabilizace", "vysílače", "lopatek", "kompasu", "telemetrie", "kamery", "podvozku"]
@@ -105,6 +1277,187 @@
     const actions = ["Restartovat", "Rekalibrovat", "Zvýšit napětí v", "Vyčistit impulsy", "Přepsat registry", "Aktivovat záložní", "Spustit diagnostiku", "Upravit parametry", "Vzdáleně propláchnout", "Nulovat hodnoty"];
 
     let correctCount = 0, wrongCount = 0, totalCount = 0, audioCtx = null;
+    let autoAdvanceTimeout = null;
+    let lockedMode = null; // when in multi and chosen, 'quiz' or 'database'
+    let currentQuestion = null; // store current question state so single-player can switch panels
+    let questionActive = false; // true when a question is shown and not yet advanced
+    let bgMusicEnabled = true;
+    let customTimerDuration = 40000; // Default 40s, can be changed by slider
+
+    // Mode selection
+    document.querySelectorAll('.mode-card').forEach(card => {
+        card.addEventListener('click', () => {
+            gameMode = card.dataset.mode;
+            document.getElementById('difficulty-section').style.display = 'block';
+            document.querySelectorAll('.mode-card').forEach(c => c.style.opacity = '0.5');
+            card.style.opacity = '1';
+        });
+    });
+
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // if this is one of the multi-choice buttons (id lock-quiz / lock-db), ignore here
+            if (btn.id === 'lock-quiz' || btn.id === 'lock-db') return;
+            // if start-game-btn, ignore here (handled separately)
+            if (btn.id === 'start-game-btn') return;
+
+            gameDifficulty = btn.dataset.difficulty;
+            document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            // Show time slider only for 'time' difficulty
+            const sliderSection = document.getElementById('time-slider-section');
+            if (gameDifficulty === 'time') {
+                sliderSection.style.display = 'block';
+                customTimerDuration = parseInt(document.getElementById('time-slider').value) * 1000;
+            } else if (gameDifficulty === 'hard') {
+                sliderSection.style.display = 'none';
+                customTimerDuration = 30000; // Always 30s for hardcore
+            } else {
+                sliderSection.style.display = 'none';
+            }
+
+            // if team selected, show locked-mode choice instead of starting immediately
+            if (gameMode === 'multi') {
+                document.getElementById('multi-choice').style.display = 'block';
+                return;
+            }
+
+            // For 'time' difficulty, don't auto-start — wait for button click
+            if (gameDifficulty === 'time') {
+                return;
+            }
+
+            setTimeout(() => {
+                startGame();
+            }, 300);
+        });
+    });
+
+    // Time slider event
+    document.getElementById('time-slider').addEventListener('input', (e) => {
+        const value = e.target.value;
+        document.getElementById('time-display').innerText = value;
+        customTimerDuration = value * 1000;
+    });
+
+    document.getElementById('back-to-modes').addEventListener('click', () => {
+        document.getElementById('difficulty-section').style.display = 'none';
+        document.querySelectorAll('.mode-card').forEach(c => c.style.opacity = '1');
+        document.getElementById('multi-choice').style.display = 'none';
+    });
+
+    // Start game button for 'time' difficulty
+    document.getElementById('start-game-btn').addEventListener('click', () => {
+        startGame();
+    });
+
+    function startGame() {
+        document.getElementById('mode-screen').classList.add('hidden');
+        updateModeDisplay();
+
+        // if multi and a lockedMode has been chosen, enforce it
+        if (gameMode === 'multi' && lockedMode) {
+            // lock menu to only show/allow locked mode
+            lockMenuTo(lockedMode);
+            if (lockedMode === 'quiz') {
+                // start quiz but only load question if none active
+                if (!questionActive) loadQuestion(true);
+            } else {
+                // show database
+                switchMode('database');
+            }
+            return;
+        }
+
+        // single player: open quiz by default and keep question across switches
+        if (!questionActive) loadQuestion(true);
+    }
+
+    function updateModeDisplay() {
+        const modeText = gameMode === 'single' ? 'Individuální' : 'Tým';
+        const diffText = {
+            'basic': 'Základní',
+            'time': 'Čas',
+            'hard': 'Hardcore'
+        }[gameDifficulty];
+
+        document.getElementById('mode-display').textContent = modeText;
+        document.getElementById('difficulty-display').textContent = diffText;
+        
+        const starsContainer = document.getElementById('level-stars');
+        starsContainer.innerHTML = '';
+        const starCount = gameDifficulty === 'basic' ? 1 : gameDifficulty === 'time' ? 2 : 3;
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.className = 'star-sprite';
+            starsContainer.appendChild(star);
+        }
+        // show timer UI only when difficulty requires it and quiz view is active
+        const inQuiz = document.getElementById('quiz-mode').classList.contains('active');
+        showTimer((gameDifficulty === 'time' || gameDifficulty === 'hard') && inQuiz);
+    }
+
+    // Menu
+    document.querySelectorAll('.menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // if locked to a mode (team), ignore clicks to the other mode
+            if (lockedMode && e.target.dataset.mode !== lockedMode) {
+                // small visual feedback: flash
+                e.target.classList.add('locked');
+                setTimeout(() => e.target.classList.remove('locked'), 300);
+                return;
+            }
+
+            document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            switchMode(e.target.dataset.mode);
+        });
+    });
+
+    document.getElementById('reset-game').addEventListener('click', () => {
+        correctCount = 0;
+        wrongCount = 0;
+        totalCount = 0;
+        updateStats();
+        document.getElementById('mode-screen').classList.remove('hidden');
+        document.getElementById('difficulty-section').style.display = 'none';
+        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('selected'));
+        // reset team lock and question
+        lockedMode = null;
+        currentQuestion = null;
+        questionActive = false;
+        unlockMenu();
+    });
+
+    function switchMode(mode) {
+        document.getElementById('quiz-mode').classList.remove('active');
+        document.getElementById('database-mode').classList.remove('active');
+        
+        if (mode === 'quiz') {
+            document.getElementById('quiz-mode').classList.add('active');
+            if (!questionActive) loadQuestion(false);
+            showTimer(gameDifficulty === 'time' || gameDifficulty === 'hard');
+            // Switch to quiz audio
+            if (bgMusicEnabled) {
+                currentAudioMode = 'quiz';
+                currentSegmentIndex = 0;
+                playAudioSegment('quiz', 0);
+            }
+        } else {
+            document.getElementById('database-mode').classList.add('active');
+            if (document.getElementById('db-grid').innerHTML === '') {
+                loadDatabase();
+            }
+            showTimer(false);
+            // Switch to database audio
+            if (bgMusicEnabled) {
+                currentAudioMode = 'database';
+                currentSegmentIndex = 0;
+                playAudioSegment('database', 0);
+            }
+        }
+    }
 
     function updateStats() {
         document.getElementById('count-correct').innerText = correctCount;
@@ -112,29 +1465,385 @@
         document.getElementById('count-total').innerText = totalCount;
     }
 
+    function lockMenuTo(mode) {
+        lockedMode = mode;
+        document.querySelectorAll('.menu-btn').forEach(b => {
+            if (b.dataset.mode !== mode) {
+                b.classList.add('locked');
+                b.disabled = true;
+            } else {
+                b.classList.remove('locked');
+                b.disabled = false;
+                b.classList.add('active');
+            }
+        });
+    }
+
+    function unlockMenu() {
+        lockedMode = null;
+        document.querySelectorAll('.menu-btn').forEach(b => {
+            b.classList.remove('locked');
+            b.disabled = false;
+        });
+    }
+
+    // UI lock helpers: disables main interactive controls and shows overlay
+    function lockUI() {
+        document.querySelectorAll('button, input, .menu-btn, .answer-btn').forEach(el => {
+            if (!el.classList.contains('always-enabled')) {
+                el.setAttribute('data-was-disabled', el.disabled ? '1' : '0');
+                el.disabled = true;
+                el.classList.add('locked');
+            }
+        });
+        const blur = document.getElementById('ui-blur-overlay');
+        if (blur) { blur.style.pointerEvents = 'auto'; blur.style.opacity = '1'; }
+    }
+
+    function unlockUI() {
+        document.querySelectorAll('button, input, .menu-btn, .answer-btn').forEach(el => {
+            if (el.hasAttribute('data-was-disabled')) {
+                const was = el.getAttribute('data-was-disabled');
+                el.disabled = was === '1';
+                el.removeAttribute('data-was-disabled');
+                el.classList.remove('locked');
+            }
+        });
+        const blur = document.getElementById('ui-blur-overlay');
+        if (blur) { blur.style.pointerEvents = 'none'; blur.style.opacity = '0'; }
+    }
+
+    function showBlur() {
+        const blur = document.getElementById('ui-blur-overlay');
+        if (blur) { blur.style.pointerEvents = 'auto'; blur.style.opacity = '1'; }
+    }
+
+    function hideBlur() {
+        const blur = document.getElementById('ui-blur-overlay');
+        if (blur) { blur.style.pointerEvents = 'none'; blur.style.opacity = '0'; }
+    }
+
+    // Tutorial guided overlay
+    const tutorialSteps = [
+        { text: 'Vyberte režim: klikněte na "Individuální".', selector: '#mode-screen .mode-card[data-mode="single"]', pos: 'center', interactive: true, needsOkButton: false },
+        { text: 'Klikněte na "Čas" pro nastavení doby trvání.', selector: '.difficulty-btn[data-difficulty="time"]', pos: 'bottom', interactive: true, needsOkButton: false },
+        { text: 'Upravte čas pomocí posuvníku (20–60 sekund).', selector: '#time-slider', pos: 'top', interactive: true, needsOkButton: false },
+        { text: 'Klikněte "Vstoupit do hry" pro spuštění kvízu.', selector: '#start-game-btn', pos: 'bottom', interactive: true, needsOkButton: false },
+        { text: 'Zvuk (klik) — Zapněte nebo vypněte zvuk.', selector: '#sound-toggle', pos: 'left', interactive: false, needsOkButton: true },
+        { text: 'Otázka v kvízu (ukázka otázky) — Porucha ramene. Správná odpověď: Spustit diagnostiku ramene', selector: '.option-btn', pos: 'top', interactive: false, needsOkButton: true },
+        { text: 'Seznam (klik) — Přepněte do SEZNAMU pomocí horního menu.', selector: '.menu-btn[data-mode="database"]', pos: 'bottom', interactive: false, needsOkButton: true },
+        { text: 'Scroll na Rover 1 (šipka) — Najděte Rover 1, přejděte dolů a klikněte na Rover 1.', selector: '.db-card[data-tutorial="rover-target"]', pos: 'right', interactive: true, needsOkButton: false },
+        { text: 'Kvíz (klik) — Vraťte se do KVÍZU.', selector: '.menu-btn[data-mode="quiz"]', pos: 'bottom', interactive: false, needsOkButton: true },
+        { text: 'Správná odpověď (klik) → hotovo — Klikněte na správnou odpověď: Spustit diagnostiku ramene', selector: '.option-btn', pos: 'top', interactive: true, needsOkButton: false }
+    ];
+
+    let tutorialActive = false;
+    let tutorialIndex = 0;
+
+    function showTutorialPrompt() {
+        const el = document.getElementById('tutorial-prompt');
+        if (el) el.style.display = 'flex';
+    }
+
+    function hideTutorialPrompt() {
+        const el = document.getElementById('tutorial-prompt');
+        if (el) el.style.display = 'none';
+    }
+
+    function startTutorial() {
+        tutorialActive = true; tutorialIndex = 0;
+        document.getElementById('tutorial-overlay').style.display = 'block';
+        hideTutorialPrompt();
+        pauseTimer(); // Pause any timer during tutorial
+        showTutorialStep(0);
+    }
+
+    function endTutorial() {
+        tutorialActive = false; tutorialIndex = 0;
+        document.getElementById('tutorial-overlay').style.display = 'none';
+        document.getElementById('spotlight').style.display = 'none';
+        document.getElementById('tutorial-box').style.display = 'none';
+        clearTutorialHandler();
+        
+        // Clean up database greyed cards
+        document.querySelectorAll('.db-card.tutorial-greyed').forEach(c => c.classList.remove('tutorial-greyed'));
+        document.querySelectorAll('.db-card.db-highlight').forEach(c => c.classList.remove('db-highlight'));
+        
+        // Hide blur overlay
+        hideBlur();
+        unlockUI();
+        
+        // Resume timer if game is active
+        if (document.getElementById('mode-screen').classList.contains('hidden')) {
+            if (gameDifficulty === 'time' || gameDifficulty === 'hard') {
+                startTimer();
+            }
+        }
+    }
+
+    let _tutorialHandler = null;
+    function clearTutorialHandler() {
+        if (_tutorialHandler && _tutorialHandler.target) {
+            _tutorialHandler.target.removeEventListener('click', _tutorialHandler.fn);
+        }
+        _tutorialHandler = null;
+    }
+
+    function showTutorialStep(i) {
+        clearTutorialHandler();
+        tutorialIndex = i;
+        const step = tutorialSteps[i];
+        const box = document.getElementById('tutorial-box');
+        const spot = document.getElementById('spotlight');
+        if (!step || !box || !spot) { endTutorial(); return; }
+
+        let target = document.querySelector(step.selector);
+        // If target not found (e.g., hidden or not yet rendered), retry with delay
+        if (!target) {
+            setTimeout(() => { if (tutorialActive) showTutorialStep(i); }, 200);
+            return;
+        }
+        const rect = target.getBoundingClientRect();
+        // place spotlight near center of target
+        const cx = rect.left + rect.width/2; const cy = rect.top + rect.height/2;
+        spot.style.left = (cx) + 'px'; spot.style.top = (cy) + 'px';
+        
+        // Adjust spotlight size based on step - larger for question and database card
+        let spotlightSize = Math.max(64, rect.width + 24);
+        if (i === 5) spotlightSize = Math.max(120, rect.width + 40); // Larger for question
+        if (i === 8) spotlightSize = Math.max(140, rect.width + 50); // Larger for database card
+        
+        spot.style.width = spotlightSize + 'px';
+        spot.style.height = spotlightSize + 'px';
+        spot.style.display = 'block';
+
+        // place hint box in center of viewport
+        box.style.display = 'block'; box.style.opacity = '1';
+        const centerX = window.innerWidth / 2 - 210 / 2;
+        const centerY = window.innerHeight / 2 - 100;
+        box.style.left = Math.max(12, centerX) + 'px'; 
+        box.style.top = Math.max(12, centerY) + 'px';
+
+        document.getElementById('tutorial-text').innerText = step.text;
+
+        // Show/hide OK button based on step needs
+        const okBtn = document.getElementById('tutorial-ok-btn');
+        if (step.needsOkButton) {
+            okBtn.style.display = 'block';
+        } else {
+            okBtn.style.display = 'none';
+        }
+
+        // For interactive steps attach a one-time click listener to advance
+        if (step.interactive) {
+            const handler = (ev) => {
+                if (tutorialActive) {  // Only advance if tutorial is still active
+                    try { if (navigator.vibrate) navigator.vibrate(100); } catch(e){}
+                    // For elements that user is already clicking, don't prevent or double-click
+                    const isUserClickTarget = (step.selector === '#sound-toggle' || 
+                                             step.selector === '.option-btn' || 
+                                             step.selector.includes('.menu-btn') ||
+                                             step.selector.includes('.db-card') ||
+                                             step.selector.includes('.mode-card') ||
+                                             step.selector.includes('.difficulty-btn') ||
+                                             step.selector.includes('#time-slider') ||
+                                             step.selector.includes('#start-game-btn'));
+                    
+                    if (!isUserClickTarget) {
+                        // For other interactive elements, prevent default and trigger click
+                        ev.stopPropagation();
+                        ev.preventDefault();
+                        try { target.click(); } catch(e){}
+                    }
+                    
+                    // For "Čas" button click, wait longer for slider to appear
+                    // For option buttons, wait longer for answer processing
+                    let delay = 300;
+                    if (step.selector.includes('time') && i === 1) delay = 600;
+                    if (step.selector === '.option-btn' && (i === 5 || i === 9)) delay = 800;
+                    
+                    setTimeout(() => { if (tutorialActive) tutorialNext(); }, delay);
+                }
+            };
+            target.addEventListener('click', handler, { once: true });
+            _tutorialHandler = { target, fn: handler };
+        }
+    }
+
+    function showEnterButton() {
+        const box = document.getElementById('tutorial-box');
+        const text = document.getElementById('tutorial-text');
+        text.innerText = 'Výborně! Nyní vstupte do hry bez průvodce.';
+        // remove any previous enter button
+        let existing = document.getElementById('tutorial-enter');
+        if (existing) existing.remove();
+        const btn = document.createElement('button');
+        btn.id = 'tutorial-enter';
+        btn.className = 'next';
+        btn.innerText = 'VSTOUPIT DO HRY';
+        btn.style.marginLeft = '8px';
+        btn.addEventListener('click', () => { endTutorial(); });
+        const ctr = document.querySelector('#tutorial-box .tutorial-controls');
+        if (ctr) ctr.appendChild(btn);
+    }
+
+    function tutorialNext() {
+        if (!tutorialActive) return;
+        if (tutorialIndex + 1 < tutorialSteps.length) {
+            const nextIdx = tutorialIndex + 1;
+            // Step 4: Sound toggle - interactive, wait for click
+            if (nextIdx === 4) {
+                setTimeout(() => { showTutorialStep(nextIdx); }, 200);
+            }
+            // Step 5: Show question in quiz - display question then show step
+            else if (nextIdx === 5) {
+                displayQuestionFromAsset(3, '0', 'ramene', 6);
+                setTimeout(() => { showTutorialStep(nextIdx); }, 400);
+            }
+            // Step 6: Show question example with OK button to continue
+            else if (nextIdx === 6) {
+                displayQuestionFromAsset(3, '0', 'ramene', 6);
+                setTimeout(() => { showTutorialStep(nextIdx); }, 400);
+            }
+            // Step 7: Switch to database/list and show grey cards
+            else if (nextIdx === 7) {
+                // Switch to DB view if not already there
+                if (!document.getElementById('database-mode').classList.contains('active')) {
+                    switchMode('database');
+                    loadDatabase();
+                    setTimeout(() => { 
+                        // Wait for cards to render, then apply greying
+                        const allCards = document.querySelectorAll('.db-card');
+                        if (allCards.length > 0) {
+                            allCards.forEach(c => {
+                                c.classList.remove('db-highlight');
+                                c.classList.add('tutorial-greyed');
+                            });
+                        }
+                        showTutorialStep(nextIdx); 
+                    }, 600);
+                } else {
+                    const allCards = document.querySelectorAll('.db-card');
+                    allCards.forEach(c => {
+                        c.classList.remove('db-highlight');
+                        c.classList.add('tutorial-greyed');
+                    });
+                    showTutorialStep(nextIdx);
+                }
+            }
+            // Step 7: Highlight Rover 1 card and show arrow - interactive, wait for click
+            else if (nextIdx === 8) {
+                // Find all cards and locate Rover 1 (asset 3, variant 0)
+                const cards = document.querySelectorAll('.db-card');
+                let targetCard = null;
+                
+                // Find target card and ensure only it is highlighted
+                for (const c of cards) {
+                    // Look for Rover 1 card (3_0.jpg)
+                    if (c.innerHTML.includes('3_0.jpg')) {
+                        targetCard = c;
+                        c.setAttribute('data-tutorial', 'rover-target');
+                        c.classList.remove('tutorial-greyed');
+                        c.classList.add('db-highlight');
+                        c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        // Keep other cards greyed
+                        c.classList.add('tutorial-greyed');
+                    }
+                }
+                
+                // If Rover 1 found, show the step with arrow
+                if (targetCard) {
+                    setTimeout(() => { showTutorialStepWithArrow(nextIdx); }, 400);
+                } else {
+                    // Fallback: just show the step anyway
+                    setTimeout(() => { showTutorialStep(nextIdx); }, 400);
+                }
+            }
+            // Step 9: Return to quiz
+            else if (nextIdx === 9) {
+                switchMode('quiz');
+                setTimeout(() => { showTutorialStep(nextIdx); }, 400);
+            }
+            // Step 10: Final answer - interactive, wait for click
+            else {
+                displayQuestionFromAsset(3, '0', 'ramene', 6);
+                setTimeout(() => { showTutorialStep(nextIdx); }, 400);
+            }
+        }
+        else {
+            // Tutorial complete - resume timer and end
+            endTutorial();
+        }
+    }
+
+    // Show tutorial step with arrow indicator for DB grid
+    function showTutorialStepWithArrow(i) {
+        showTutorialStep(i);
+        const cards = document.querySelectorAll('.db-card');
+        let found = null;
+        for (const c of cards) {
+            if (c.innerHTML.includes('3_0.jpg')) { found = c; break; }
+        }
+        if (found) {
+            found.classList.add('db-highlight');
+            const arrow = document.createElement('div'); 
+            arrow.className = 'db-arrow'; arrow.innerText = '↓';
+            found.style.position = 'relative'; 
+            found.appendChild(arrow);
+            found.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    document.getElementById('tutorial-yes').addEventListener('click', () => { startTutorial(); });
+    document.getElementById('tutorial-no').addEventListener('click', () => { hideTutorialPrompt(); });
+    // hide the explicit next button — tutorial is interactive
+    const tn = document.getElementById('tutorial-next'); if (tn) tn.style.display = 'none';
+    document.getElementById('tutorial-skip').addEventListener('click', () => { endTutorial(); });
+    document.getElementById('tutorial-ok-btn').addEventListener('click', () => {
+        if (tutorialActive) {
+            try { if (navigator.vibrate) navigator.vibrate(100); } catch(e){}
+            tutorialNext();
+        }
+    });
+
+    // show prompt on first load
+    setTimeout(() => { showTutorialPrompt(); }, 800);
+
     function triggerFinalEffects() {
-        if (navigator.vibrate) navigator.vibrate([150, 50, 150]);
+        if (navigator.vibrate) navigator.vibrate([150, 50, 150, 50, 150]);
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(140, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
 
         const overlay = document.getElementById('flash-overlay');
         let count = 0;
         const interval = setInterval(() => {
-            overlay.style.backgroundColor = (count % 2 === 0) ? "rgba(255, 0, 0, 0.4)" : "rgba(255, 255, 255, 0.4)";
+            overlay.style.backgroundColor = (count % 2 === 0) ? "rgba(78, 205, 196, 0.3)" : "rgba(255, 255, 255, 0.15)";
             count++;
-            if (count > 8) { clearInterval(interval); overlay.style.backgroundColor = "transparent"; }
-        }, 70);
+            if (count > 8) {
+                clearInterval(interval);
+                overlay.style.backgroundColor = "transparent";
+            }
+        }, 80);
     }
 
-    function loadQuestion() {
+    function loadQuestion(restartTimer = true) {
+        // create and mark a current question so it persists across panel switches
+        currentQuestion = currentQuestion || {};
+        questionActive = true;
+
         const asset = assets[Math.floor(Math.random() * assets.length)];
         const v = variants[Math.floor(Math.random() * variants.length)];
         const errorIndex = Math.floor(Math.random() * 10);
@@ -142,20 +1851,39 @@
         const targetPart = parts[errorIndex % parts.length];
         const correctAction = actions[(errorIndex + v.charCodeAt(0)) % actions.length];
         const solution = `${correctAction} ${targetPart}`;
-        
+
+        // store solution so switching away/back preserves it
+        currentQuestion.solution = solution;
+        currentQuestion.asset = asset;
+        currentQuestion.v = v;
+        currentQuestion.targetPart = targetPart;
+
         document.getElementById('asset-img').src = `${baseUrl}${asset.id}_${v}.jpg`;
         document.getElementById('display-err-text').innerText = `PORUCHA ${targetPart}`;
-        
+
         const optionsDiv = document.getElementById('options');
         optionsDiv.innerHTML = "";
         document.getElementById('feedback').innerText = "";
         document.getElementById('next-btn').style.display = "none";
 
+        // start timer only for time/hard difficulties. do not restart when switching panels.
+        if (gameDifficulty === 'time' || gameDifficulty === 'hard') {
+            showTimer(true);
+            if (typeof restartTimer === 'undefined' || restartTimer) {
+                // default behavior is to restart the timer for a new question
+                resetTimer();
+                startTimer();
+            }
+        } else {
+            showTimer(false);
+            resetTimer();
+        }
+
         let choices = [solution];
         let usedActions = [correctAction];
-        while(choices.length < 4) {
+        while (choices.length < 4) {
             let randAction = actions[Math.floor(Math.random() * actions.length)];
-            if(!usedActions.includes(randAction)) {
+            if (!usedActions.includes(randAction)) {
                 choices.push(`${randAction} ${targetPart}`);
                 usedActions.push(randAction);
             }
@@ -167,35 +1895,434 @@
             btn.className = 'option-btn';
             btn.innerText = `CMD: ${choice}`;
             btn.onclick = () => {
-                if(choice === solution) {
+                if (choice === solution) {
                     correctCount++; totalCount++; updateStats();
                     document.querySelectorAll('.option-btn').forEach(b => {
                         b.disabled = true;
-                        if(b.innerText.includes(choice)) b.classList.add('correct');
+                        if (b.innerText.includes(choice)) b.classList.add('correct');
                     });
+                    // Stop timer on correct answer
+                    pauseTimer();
+                    // lock UI and show subtle blur/overlay for confirmation
+                    lockUI();
+                    showBlur();
+                    // Play correct answer audio
+                    if (bgMusicEnabled) {
+                        playAudioSegment('correct', 0);
+                    }
                     const fb = document.getElementById('feedback');
-                    fb.style.color = "var(--green)";
+                    fb.style.color = "var(--secondary)";
                     fb.innerHTML = "<span class='loading-dots'>VYSÍLÁM PAKET</span>";
                     setTimeout(() => {
                         fb.innerText = "POTVRZENO";
                         triggerFinalEffects();
                         document.getElementById('next-btn').style.display = "block";
-                        // Scroll k tlačítku
+                        // Advance tutorial to next step after correct answer
+                        if (tutorialActive && tutorialIndex < tutorialSteps.length - 1) {
+                            // For final question in tutorial, wait for click then end
+                            if (tutorialIndex === 9) {
+                                setTimeout(() => { if (tutorialActive) endTutorial(); }, 600);
+                            } else {
+                                setTimeout(() => { if (tutorialActive) tutorialNext(); }, 600);
+                            }
+                        }
                         document.getElementById('quiz-container').scrollTo({top: 1000, behavior: 'smooth'});
                     }, Math.floor(Math.random() * 25000) + 5000);
                 } else {
                     wrongCount++; totalCount++; updateStats();
                     btn.classList.add('wrong'); btn.disabled = true;
-                    document.getElementById('feedback').innerText = "CHYBA - ODMÍTNUTO";
-                    document.getElementById('feedback').style.color = "var(--red)";
+                    const fb = document.getElementById('feedback');
+                    fb.innerText = "CHYBA - ODMÍTNUTO";
+                    fb.style.color = "var(--primary)";
                 }
             };
             optionsDiv.appendChild(btn);
         });
     }
 
-    document.getElementById('next-btn').onclick = loadQuestion;
-    window.onload = loadQuestion;
+    function nextQuestion() {
+        // advance to next question: clear currentQuestion and flags then load new
+        currentQuestion = null;
+        questionActive = false;
+        document.getElementById('next-btn').style.display = 'none';
+        // restore UI and hide blur
+        unlockUI();
+        hideBlur();
+        resetTimer();
+        loadQuestion(true);
+    }
+
+    function loadDatabase() {
+        const grid = document.getElementById('db-grid');
+        grid.innerHTML = "";
+
+        assets.forEach((asset) => {
+            variants.forEach((v) => {
+                const fileName = `${asset.id}_${v}.jpg`;
+                const card = document.createElement('div');
+                card.className = 'db-card';
+
+                let repairHtml = '';
+                const parts = errorParts[asset.cat] || errorParts.Vehicle;
+
+                // match original: generate 10 unique error lines
+                for (let i = 0; i < 10; i++) {
+                    const part = parts[i % parts.length];
+                    const action = actions[(i + v.charCodeAt(0)) % actions.length];
+                    const errCode = `${asset.cat[0]}${asset.id}-${v}${i + 100}`;
+
+                    repairHtml += `\n                        <div class="db-err-row">\n                            <span class="db-err-msg">[ERR-${errCode}] Porucha ${part}</span>\n                            <span class="db-sol-msg">COMMAND: ${action} ${part}</span>\n                        </div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="db-img-box">
+                        <span class="db-badge badge-${v}">${variantNames[v]} (${v})</span>
+                        <img src="${baseUrl}${fileName}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x200/111/444?text=Obrázek+nenalezen'">
+                    </div>
+                    <div class="db-info">
+                        <h3>${asset.name}</h3>
+                        <span class="db-spec">${asset.spec}</span>
+                        <div class="db-meta">ID: ${asset.id} | Typ: ${asset.cat} | Soubor: ${fileName}</div>
+                    </div>
+                    <div class="db-repairs">
+                        <h4>Diagnostický výpis logů:</h4>
+                        ${repairHtml}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        });
+    }
+
+    // Display a question for a specific asset/variant/part (used by test)
+    function displayQuestionFromAsset(assetId, variant, targetPart, correctActionIndex = 6) {
+        const asset = assets.find(a => a.id === String(assetId));
+        if (!asset) return;
+        currentQuestion = currentQuestion || {};
+        questionActive = true;
+        const correctAction = actions[correctActionIndex % actions.length];
+        const solution = `${correctAction} ${targetPart}`;
+        currentQuestion.solution = solution;
+        currentQuestion.asset = asset; currentQuestion.v = variant; currentQuestion.targetPart = targetPart;
+
+        document.getElementById('asset-img').src = `${baseUrl}${asset.id}_${variant}.jpg`;
+        document.getElementById('display-err-text').innerText = `PORUCHA ${targetPart}`;
+        const optionsDiv = document.getElementById('options'); optionsDiv.innerHTML = '';
+        document.getElementById('feedback').innerText = '';
+        document.getElementById('next-btn').style.display = 'none';
+
+        // prepare choices
+        let choices = [solution];
+        const used = [correctAction];
+        while (choices.length < 4) {
+            const a = actions[Math.floor(Math.random() * actions.length)];
+            if (!used.includes(a)) { choices.push(`${a} ${targetPart}`); used.push(a); }
+        }
+        choices.sort(() => Math.random()-0.5);
+        choices.forEach(choice => {
+            const btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = `CMD: ${choice}`;
+            btn.onclick = () => {
+                if (choice === solution) {
+                    correctCount++; totalCount++; updateStats();
+                    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+                    pauseTimer(); lockUI(); showBlur();
+                    const fb = document.getElementById('feedback'); fb.innerText = 'POTVRZENO'; fb.style.color = 'var(--secondary)';
+                    document.getElementById('next-btn').style.display = 'block';
+                    
+                    // Clear any existing auto-advance timeout
+                    if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+                    // Auto-advance after 10 seconds
+                    autoAdvanceTimeout = setTimeout(() => { nextQuestion(); }, 10000);
+                } else {
+                    wrongCount++; totalCount++; updateStats(); btn.classList.add('wrong'); btn.disabled = true;
+                }
+            };
+            optionsDiv.appendChild(btn);
+        });
+    }
+
+    // Run the test flow: show DB, highlight asset card and repair, then open quiz with prepared question
+    function runTestQuestion() {
+        // ensure DB is loaded and visible
+        switchMode('database');
+        loadDatabase();
+        setTimeout(() => {
+            const grid = document.getElementById('db-grid');
+            const cards = Array.from(grid.querySelectorAll('.db-card'));
+            const targetFile = '3_0.jpg';
+            let found = null;
+            for (const c of cards) {
+                if (c.innerHTML.includes(targetFile)) { found = c; break; }
+            }
+            if (found) {
+                found.classList.add('db-highlight');
+                // add arrow marker
+                const arrow = document.createElement('div'); arrow.className = 'db-arrow'; arrow.innerText = '→';
+                found.style.position = 'relative'; found.appendChild(arrow);
+                // highlight repair row mentioning 'ramene'
+                const repairs = found.querySelectorAll('.db-err-row');
+                for (const r of repairs) {
+                    if (r.innerText.includes('ramene')) { r.style.background = 'rgba(78,205,196,0.06)'; r.style.borderLeft = '4px solid rgba(78,205,196,0.24)'; break; }
+                }
+                // after short pause, go to quiz and show prepared question
+                setTimeout(() => {
+                    // remove highlight
+                    found.classList.remove('db-highlight'); if (arrow) arrow.remove();
+                    switchMode('quiz');
+                    displayQuestionFromAsset(3, '0', 'ramene', 6);
+                }, 1200);
+            }
+        }, 300);
+    }
+
+    // spawn particles for background motion
+    function spawnParticles(count = 30) {
+        const container = document.getElementById('particles');
+        if (!container) return;
+        for (let i = 0; i < count; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            const top = Math.random() * 90 + 2; // percent
+            const dur = 6 + Math.random() * 8; // seconds
+            const delay = Math.random() * 6;
+            p.style.top = top + 'vh';
+            p.style.left = (-10 - Math.random() * 20) + 'vw';
+            p.style.animationDuration = dur + 's';
+            p.style.animationDelay = delay + 's';
+            container.appendChild(p);
+            // cleanup occasionally
+            setTimeout(() => { p.remove(); }, (dur + delay + 2) * 1000);
+        }
+    }
+
+    // periodically add particles
+    setInterval(() => spawnParticles(8), 3000);
+    // initial burst
+    spawnParticles(24);
+
+    // slow background glows (large, subtle)
+    function spawnGlows(count = 3) {
+        const container = document.getElementById('particles');
+        if (!container) return;
+        for (let i = 0; i < count; i++) {
+            const g = document.createElement('div');
+            g.style.position = 'absolute';
+            g.style.width = (150 + Math.random() * 300) + 'px';
+            g.style.height = g.style.width;
+            g.style.borderRadius = '50%';
+            g.style.left = (Math.random() * 110 - 5) + '%';
+            g.style.top = (Math.random() * 90) + '%';
+            g.style.background = 'radial-gradient(circle, rgba(255,255,255,0.06), rgba(255,230,109,0.02))';
+            g.style.filter = 'blur(20px)';
+            g.style.pointerEvents = 'none';
+            g.style.zIndex = '40';
+            g.style.opacity = '0';
+            g.style.transition = 'opacity 4s ease-in-out, transform 8s linear';
+            container.appendChild(g);
+            // fade in/out and drift
+            setTimeout(() => { g.style.opacity = '1'; g.style.transform = 'translateY(-20px)'; }, 50 + Math.random() * 500);
+            setTimeout(() => { g.style.opacity = '0'; }, 4000 + Math.random() * 6000);
+            setTimeout(() => { g.remove(); }, 12000);
+        }
+    }
+    setInterval(() => spawnGlows(2), 5000);
+    spawnGlows(2);
+
+    // Additional rotating glows
+    function spawnRotatingGlows(count = 2) {
+        const container = document.getElementById('particles');
+        if (!container) return;
+        for (let i = 0; i < count; i++) {
+            const g = document.createElement('div');
+            g.style.position = 'absolute';
+            g.style.width = (200 + Math.random() * 200) + 'px';
+            g.style.height = g.style.width;
+            g.style.borderRadius = '50%';
+            g.style.left = (Math.random() * 100) + '%';
+            g.style.top = (Math.random() * 100) + '%';
+            g.style.background = 'radial-gradient(circle, rgba(78,205,196,0.05), transparent)';
+            g.style.filter = 'blur(40px)';
+            g.style.pointerEvents = 'none';
+            g.style.zIndex = '35';
+            g.style.opacity = '0.4';
+            g.style.animation = `rotateGlow ${12 + Math.random() * 8}s linear infinite`;
+            container.appendChild(g);
+            setTimeout(() => { g.remove(); }, 30000);
+        }
+    }
+    setInterval(() => spawnRotatingGlows(1), 8000);
+    spawnRotatingGlows(1);
+
+    // Drifting particles
+    function spawnDriftingParticles(count = 3) {
+        const container = document.getElementById('particles');
+        if (!container) return;
+        for (let i = 0; i < count; i++) {
+            const p = document.createElement('div');
+            p.style.position = 'absolute';
+            p.style.width = (4 + Math.random() * 6) + 'px';
+            p.style.height = p.style.width;
+            p.style.borderRadius = '50%';
+            p.style.background = `rgba(${100 + Math.random() * 100}, ${150 + Math.random() * 100}, 200, ${0.3 + Math.random() * 0.4})`;
+            p.style.left = Math.random() * 100 + '%';
+            p.style.top = Math.random() * 100 + '%';
+            p.style.pointerEvents = 'none';
+            p.style.zIndex = '45';
+            p.style.animation = `drift ${10 + Math.random() * 10}s ease-in-out infinite`;
+            p.style.filter = 'blur(1px)';
+            container.appendChild(p);
+            setTimeout(() => { p.remove(); }, 25000);
+        }
+    }
+    setInterval(() => spawnDriftingParticles(2), 4000);
+    spawnDriftingParticles(2);
+
+    document.getElementById('next-btn').onclick = nextQuestion;
+
+    // TIMER: managed in JS so it persists across panel switches
+    let timerDuration = 30 * 1000; // milliseconds
+    let timerEnd = null;
+    let timerInterval = null;
+    function showTimer(visible) {
+        const wrap = document.getElementById('timer-wrap');
+        if (!wrap) return;
+        wrap.style.display = visible ? 'block' : 'none';
+    }
+
+    function startTimer(durationMs = customTimerDuration) {
+        // do not restart if already running
+        if (timerEnd && Date.now() < timerEnd) return;
+        timerEnd = Date.now() + durationMs;
+        if (timerInterval) clearInterval(timerInterval);
+        updateTimer();
+        timerInterval = setInterval(updateTimer, 100);
+    }
+
+    function updateTimer() {
+        const prog = document.getElementById('timer-progress');
+        if (!prog) return;
+        const now = Date.now();
+        const remaining = Math.max(0, timerEnd - now);
+        const pct = (remaining / customTimerDuration) * 100;
+        prog.style.width = (pct) + '%';
+        // color thresholds: >66 green, >33 yellow, >10 orange, <=10 red
+        if (pct > 66) prog.style.background = '#00ff41';
+        else if (pct > 33) prog.style.background = '#ffe66d';
+        else if (pct > 10) prog.style.background = '#ff8c42';
+        else prog.style.background = '#ff3131';
+
+        if (remaining <= 0) {
+            clearInterval(timerInterval); timerInterval = null; timerEnd = null;
+            onTimerExpire();
+        }
+    }
+
+    function pauseTimer() {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    }
+
+    function resetTimer() {
+        pauseTimer();
+        timerEnd = null;
+        const prog = document.getElementById('timer-progress');
+        if (prog) { prog.style.width = '100%'; prog.style.background = '#00ff41'; }
+    }
+
+    function onTimerExpire() {
+        // disable options and show next button
+        document.querySelectorAll('.option-btn').forEach(b => { b.disabled = true; b.classList.add('wrong'); });
+        const fb = document.getElementById('feedback');
+        if (fb) { fb.innerText = 'ČAS VYPRŠEL'; fb.style.color = 'var(--primary)'; }
+        const nb = document.getElementById('next-btn'); if (nb) nb.style.display = 'block';
+        // Advance tutorial to skip button step (step 4) if active
+        if (tutorialActive && tutorialIndex < 4) {
+            tutorialNext();
+        }
+        // keep questionActive true until nextQuestion
+    }
+
+    // multi locked-mode buttons
+    document.getElementById('lock-quiz').addEventListener('click', () => {
+        lockedMode = 'quiz';
+        // hide chooser and start
+        document.getElementById('mode-screen').classList.add('hidden');
+        document.getElementById('difficulty-section').style.display = 'none';
+        updateModeDisplay();
+        lockMenuTo('quiz');
+        loadQuestion(true);
+    });
+    document.getElementById('lock-db').addEventListener('click', () => {
+        lockedMode = 'database';
+        document.getElementById('mode-screen').classList.add('hidden');
+        document.getElementById('difficulty-section').style.display = 'none';
+        updateModeDisplay();
+        lockMenuTo('database');
+        switchMode('database');
+    });
+
+    // Background music control
+    const audioSegments = {
+        quiz: [
+            { start: 81.23, end: 94.15, isLoop: true, name: "Hudba 1" },
+            { start: 95.16, end: 108.20, isLoop: false, name: "Hudba 2" }
+        ],
+        database: [
+            { start: 120.00, end: 148.08, isLoop: false, name: "Hudba 3" },
+            { start: 149.04, end: 166.20, isLoop: true, name: "Hudba 3L" }
+        ],
+        correct: [
+            { start: 167.20, end: 188.16, isLoop: true, name: "Hudba 4" }
+        ]
+    };
+
+    let currentAudioMode = 'quiz';
+    let currentSegmentIndex = 0;
+    let audioTimeout = null;
+
+    function playAudioSegment(mode = 'quiz', segmentIdx = 0) {
+        const audio = document.getElementById('bg-music');
+        if (!bgMusicEnabled || !audioSegments[mode]) return;
+        
+        const segment = audioSegments[mode][segmentIdx];
+        if (!segment) return;
+
+        audio.currentTime = segment.start;
+        audio.play().catch(() => {});
+
+        if (audioTimeout) clearTimeout(audioTimeout);
+        const duration = (segment.end - segment.start) * 1000;
+        audioTimeout = setTimeout(() => {
+            if (segment.isLoop) {
+                playAudioSegment(mode, segmentIdx);
+            } else if (segmentIdx + 1 < audioSegments[mode].length) {
+                playAudioSegment(mode, segmentIdx + 1);
+            }
+        }, duration);
+    }
+
+    document.getElementById('sound-toggle').addEventListener('click', () => {
+        const audio = document.getElementById('bg-music');
+        const btn = document.getElementById('sound-toggle');
+        bgMusicEnabled = !bgMusicEnabled;
+        if (bgMusicEnabled) {
+            playAudioSegment(currentAudioMode, currentSegmentIndex);
+            btn.classList.remove('muted');
+        } else {
+            audio.pause();
+            if (audioTimeout) clearTimeout(audioTimeout);
+            btn.classList.add('muted');
+        }
+    });
+
+    // Auto-start music on first interaction
+    window.addEventListener('click', () => {
+        if (bgMusicEnabled) {
+            playAudioSegment('quiz', 0);
+        }
+    }, { once: true });
 </script>
+
 </body>
 </html>
+
