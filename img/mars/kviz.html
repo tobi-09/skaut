@@ -753,7 +753,7 @@
             left: 50%;
             transform: translateX(-50%);
             overflow: hidden;
-            z-index: 3602;
+            z-index: 99999 !important;
         }
 
         .next-btn::before {
@@ -958,7 +958,7 @@
             backdrop-filter: blur(4px) saturate(1.05);
             background: rgba(10,10,12,0.18);
             opacity: 0;
-            pointer-events: none;
+            pointer-events: none !important;
             transition: opacity 220ms ease;
             z-index: 2500;
         }
@@ -1218,7 +1218,7 @@
             <div id="options" class="options-grid"></div>
             <div id="feedback"></div>
             <div style="display:flex; gap:8px; flex-direction:column; align-items:stretch;">
-                <button id="next-btn" class="next-btn">POKRAČOVAT</button>
+                <button id="next-btn" class="next-btn always-enabled">POKRAČOVAT</button>
             </div>
         </div>
     </div>
@@ -1497,7 +1497,7 @@
             }
         });
         const blur = document.getElementById('ui-blur-overlay');
-        if (blur) { blur.style.pointerEvents = 'auto'; blur.style.opacity = '1'; }
+        if (blur) { blur.style.pointerEvents = 'none'; blur.style.opacity = '1'; }
     }
 
     function unlockUI() {
@@ -1515,7 +1515,7 @@
 
     function showBlur() {
         const blur = document.getElementById('ui-blur-overlay');
-        if (blur) { blur.style.pointerEvents = 'auto'; blur.style.opacity = '1'; }
+        if (blur) { blur.style.pointerEvents = 'none'; blur.style.opacity = '1'; }
     }
 
     function hideBlur() {
@@ -1530,7 +1530,7 @@
         { text: 'Upravte čas pomocí posuvníku (20–60 sekund).', selector: '#time-slider', pos: 'top', interactive: true, needsOkButton: false },
         { text: 'Klikněte "Vstoupit do hry" pro spuštění kvízu.', selector: '#start-game-btn', pos: 'bottom', interactive: true, needsOkButton: false },
         { text: 'Zvuk (klik) — Zapněte nebo vypněte zvuk.', selector: '#sound-toggle', pos: 'left', interactive: false, needsOkButton: true },
-        { text: 'Otázka v kvízu (ukázka otázky) — Porucha ramene.', selector: '.option-btn', pos: 'top', interactive: false, needsOkButton: true },
+        { text: 'Otázka v kvízu (ukázka otázky) — Porucha ramene. Správná odpověď: Spustit diagnostiku ramene', selector: '.option-btn', pos: 'top', interactive: false, needsOkButton: true },
         { text: 'Seznam (klik) — Přepněte do SEZNAMU pomocí horního menu.', selector: '.menu-btn[data-mode="database"]', pos: 'bottom', interactive: false, needsOkButton: true },
         { text: 'Scroll na Rover 1 (šipka) — Najděte Rover 1, přejděte dolů a klikněte na Rover 1.', selector: '.db-card[data-tutorial="rover-target"]', pos: 'right', interactive: true, needsOkButton: false },
         { text: 'Kvíz (klik) — Vraťte se do KVÍZU.', selector: '.menu-btn[data-mode="quiz"]', pos: 'bottom', interactive: false, needsOkButton: true },
@@ -2043,7 +2043,10 @@
                     document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
                     pauseTimer(); lockUI(); showBlur();
                     const fb = document.getElementById('feedback'); fb.innerText = 'POTVRZENO'; fb.style.color = 'var(--secondary)';
-                    document.getElementById('next-btn').style.display = 'block';
+                    const nextBtn = document.getElementById('next-btn');
+                    nextBtn.style.display = 'block';
+                    nextBtn.disabled = false;
+                    nextBtn.classList.remove('locked');
                     
                     // Clear any existing auto-advance timeout
                     if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
@@ -2340,4 +2343,5 @@
 
 </body>
 </html>
+
 
