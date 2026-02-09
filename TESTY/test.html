@@ -8,16 +8,16 @@ class Program
         //registrace
         Console.WriteLine("ahoj vytej v bistru na vršku prosim zaregistruj se níže ");
         Console.WriteLine(">REGISTRACE<");
-        Console.Write("Zadej jméno: ");
+        Console.Write("Zadez jmeno: ");
         string jmeno = Console.ReadLine();
 
-        Console.Write("Zadej zustatek: ");
-        double zustatek;
-        double.TryParse(Console.ReadLine(), out zustatek); // Pro tuto část *
+        Console.Write("Zadej zuztatek: ");
+        double manyleft;
+        double.TryParse(Console.ReadLine(), out manyleft); // Pro tuto část *
 
         //NABÍDKA JÍDEL
-        List<string> jidla = new List<string> { "Chilli con carne", "Pizza", "Gulašovka", "Vývar", "Panna cotta", "Tiramisu", "Croissant", "Džus" };
-        List<double> ceny = new List<double> { 150, 180, 55, 45, 75, 85, 40, 35 };
+        List<string> food = new List<string> { "Chili con carne", "Pizza", "Gulašovka", "Vývar", "Panna cotta", "Tiramisu", "Croissant", "Džus" };
+        List<double> cost = new List<double> { 150, 180, 55, 45, 75, 85, 40, 35 };
         List<string> typy = new List<string> { "Hlavní jídlo", "Hlavní jídlo", "Polévka", "Polévka", "Dezert", "Dezert", "Dezert", "Pití" };
         
         List<string> historie = new List<string>(); // Pro tuto část* *
@@ -25,11 +25,11 @@ class Program
         while (true)
         {
             Console.Clear();
-            Console.WriteLine($"Uživatel: {jmeno} | Zůstatek: {zustatek} Kč"); // Pro tuto část *
-            Console.WriteLine("------------------------------------------");
-            Console.WriteLine("1. Přidat jídlo do nabídky");
-            Console.WriteLine("2. Zobrazit jídelníček a objednat");
-            Console.WriteLine("3. Můj profil (poslední 3 jídla)");
+            Console.WriteLine($"Uživatel: {jmeno} | Zůstatek: {manyleft} Kč"); // Pro tuto část *
+            Console.WriteLine("------------------------------------------ ");
+            Console.WriteLine("1. Přidat jídlo do nabidky");
+            Console.WriteLine("2.Zobrazit jidelníček a objednat");
+            Console.WriteLine("3. Můj profil (poslední 3 jýdla)");
             Console.WriteLine("x. Konec programu");
             Console.Write("\nVyber možnost (1-4): ");
             
@@ -44,7 +44,7 @@ class Program
                 double novaCena;
                 double.TryParse(Console.ReadLine(), out novaCena);
 
-                // Výběr typu pomocí čísla
+                // Výběr typu
                 Console.WriteLine("Typ (1. Polévka, 2. Hlavní, 3. Dezert, 4. Pití): ");
                 string volbaTypu = Console.ReadLine();
                 string finalniTyp = "Neurčeno";
@@ -53,44 +53,44 @@ class Program
                 else if (volbaTypu == "3") finalniTyp = "Dezert";
                 else if (volbaTypu == "4") finalniTyp = "Pití";
 
-                jidla.Add(novyNazev);
-                ceny.Add(novaCena);
+                food.Add(novyNazev);
+                cost.Add(novaCena);
                 typy.Add(finalniTyp);
                 
-                Console.WriteLine("Jídlo bylo přidáno!");
+                Console.WriteLine("Jídlo bylo přidáno");
                 Console.ReadKey();
             }
-            else if (volba == "2") // JÍDELNÍČEK A OBJEDNÁVKA
+            else if (volba == "2") // jidlo+obednani
             {
-                Console.WriteLine("\n--- AKTUÁLNÍ NABÍDKA ---");
-                for (int i = 0; i < jidla.Count; i++)
+                Console.WriteLine("\nAKTUÁLNÍ NABÍKA");
+                for (int i = 0; i < food.Count; i++)
                 {
-                    Console.WriteLine($"{i + 1}. {jidla[i]} ({typy[i]}) - {ceny[i]} Kč");
+                    Console.WriteLine($"{i + 1}. {food[i]} ({typy[i]}) - {cost[i]} Kč");
                 }
 
                 Console.Write("\nčíslo jídla (nebo 0 = zpět): ");
                 int index;
-                if (int.TryParse(Console.ReadLine(), out index) && index > 0 && index <= jidla.Count)
+                if (int.TryParse(Console.ReadLine(), out index) && index > 0 && index <= food.Count)
                 {
-                    double cenaJidla = ceny[index - 1];
-                    if (zustatek >= cenaJidla)
+                    double cenafood = cost[index - 1];
+                    if (manyleft >= cenafood)
                     {
-                        zustatek -= cenaJidla;
-                        historie.Add(jidla[index - 1]);
-                        Console.WriteLine($"objednáno: {jidla[index - 1]}");
+                        manyleft -= cenafood;
+                        historie.Add(food[index - 1]);
+                        Console.WriteLine($"objednáno: {food[index - 1]}");
                     }
                     else
                     {
-                        Console.WriteLine("nedostatek peněz na účtu!");
+                        Console.WriteLine("nedostatek peněs ");
                     }
                 }
                 Console.WriteLine();
                 Console.ReadKey();
             }
-            else if (volba == "3") // PROFIL
+            else if (volba == "3") // profil
             {
                 Console.WriteLine($"\nPROFIL: {jmeno}");
-                Console.WriteLine($"Aktuální zůstatek: {zustatek} Kč");
+                Console.WriteLine($"Aktuální zůstatek: {manyleft} Kč");
                 Console.WriteLine("Poslední 3 objednávky:");
 
                 int vypis = 0;
@@ -101,12 +101,12 @@ class Program
                     vypis++;
                 }
 
-                Console.WriteLine("\npro zpět stiskni klávesu...");
+                Console.WriteLine("\npro zpět");
                 Console.ReadKey();
             }
             else if (volba == "x") 
             {
-                Console.WriteLine("Nashledano");
+                Console.WriteLine("Nashledano a budde se na vaz tešit přiště , tym bistara na svahu ");
                 break; 
             }
         }
