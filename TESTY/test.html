@@ -1,0 +1,117 @@
+using System;
+using System.Collections.Generic;// Pro tuto část *
+
+class Program
+{
+    static void Main()
+    {
+        //registrace
+        Console.WriteLine("ahoj vytej v bistru na vršku prosim zaregistruj se níže ");
+        Console.WriteLine(">REGISTRACE<");
+        Console.Write("Zadej jméno: ");
+        string jmeno = Console.ReadLine();
+
+        Console.Write("Zadej zustatek: ");
+        double zustatek;
+        double.TryParse(Console.ReadLine(), out zustatek); // Pro tuto část *
+
+        //NABÍDKA JÍDEL
+        List<string> jidla = new List<string> { "Chilli con carne", "Pizza", "Gulašovka", "Vývar", "Panna cotta", "Tiramisu", "Croissant", "Džus" };
+        List<double> ceny = new List<double> { 150, 180, 55, 45, 75, 85, 40, 35 };
+        List<string> typy = new List<string> { "Hlavní jídlo", "Hlavní jídlo", "Polévka", "Polévka", "Dezert", "Dezert", "Dezert", "Pití" };
+        
+        List<string> historie = new List<string>(); // Pro tuto část* *
+
+        while (true)
+        {
+            Console.Clear();
+            Console.WriteLine($"Uživatel: {jmeno} | Zůstatek: {zustatek} Kč"); // Pro tuto část *
+            Console.WriteLine("------------------------------------------");
+            Console.WriteLine("1. Přidat jídlo do nabídky");
+            Console.WriteLine("2. Zobrazit jídelníček a objednat");
+            Console.WriteLine("3. Můj profil (poslední 3 jídla)");
+            Console.WriteLine("x. Konec programu");
+            Console.Write("\nVyber možnost (1-4): ");
+            
+            string volba = Console.ReadLine();
+
+            if (volba == "1") // Pridani
+            {
+                Console.Write("Název jídla: ");
+                string novyNazev = Console.ReadLine();
+                
+                Console.Write("Cena jídla: ");
+                double novaCena;
+                double.TryParse(Console.ReadLine(), out novaCena);
+
+                // Výběr typu pomocí čísla
+                Console.WriteLine("Typ (1. Polévka, 2. Hlavní, 3. Dezert, 4. Pití): ");
+                string volbaTypu = Console.ReadLine();
+                string finalniTyp = "Neurčeno";
+                if (volbaTypu == "1") finalniTyp = "Polévka";
+                else if (volbaTypu == "2") finalniTyp = "Hlavní jídlo";
+                else if (volbaTypu == "3") finalniTyp = "Dezert";
+                else if (volbaTypu == "4") finalniTyp = "Pití";
+
+                jidla.Add(novyNazev);
+                ceny.Add(novaCena);
+                typy.Add(finalniTyp);
+                
+                Console.WriteLine("Jídlo bylo přidáno!");
+                Console.ReadKey();
+            }
+            else if (volba == "2") // JÍDELNÍČEK A OBJEDNÁVKA
+            {
+                Console.WriteLine("\n--- AKTUÁLNÍ NABÍDKA ---");
+                for (int i = 0; i < jidla.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {jidla[i]} ({typy[i]}) - {ceny[i]} Kč");
+                }
+
+                Console.Write("\nčíslo jídla (nebo 0 = zpět): ");
+                int index;
+                if (int.TryParse(Console.ReadLine(), out index) && index > 0 && index <= jidla.Count)
+                {
+                    double cenaJidla = ceny[index - 1];
+                    if (zustatek >= cenaJidla)
+                    {
+                        zustatek -= cenaJidla;
+                        historie.Add(jidla[index - 1]);
+                        Console.WriteLine($"objednáno: {jidla[index - 1]}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("nedostatek peněz na účtu!");
+                    }
+                }
+                Console.WriteLine();
+                Console.ReadKey();
+            }
+            else if (volba == "3") // PROFIL
+            {
+                Console.WriteLine($"\nPROFIL: {jmeno}");
+                Console.WriteLine($"Aktuální zůstatek: {zustatek} Kč");
+                Console.WriteLine("Poslední 3 objednávky:");
+
+                int vypis = 0;
+                // Pro tuto část *
+                for (int i = historie.Count - 1; i >= 0 && vypis < 3; i--)
+                {
+                    Console.WriteLine($"- {historie[i]}");
+                    vypis++;
+                }
+
+                Console.WriteLine("\npro zpět stiskni klávesu...");
+                Console.ReadKey();
+            }
+            else if (volba == "x") 
+            {
+                Console.WriteLine("Nashledano");
+                break; 
+            }
+        }
+    }
+}
+//*=
+// pro tuto čast bylo využito vyhledávání Google a s tím jeho automaticky generovaná AI odpověď.
+//tyka se vždy jen řadku pro opravu kodu kvuly eroru 
