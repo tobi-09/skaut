@@ -779,6 +779,21 @@
             transform: translateY(-1px);
         }
 
+        /* Active next button: larger and blinking to draw attention */
+        .next-btn.active {
+            transform: translateX(-50%) scale(1.12);
+            padding: 20px 22px;
+            font-size: 1.12rem;
+            box-shadow: 0 18px 40px rgba(78,205,196,0.45);
+            animation: nextPulse 800ms infinite;
+        }
+
+        @keyframes nextPulse {
+            0% { transform: translateX(-50%) scale(1.05); opacity: 1; }
+            50% { transform: translateX(-50%) scale(1.12); opacity: 0.9; }
+            100% { transform: translateX(-50%) scale(1.05); opacity: 1; }
+        }
+
 
 
         /* Database Mode */
@@ -958,9 +973,9 @@
             backdrop-filter: blur(4px) saturate(1.05);
             background: rgba(10,10,12,0.18);
             opacity: 0;
-            pointer-events: none !important;
+            pointer-events: none; /* Důležité: umožní klikat skrz, když je overlay neaktivní */
             transition: opacity 220ms ease;
-            z-index: 2500;
+            z-index: 2000; /* Sníženo z 2500 */
         }
 
         /* Tutorial prompt (startup) */
@@ -1034,6 +1049,7 @@
         .tutorial-controls .next { background:#00b894; color:white; }
         .tutorial-controls #tutorial-ok-btn { background:#00b894; color:white; }
         .tutorial-controls .close { background:transparent; color:#cbd5e1; border:1px solid rgba(255,255,255,0.06); }
+        .tutorial-controls .next.disabled { opacity: 0.5; cursor: not-allowed; }
         /* DB highlight and arrow for tutorial/test */
         .db-card.tutorial-greyed { opacity: 0.35; filter: brightness(0.6); pointer-events: none; box-shadow: none; }
         .db-card.db-highlight { 
@@ -1084,6 +1100,20 @@
             .stat-item { padding: 12px 20px; font-size: 0.85rem; }
             .mode-card { padding: 20px; }
             .difficulty-indicator { font-size: 0.7rem; padding: 6px 10px; }
+            /* Make tutorial box fixed and unobtrusive on small screens */
+            #tutorial-box {
+                left: 12px !important;
+                right: 12px !important;
+                top: auto !important;
+                bottom: 12px !important;
+                transform: none !important;
+                width: calc(100% - 24px) !important;
+                max-width: none !important;
+                box-shadow: 0 12px 36px rgba(0,0,0,0.6) !important;
+                z-index: 99999 !important;
+            }
+            /* Hide the floating spotlight on mobile to avoid covering targets */
+            #spotlight { display: none !important; }
         }
     </style>
 </head>
@@ -1523,6 +1553,20 @@
         if (blur) { blur.style.pointerEvents = 'none'; blur.style.opacity = '0'; }
     }
 
+    // Activate next button: hide blur overlay and make button large/blinking
+    function activateNextBtn() {
+        const blur = document.getElementById('ui-blur-overlay');
+        if (blur) { blur.style.opacity = '0'; blur.style.pointerEvents = 'none'; }
+        const nextBtn = document.getElementById('next-btn');
+        if (nextBtn) {
+            nextBtn.style.display = 'block';
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('locked');
+            nextBtn.classList.add('active');
+            try { nextBtn.focus(); } catch(e){}
+        }
+    }
+
     // Tutorial guided overlay
     const tutorialSteps = [
         { text: 'Vyberte režim: klikněte na "Individuální".', selector: '#mode-screen .mode-card[data-mode="single"]', pos: 'center', interactive: true, needsOkButton: false },
@@ -1626,20 +1670,20 @@
 
         document.getElementById('tutorial-text').innerText = step.text;
 
-        // Show/hide OK button based on step needs
+        // Show unified OK/Next button; disable it for interactive steps until user acts
         const okBtn = document.getElementById('tutorial-ok-btn');
-        if (step.needsOkButton) {
+        if (okBtn) {
             okBtn.style.display = 'block';
-        } else {
-            okBtn.style.display = 'none';
+            okBtn.innerText = 'DALŠÍ';
+            okBtn.disabled = !!step.interactive;
+            if (okBtn.disabled) okBtn.classList.add('disabled'); else okBtn.classList.remove('disabled');
         }
 
         // For interactive steps attach a one-time click listener to advance
         if (step.interactive) {
             const handler = (ev) => {
-                if (tutorialActive) {  // Only advance if tutorial is still active
+                if (tutorialActive) {
                     try { if (navigator.vibrate) navigator.vibrate(100); } catch(e){}
-                    // For elements that user is already clicking, don't prevent or double-click
                     const isUserClickTarget = (step.selector === '#sound-toggle' || 
                                              step.selector === '.option-btn' || 
                                              step.selector.includes('.menu-btn') ||
@@ -1648,21 +1692,20 @@
                                              step.selector.includes('.difficulty-btn') ||
                                              step.selector.includes('#time-slider') ||
                                              step.selector.includes('#start-game-btn'));
-                    
+
                     if (!isUserClickTarget) {
-                        // For other interactive elements, prevent default and trigger click
-                        ev.stopPropagation();
-                        ev.preventDefault();
+                        // programmatic click for non-user targets and auto-advance
+                        ev.stopPropagation(); ev.preventDefault();
                         try { target.click(); } catch(e){}
+                        let delay = 300;
+                        if (step.selector.includes('time') && i === 1) delay = 600;
+                        if (step.selector === '.option-btn' && (i === 5 || i === 9)) delay = 800;
+                        setTimeout(() => { if (tutorialActive) tutorialNext(); }, delay);
+                    } else {
+                        // For true interactive targets: enable the single Next button when user clicks target
+                        const okBtn = document.getElementById('tutorial-ok-btn');
+                        if (okBtn) { okBtn.disabled = false; okBtn.classList.remove('disabled'); }
                     }
-                    
-                    // For "Čas" button click, wait longer for slider to appear
-                    // For option buttons, wait longer for answer processing
-                    let delay = 300;
-                    if (step.selector.includes('time') && i === 1) delay = 600;
-                    if (step.selector === '.option-btn' && (i === 5 || i === 9)) delay = 800;
-                    
-                    setTimeout(() => { if (tutorialActive) tutorialNext(); }, delay);
                 }
             };
             target.addEventListener('click', handler, { once: true });
@@ -1797,15 +1840,19 @@
 
     document.getElementById('tutorial-yes').addEventListener('click', () => { startTutorial(); });
     document.getElementById('tutorial-no').addEventListener('click', () => { hideTutorialPrompt(); });
-    // hide the explicit next button — tutorial is interactive
+    // hide the explicit next button — tutorial uses a single Next button now
     const tn = document.getElementById('tutorial-next'); if (tn) tn.style.display = 'none';
     document.getElementById('tutorial-skip').addEventListener('click', () => { endTutorial(); });
-    document.getElementById('tutorial-ok-btn').addEventListener('click', () => {
-        if (tutorialActive) {
-            try { if (navigator.vibrate) navigator.vibrate(100); } catch(e){}
-            tutorialNext();
-        }
-    });
+    const tutorialOkBtn = document.getElementById('tutorial-ok-btn');
+    if (tutorialOkBtn) {
+        tutorialOkBtn.innerText = 'DALŠÍ';
+        tutorialOkBtn.addEventListener('click', () => {
+            if (tutorialActive) {
+                try { if (navigator.vibrate) navigator.vibrate(100); } catch(e){}
+                tutorialNext();
+            }
+        });
+    }
 
     // show prompt on first load
     setTimeout(() => { showTutorialPrompt(); }, 800);
@@ -1916,12 +1963,12 @@
                     setTimeout(() => {
                         fb.innerText = "POTVRZENO";
                         triggerFinalEffects();
-                        document.getElementById('next-btn').style.display = "block";
+                        activateNextBtn();
                         // Advance tutorial to next step after correct answer
                         if (tutorialActive && tutorialIndex < tutorialSteps.length - 1) {
-                            // For final question in tutorial, wait for click then end
-                            if (tutorialIndex === 9) {
-                                setTimeout(() => { if (tutorialActive) endTutorial(); }, 600);
+                            // For final question in tutorial: end tutorial and continue to next question
+                            if (tutorialIndex === tutorialSteps.length - 1) {
+                                setTimeout(() => { if (tutorialActive) { endTutorial(); nextQuestion(); } }, 600);
                             } else {
                                 setTimeout(() => { if (tutorialActive) tutorialNext(); }, 600);
                             }
@@ -1962,6 +2009,9 @@
         
         // restore UI and hide blur
         unlockUI();
+        // ensure next button active styles removed
+        const nextBtn = document.getElementById('next-btn');
+        if (nextBtn) { nextBtn.classList.remove('active'); nextBtn.style.display = 'none'; }
         hideBlur();
         resetTimer();
         loadQuestion(true);
@@ -2043,15 +2093,17 @@
                     document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
                     pauseTimer(); lockUI(); showBlur();
                     const fb = document.getElementById('feedback'); fb.innerText = 'POTVRZENO'; fb.style.color = 'var(--secondary)';
-                    const nextBtn = document.getElementById('next-btn');
-                    nextBtn.style.display = 'block';
-                    nextBtn.disabled = false;
-                    nextBtn.classList.remove('locked');
+                    activateNextBtn();
                     
                     // Clear any existing auto-advance timeout
                     if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
-                    // Auto-advance after 10 seconds
-                    autoAdvanceTimeout = setTimeout(() => { nextQuestion(); }, 10000);
+                    // If tutorial is active and this is the final tutorial step, end tutorial and advance
+                    if (tutorialActive && tutorialIndex === tutorialSteps.length - 1) {
+                        setTimeout(() => { if (tutorialActive) { endTutorial(); nextQuestion(); } }, 600);
+                    } else {
+                        // Auto-advance after 10 seconds
+                        autoAdvanceTimeout = setTimeout(() => { nextQuestion(); }, 10000);
+                    }
                 } else {
                     wrongCount++; totalCount++; updateStats(); btn.classList.add('wrong'); btn.disabled = true;
                 }
@@ -2252,7 +2304,7 @@
         document.querySelectorAll('.option-btn').forEach(b => { b.disabled = true; b.classList.add('wrong'); });
         const fb = document.getElementById('feedback');
         if (fb) { fb.innerText = 'ČAS VYPRŠEL'; fb.style.color = 'var(--primary)'; }
-        const nb = document.getElementById('next-btn'); if (nb) nb.style.display = 'block';
+        activateNextBtn();
         // Advance tutorial to skip button step (step 4) if active
         if (tutorialActive && tutorialIndex < 4) {
             tutorialNext();
