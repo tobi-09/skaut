@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Taborvý den</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* fallback simple styles for non‑tailwind elements */
+    body { font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; margin:0; padding:0; }
+    /* overlay login */
+    #loginOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:50; }
+    #loginBox { background:#fff; padding:2rem; border-radius:1rem; max-width:400px; width:90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    /* timeline styles */
+    .timeline-container { position: relative; padding: 3rem 0; }
+    .timeline-line { position: absolute; left: 2.5%; top: 0; width: 3px; height: 100%; background: linear-gradient(to bottom, #255C9E, #A0067D); }
+    .timeline-block { position: relative; margin-left: 5%; margin-bottom: 2rem; padding-left: 3rem; }
+    .timeline-dot { position: absolute; left: -1.65rem; top: 1.5rem; width: 1.2rem; height: 1.2rem; background: white; border: 3px solid #255C9E; border-radius: 50%; z-index: 10; }
+    .block-card { background: white; border-left-width: 6px; border-left-style: solid; border-left-color: #255C9E; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: box-shadow 0.3s ease; }
+    .block-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+    .block-time { font-weight: 700; color: #255C9E; font-size: 1rem; margin-bottom: 0.25rem; }
+    .block-title { font-weight: 600; font-size: 0.95rem; color: #1a202c; margin-bottom: 0.5rem; }
+    .block-detail { font-size: 0.85rem; color: #4a5568; margin: 0.25rem 0; }
+    .block-links { font-size: 0.8rem; margin-top: 0.5rem; }
+    .block-links a { color: #2563eb; text-decoration: underline; margin-right: 0.5rem; }
+    .block-editors { font-size: 0.75rem; color: #059669; margin-top: 0.5rem; font-weight: 500; }
+    .action-buttons { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    .action-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.8rem; color: white; border: none; border-radius: 0.4rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s ease; }
+    .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    .view-btn { background: #2563eb; }
+    .view-btn:hover { background: #1d4ed8; }
+    .edit-btn { background: #c41818; }
+    .edit-btn:hover { background: #a11014; }
+    .action-btn i { font-size: 0.9rem; }
+    .action-btn.collab { background: #059669; }
+    .action-btn.collab:hover { background: #047857; }
+    /* idea and goal cards */
+    .idea-card { background: white; border-top: 4px solid #3B82F6; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: box-shadow 0.3s ease; }
+    .idea-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+    /* goal styling with color bar */
+    .goal-card { background: white; border-top: 4px solid #F59E0B; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: box-shadow 0.3s ease; position: relative; }
+    .goal-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+    .goal-card.urgent { border-top-color: #EF4444; }
+    .goal-card.normal { border-top-color: #10B981; }
+    .goal-card.completed { opacity: 0.7; border-top-color: #9CA3AF; }
+    .goal-card.completed .card-text { text-decoration: line-through; color: #9CA3AF; }
+    .card-text { font-size: 0.95rem; color: #1a202c; margin-bottom: 0.5rem; }
+    .card-meta { font-size: 0.8rem; color: #9CA3AF; margin-top: 0.5rem; }
+    .goal-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    .goal-action-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 600; border: none; border-radius: 0.4rem; cursor: pointer; transition: all 0.3s ease; }
+    .goal-action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .complete-goal-btn { background: #10B981; color: white; }
+    .complete-goal-btn:hover { background: #059669; }
+    .undo-goal-btn { background: #F59E0B; color: white; }
+    .undo-goal-btn:hover { background: #D97706; }
+    .delete-goal-btn { background: #EF4444; color: white; }
+    .delete-goal-btn:hover { background: #DC2626; }
+    /* panel transitions */
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    /* input styling */
+    input, textarea, select { border: 1px solid #E5E7EB; }
+    input:focus, textarea:focus, select:focus { outline: none; /* tailwind 'ring' utility not valid in plain CSS, substitute with box-shadow */ box-shadow: 0 0 0 2px #3B82F6; border-color: #3B82F6; }
+    /* day leader badges */
+    .day-leader-badge { display: inline-block; padding: 0.4rem 0.8rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+    /* improve description display */
+    .block-detail.italic { font-style: italic; color: #6B7280; margin: 0.5rem 0; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<!-- overlay shown until someone logs in -->
+<div id="loginOverlay" class="bg-gradient-to-br from-blue-900 to-blue-800">
+  <div id="loginBox" class="bg-white rounded-xl shadow-2xl border-t-4 border-blue-600">
+    <div class="flex items-center justify-center gap-2 mb-4">
+      <i class="fas fa-lock text-3xl text-blue-600"></i>
+      <h2 class="text-2xl font-bold text-gray-800">Přihlášení</h2>
+    </div>
+    <p class="text-center text-sm text-gray-600 mb-6">Vyber své jméno a vstup</p>
+    <label for="userSelect" class="block mb-2 font-semibold text-gray-700"><i class="fas fa-user mr-2 text-blue-600"></i>Jméno</label>
+    <select id="userSelect" class="input border border-gray-300 rounded-lg w-full mb-4 p-2 focus:outline-none focus:ring-2 focus:ring-blue-600">
+      <option value="">-- vyber jméno --</option>
+      <option>👤 Kilian</option>
+      <option>👤 Kuba</option>
+      <option>👤 Vlk</option>
+      <option>👤 Matouš</option>
+      <option>👤 Hugo</option>
+      <option>👤 Dan</option>
+      <option>👤 Tobiáš</option>
+      <option>👤 Makro</option>
+      <option>👤 Míno</option>
+    </select>
+    <button id="loginBtn" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-lg">
+      <i class="fas fa-sign-in-alt mr-2"></i>Přihlásit
+    </button>
+  </div>
+</div>
+
+  <!-- small modal for editing Garant -->
+  <div id="garantModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg w-full max-w-md p-6 shadow-lg">
+      <h4 class="text-lg font-bold mb-3">Upravit Garanta</h4>
+      <input id="garantEditInput" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4" />
+      <div class="flex justify-end gap-2">
+        <button id="garantCancel" class="px-4 py-2 bg-gray-200 rounded">Zrušit</button>
+        <button id="garantSave" class="px-4 py-2 bg-blue-600 text-white rounded">Uložit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- small modal for editing Links -->
+  <div id="linksModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg w-full max-w-lg p-6 shadow-lg">
+      <h4 class="text-lg font-bold mb-3">Upravit Odkazy</h4>
+      <textarea id="linksEditInput" rows="6" class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4" placeholder="Odděleno čárkami"></textarea>
+      <div class="flex justify-end gap-2">
+        <button id="linksCancel" class="px-4 py-2 bg-gray-200 rounded">Zrušit</button>
+        <button id="linksSave" class="px-4 py-2 bg-blue-600 text-white rounded">Uložit</button>
+      </div>
+    </div>
+  </div>
+
+<header class="p-4 bg-white text-blue-900 flex items-center justify-between shadow-lg border-b">
+<!-- lighter header per user request -->
+  <div class="flex items-center gap-4">
+    <img src="https://tobi-09.github.io/skaut/logo%20skaut%20web.png" alt="Taborvý den" class="h-14 drop-shadow-lg">
+    <div>
+      <h1 class="text-3xl font-bold">Taborvý den</h1>
+      <p class="text-sm text-blue-100 mt-1">Skautský táborový program</p>
+    </div>
+  </div>
+  <div id="loginArea" class="hidden"></div>
+  <div id="userInfo" class="hidden flex items-center gap-3">
+    <div>
+      <div class="text-sm text-blue-100">Přihlášen jako</div>
+      <div class="text-lg font-bold" id="currentUser"></div>
+    </div>
+    <button id="logoutBtn" class="ml-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition transform hover:scale-105 shadow">Odhlásit</button>
+  </div>
+</header>
+
+<nav class="flex border-b bg-white shadow-sm">
+  <div class="tab cursor-pointer px-6 py-3 border-b-4 border-blue-600 font-semibold text-blue-600 flex items-center gap-2 hover:bg-blue-50 transition" data-panel="schedulePanel">
+    <i class="fas fa-calendar-alt"></i> Harmonogram
+  </div>
+  <div class="tab cursor-pointer px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 flex items-center gap-2 transition" data-panel="ideasPanel">
+    <i class="fas fa-lightbulb"></i> Nápady
+  </div>
+  <div class="tab cursor-pointer px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 flex items-center gap-2 transition" data-panel="goalsPanel">
+    <i class="fas fa-bullseye"></i> Cíle
+  </div>
+</nav>
+
+<section id="schedulePanel" class="panel active p-6 bg-gradient-to-b from-slate-50 to-white">
+  <h2 class="text-2xl font-bold mb-2 text-blue-900">Časový harmonogram</h2>
+  <p class="text-sm text-gray-600 mb-2">Doba jednotlivých programů: 7:00 – 22:00</p>
+  <div id="globalDayLeader" class="text-md font-semibold text-gray-700 mb-4"></div>
+  <div class="timeline-container">
+    <div class="timeline-line"></div>
+    <div id="scheduleBlocks" class="space-y-0"></div>
+  </div>
+</section>
+
+<section id="ideasPanel" class="panel p-6 bg-white">
+  <h2 class="text-2xl font-bold mb-2 text-blue-900 flex items-center gap-2">
+    <i class="fas fa-lightbulb text-yellow-500"></i> Nápady a brainstorm
+  </h2>
+  <p class="text-sm text-gray-600 mb-6">Přidávejte nápady na programy a aktivity</p>
+  <!-- input area for new idea -->
+  <div class="mb-4">
+    <textarea id="newIdeaText" rows="2" placeholder="Popis nápadu..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"></textarea>
+    <button class="action-btn collab mt-2" id="addIdeaBtn">
+      <i class="fas fa-plus"></i> Přidat nápad
+    </button>
+  </div>
+  <div id="ideaList" class="space-y-3"></div>
+</section>
+
+<section id="goalsPanel" class="panel p-6 bg-white">
+  <h2 class="text-2xl font-bold mb-2 text-blue-900 flex items-center gap-2">
+    <i class="fas fa-bullseye text-red-500"></i> Cíle a úkoly
+  </h2>
+  <p class="text-sm text-gray-600 mb-6">Sledujte cíle a jejich deadline</p>
+  <!-- input area for new goal -->
+  <div class="mb-4 space-y-2">
+    <input type="text" id="newGoalDesc" placeholder="Popis cíle/úkolu" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+    <input type="datetime-local" id="newGoalDeadline" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+    <label class="block text-sm font-semibold text-gray-700">Týká se:</label>
+    <select id="newGoalAssignee" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600">
+      <option value="">-- vyber osobu --</option>
+      <option value="">👤 Všichni</option>
+      <option value="👤 Kilian">👤 Kilian</option>
+      <option value="👤 Kuba">👤 Kuba</option>
+      <option value="👤 Vlk">👤 Vlk</option>
+      <option value="👤 Matouš">👤 Matouš</option>
+      <option value="👤 Hugo">👤 Hugo</option>
+      <option value="👤 Dan">👤 Dan</option>
+      <option value="👤 Tobiáš">👤 Tobiáš</option>
+      <option value="👤 Makro">👤 Makro</option>
+      <option value="👤 Míno">👤 Míno</option>
+    </select>
+    <button class="action-btn collab" id="addGoalBtn">
+      <i class="fas fa-plus"></i> Přidat cíl/úkol
+    </button>
+  </div>
+  <div id="goalList" class="space-y-3"></div>
+</section>
+
+<!-- modální dialogy  -->
+
+<!-- nahlédnout a editace bloku harmonogramu -->
+<div id="blockModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-40 backdrop-blur-sm">
+  <div class="bg-white rounded-xl w-full max-w-2xl shadow-2xl border-t-4 border-blue-600 max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-gradient-to-r from-red-700 to-red-800 text-white px-8 py-6 flex items-center justify-between shadow-md">
+      <div class="flex items-center gap-3">
+        <i class="fas fa-info-circle text-2xl"></i>
+        <h3 class="text-2xl font-bold" id="modalTitle">Náhled bloku</h3>
+      </div>
+      <button id="modalCloseX" class="text-2xl hover:opacity-80 transition">&times;</button>
+    </div>
+    
+    <div class="p-8 space-y-6">
+      <!-- cas -->
+      <div class="grid grid-cols-2 gap-4">
+        <label class="block">
+          <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <i class="fas fa-clock text-blue-600"></i> Čas od
+          </span>
+          <input type="time" id="modalTimeFrom" class="mt-2 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <i class="fas fa-clock text-blue-600"></i> čas do
+          </span>
+          <input type="time" id="modalTimeTo" class="mt-2 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+        </label>
+      </div>
+      
+      <!-- nadzev -->
+      <label class="block">
+        <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <i class="fas fa-heading text-blue-600"></i> Název bloku
+        </span>
+        <input type="text" id="modalBlockName" readonly class="mt-2 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-600" />
+      </label>
+      
+      <!-- barva karty -->
+      <label class="block">
+        <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <i class="fas fa-palette text-blue-600"></i> Barva bloku
+        </span>
+        <select id="modalColor" class="mt-2 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </select>
+      </label>
+
+      <!-- uvodni popis -->
+      <label class="block">
+        <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <i class="fas fa-pencil-alt text-blue-600"></i> Úvodní popis
+        </span>
+        <textarea id="modalShortDesc" class="mt-2 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none" rows="2" placeholder="Stručný popis programu..."></textarea>
+      </label>
+      
+      <!-- dlouhy popis -->
+      <label class="block">
+        <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <i class="fas fa-align-left text-blue-600"></i> Detailní popis
+        </span>
+        <textarea id="modalLongDesc" class="mt-2 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none" rows="4" placeholder="Detailní program, počet lidí, pomůcky..."></textarea>
+      </label>
+      
+      <!-- garant -->
+      <label class="block">
+        <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <i class="fas fa-user-tie text-blue-600"></i> Garant
+        </span>
+        <div class="mt-2 flex gap-2">
+          <input type="text" id="modalGarant" class="flex-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+          <button id="openGarantBtn" class="action-btn view-btn" title="Upravit garanta"> <i class="fas fa-pen"></i> </button>
+        </div>
+      </label>
+      
+
+      
+      <!-- tym -->
+      <label class="block">
+        <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <i class="fas fa-users text-blue-600"></i> Tým / spolupracují
+        </span>
+        <input type="text" id="modalTeam" class="mt-2 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="odděleno čárkou" />
+      </label>
+      
+      <!-- odkazy -->
+      <label class="block">
+        <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <i class="fas fa-link text-blue-600"></i> Odkazy (odděleno čárkami)
+        </span>
+        <div class="mt-2 flex gap-2">
+          <input type="text" id="modalLinks" class="flex-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+          <button id="openLinksBtn" class="action-btn view-btn" title="Upravit odkazy"><i class="fas fa-external-link-alt"></i></button>
+        </div>
+      </label>
+    </div>
+    
+    <div class="sticky bottom-0 bg-gray-100 px-8 py-4 flex justify-end gap-3 border-t">
+      <button id="modalCancel" class="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-lg transition">
+        <i class="fas fa-times mr-2"></i> Zavřít
+      </button>
+      <button id="modalSave" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition shadow">
+        <i class="fas fa-save mr-2"></i> Uložit změny
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+  import { getDatabase, ref, set, push, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAgqIX3_OHPrh27vuMJsIUpKLjVLcxMOaU",
+    authDomain: "skladatel-progrmu-a-her.firebaseapp.com",
+    databaseURL: "https://skladatel-progrmu-a-her-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "skladatel-progrmu-a-her",
+    storageBucket: "skladatel-progrmu-a-her.firebasestorage.app",
+    messagingSenderId: "1088099395066",
+    appId: "1:1088099395066:web:38863cc7963b8a8fc27043"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // color palette used across app
+  const COLORS = [
+    { id:'red', name:'Červená', hex:'#EA614A' },
+    { id:'blue', name:'Modrá', hex:'#20649B' },
+    { id:'green', name:'Zelená', hex:'#008836' },
+    { id:'yellow', name:'Žlutá', hex:'#ECA038' },
+    { id:'purple', name:'Fialová', hex:'#A0067D' }
+  ];
+
+  // jednoduchý login bez auth, počáteční overlay
+  const userSelect = document.getElementById('userSelect');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const loginArea = document.getElementById('loginArea');
+  const userInfo = document.getElementById('userInfo');
+  const currentUserSpan = document.getElementById('currentUser');
+  const loginOverlay = document.getElementById('loginOverlay');
+
+  let currentUser = null;
+  let editingKey = null;
+
+  loginBtn.addEventListener('click', () => {
+    const name = userSelect.value;
+    if(!name) return alert('Vyber jméno');
+    currentUser = name;
+    localStorage.setItem('plannerUser', name);
+    updateLoginState();
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    currentUser = null;
+    localStorage.removeItem('plannerUser');
+    updateLoginState();
+  });
+
+  function updateLoginState() {
+    if(currentUser) {
+      loginOverlay.style.display = 'none';
+      loginArea.classList.remove('hidden');
+      userInfo.classList.remove('hidden');
+      currentUserSpan.textContent = currentUser;
+    } else {
+      loginOverlay.style.display = 'flex';
+      userSelect.value = '';
+      loginArea.classList.add('hidden');
+      userInfo.classList.add('hidden');
+    }
+  }
+
+  // load stored user
+  const saved = localStorage.getItem('plannerUser');
+  if(saved) {
+    currentUser = saved;
+  }
+  updateLoginState();
+
+  // populate modal color select from palette
+  const modalColorSelect = document.getElementById('modalColor');
+  if(modalColorSelect) {
+    modalColorSelect.innerHTML = COLORS.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  }
+
+  // tab switching with Tailwind styling
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('border-blue-600','text-blue-600','font-semibold','bg-blue-50');
+        t.classList.add('text-gray-600');
+      });
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('border-blue-600','text-blue-600','font-semibold','bg-blue-50');
+      tab.classList.remove('text-gray-600');
+      document.getElementById(tab.dataset.panel).classList.add('active');
+    });
+  });
+
+  // data helpers
+  function writeData(path, value) {
+    if(!currentUser) return;
+    const entry = { ...value, author: currentUser, updated: new Date().toISOString() };
+    return push(ref(db, path), entry);
+  }
+
+  function loadList(path, container, renderFn) {
+    onValue(ref(db, path), snapshot => {
+      const data = snapshot.val() || {};
+      container.innerHTML = '';
+      Object.entries(data).forEach(([key,item]) => {
+        container.appendChild(renderFn(key,item));
+      });
+    });
+  }
+
+  // schedule
+  const scheduleBlocks = document.getElementById('scheduleBlocks');
+  // const addBlockBtn = document.getElementById('addBlockBtn'); // no additions allowed
+
+  // default schedule uses palette ids
+  const defaultSchedule = [
+    { title: 'Budiček', time: '07:00', colorId: 'red' },
+    { title: 'Rozcvička + rytuál', time: '07:30', colorId: 'yellow' },
+    { title: 'Snídaně & nástup', time: '08:15', colorId: 'yellow' },
+    { title: 'První dopolední program – garant Kilian', time: '09:00', colorId: 'blue' },
+    { title: 'Druhý dopolední program – garant Vlk', time: '10:30', colorId: 'blue' },
+    { title: 'Oběd', time: '12:00', colorId: 'green' },
+    { title: 'Polední klid', time: '13:00', colorId: 'purple' },
+    { title: 'První odpolední program – garant Dan', time: '14:30', colorId: 'blue' },
+    { title: 'Druhý odpolední program – garant Kuba', time: '16:00', colorId: 'blue' },
+    { title: 'Mytí', time: '17:30', colorId: 'red' },
+    { title: 'Večeře', time: '18:30', colorId: 'yellow' },
+    { title: 'Večerní nástup', time: '19:15', colorId: 'blue' },
+    { title: 'Večerní program – garant Tobiáš', time: '19:45', colorId: 'purple' },
+    { title: 'Večerní klid', time: '21:30', colorId: 'blue' }
+  ];
+
+  // ensure schedule path contains at least our default entries
+  async function ensureScheduleDefaults() {
+    const snap = await get(ref(db,'schedule'));
+    const data = snap.val() || {};
+    const titles = Object.values(data).map(b => b.title);
+    defaultSchedule.forEach(item => {
+      if(!titles.includes(item.title)) {
+        push(ref(db,'schedule'), { 
+          title: item.title, 
+          time: item.time,
+          timeFrom: item.time,
+          timeTo: '',
+          colorId: item.colorId || 'blue', 
+          garant:'', 
+          shortDesc: '',
+          longDesc: '',
+          team:'', 
+          links:'', 
+          editors:[], 
+          author:'system', 
+          updated:new Date().toISOString() 
+        });
+      }
+    });
+  }
+
+  // render schedule rows from database
+  function renderSchedule(data) {
+    scheduleBlocks.innerHTML = '';
+    // update global day leader banner
+    const banner = document.getElementById('globalDayLeader');
+    if(banner) banner.textContent = `Byč dne: ${getDayLeaderString()}`;
+    const entries = Object.entries(data || {});
+    // sort by time in default order
+    entries.sort((a,b) => {
+      const aIdx = defaultSchedule.findIndex(x => x.title === a[1].title);
+      const bIdx = defaultSchedule.findIndex(x => x.title === b[1].title);
+      return aIdx - bIdx;
+    });
+    entries.forEach(([key,block]) => {
+      const timelineBlock = document.createElement('div');
+      timelineBlock.className = 'timeline-block';
+      
+      // decide color, fallback to default schedule if missing
+      // determine hex color from colorId (preferred) or fallback
+      const colorId = block.colorId || (defaultSchedule.find(x=>x.title===block.title)||{}).colorId || null;
+      const paletteEntry = COLORS.find(c => c.id === colorId);
+      const cardColor = paletteEntry ? paletteEntry.hex : (block.color || '#255C9E');
+      // dot
+      const dot = document.createElement('div');
+      dot.className = 'timeline-dot';
+      dot.style.borderColor = cardColor;
+      dot.style.background = cardColor;
+      dot.style.opacity = '0.8';
+      timelineBlock.appendChild(dot);
+      
+      // block card
+      const card = document.createElement('div');
+      card.className = 'block-card';
+      card.style.borderLeftColor = cardColor;
+      
+      // time + title
+      const timeStr = (block.timeFrom && block.timeTo) ? `${block.timeFrom}–${block.timeTo}` : (block.time || '–');
+      const header = document.createElement('div');
+      header.innerHTML = `
+        <div class="block-time">${timeStr}</div>
+        <div class="block-title">${block.title}</div>
+      `;
+      card.appendChild(header);
+      
+
+      
+      // short description
+      if(block.shortDesc) {
+        const shortDiv = document.createElement('div');
+        shortDiv.className = 'block-detail italic';
+        shortDiv.innerHTML = `${block.shortDesc}`;
+        card.appendChild(shortDiv);
+      }
+      
+      // garant
+      if(block.garant) {
+        const garantDiv = document.createElement('div');
+        garantDiv.className = 'block-detail';
+        garantDiv.innerHTML = `<strong>Garant:</strong> ${block.garant}`;
+        card.appendChild(garantDiv);
+      }
+      
+      // long description
+      if(block.longDesc) {
+        const descDiv = document.createElement('div');
+        descDiv.className = 'block-detail text-sm bg-blue-50 p-2 rounded';
+        descDiv.innerHTML = `<strong>Detail:</strong> ${block.longDesc.replace(/\n/g,'<br>')}`;
+        card.appendChild(descDiv);
+      }
+      
+      // team
+      if(block.team) {
+        const teamDiv = document.createElement('div');
+        teamDiv.className = 'block-detail';
+        teamDiv.innerHTML = `<strong>Tým:</strong> ${block.team}`;
+        card.appendChild(teamDiv);
+      }
+      
+      // links
+      if(block.links && block.links.trim()) {
+        const linksDiv = document.createElement('div');
+        linksDiv.className = 'block-links';
+        const linkParts = block.links.split(',').filter(u=>u.trim());
+        linksDiv.innerHTML = `<strong>Odkazy:</strong> ` + linkParts.map(u=>`<a href="${u.trim()}" target="_blank" rel="noopener noreferrer">${u.trim().replace(/^https?:\/\//,'')}</a>`).join(' ');
+        card.appendChild(linksDiv);
+      }
+      
+      // editors (collaborators)
+      if(block.editors && block.editors.length > 0) {
+        const editorsDiv = document.createElement('div');
+        editorsDiv.className = 'block-editors';
+        editorsDiv.innerHTML = `✅ Spolupracovali: ${block.editors.map(e=>e.name).join(', ')}`;
+        card.appendChild(editorsDiv);
+      }
+      
+      // author & updated
+      const metaDiv = document.createElement('div');
+      metaDiv.className = 'block-detail';
+      metaDiv.style.fontSize = '0.75rem';
+      metaDiv.style.color = '#9CA3AF';
+      metaDiv.style.marginTop = '0.75rem';
+      metaDiv.innerHTML = `Vytvořil: ${block.author||'?'} ~ ${block.updated?new Date(block.updated).toLocaleString():'–'}`;
+      card.appendChild(metaDiv);
+      
+      // action buttons
+      const buttonsDiv = document.createElement('div');
+      buttonsDiv.className = 'action-buttons';
+      
+      const viewBtn = document.createElement('button');
+      viewBtn.className = 'action-btn view-btn';
+      viewBtn.innerHTML = '<i class="fas fa-eye"></i> Nahlédnout';
+      viewBtn.addEventListener('click', ()=> openEditModal(key, block, 'view'));
+      buttonsDiv.appendChild(viewBtn);
+      
+      // only show edit button if current user is marked as collaborator
+      const isCollab = block.editors && block.editors.some(e=>e.name === currentUser);
+      if(isCollab) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'action-btn edit-btn';
+        editBtn.innerHTML = '<i class="fas fa-edit"></i> Editovat';
+        editBtn.addEventListener('click', ()=> openEditModal(key, block, 'edit'));
+        buttonsDiv.appendChild(editBtn);
+      }
+      
+      const collabBtn = document.createElement('button');
+      collabBtn.className = 'action-btn collab';
+      collabBtn.innerHTML = '<i class="fas fa-handshake"></i> Spolupracovat';
+      collabBtn.addEventListener('click', ()=> addCollaborator(key));
+      buttonsDiv.appendChild(collabBtn);
+      
+      card.appendChild(buttonsDiv);
+      timelineBlock.appendChild(card);
+      scheduleBlocks.appendChild(timelineBlock);
+    });
+  }
+
+  function openEditModal(key, block, mode="view") {
+    editingKey = key;
+    document.getElementById('modalTitle').textContent = block.title;
+    document.getElementById('modalBlockName').value = block.title;
+    document.getElementById('modalTimeFrom').value = block.timeFrom || block.time || '';
+    document.getElementById('modalTimeTo').value = block.timeTo || '';
+    document.getElementById('modalShortDesc').value = block.shortDesc || '';
+    document.getElementById('modalLongDesc').value = block.longDesc || block.description || '';
+    document.getElementById('modalGarant').value = block.garant||'';
+    document.getElementById('modalTeam').value = block.team||'';
+    document.getElementById('modalLinks').value = block.links||'';
+    // set color select if present
+    const mcol = document.getElementById('modalColor');
+    if(mcol) {
+      mcol.value = block.colorId || (defaultSchedule.find(x=>x.title===block.title)||{}).colorId || '';
+    }
+
+    const inputs = document.querySelectorAll('#blockModal input,#blockModal textarea,#blockModal select');
+    // edit mode only if collaborator and mode==='edit'
+    const isCollab = block.editors && block.editors.some(e=>e.name === currentUser);
+    const allowEdit = mode === 'edit' && isCollab;
+
+    inputs.forEach(i => {
+      i.disabled = !allowEdit;
+      if(!allowEdit) {
+        i.classList.add('bg-gray-100','opacity-50','cursor-not-allowed');
+      } else {
+        i.classList.remove('bg-gray-100','opacity-50','cursor-not-allowed');
+      }
+      // make sure displayed when switching from view to edit
+      i.style.display = '';
+      // remove any previous plain-text container
+      const prev = i.previousSibling;
+      if(prev && prev.classList && prev.classList.contains('plain-text')) prev.remove();
+    });
+
+    // show save only in editable state
+    document.getElementById('modalSave').style.display = allowEdit ? 'inline-block' : 'none';
+
+    if(mode === 'view') {
+      inputs.forEach(i => {
+        const text = document.createElement('div');
+        text.className = 'plain-text text-sm text-gray-800 mb-2';
+        text.textContent = i.value || '–';
+        i.parentNode.insertBefore(text, i);
+        i.style.display = 'none';
+      });
+    }
+
+    document.getElementById('blockModal').classList.remove('hidden');
+  }
+
+  document.getElementById('modalCancel').addEventListener('click', ()=>{
+    document.getElementById('blockModal').classList.add('hidden');
+  });
+  document.getElementById('modalCloseX').addEventListener('click', ()=>{
+    document.getElementById('blockModal').classList.add('hidden');
+  });
+  document.getElementById('modalSave').addEventListener('click', async ()=>{
+    if(!editingKey) return;
+    const updates = {
+      timeFrom: document.getElementById('modalTimeFrom').value,
+      timeTo: document.getElementById('modalTimeTo').value,
+      shortDesc: document.getElementById('modalShortDesc').value,
+      longDesc: document.getElementById('modalLongDesc').value,
+      garant: document.getElementById('modalGarant').value,
+      team: document.getElementById('modalTeam').value,
+      links: document.getElementById('modalLinks').value,
+      author: currentUser,
+      updated: new Date().toISOString()
+    };
+    // preserve existing editors list, time, and color
+    const snap = await get(ref(db, `schedule/${editingKey}`));
+    const existing = snap.val() || {};
+    updates.editors = existing.editors || [];
+    updates.time = existing.time || '';
+    updates.colorId = document.getElementById('modalColor') ? document.getElementById('modalColor').value || existing.colorId || (defaultSchedule.find(x=>x.title===existing.title)||{}).colorId : existing.colorId || 'blue';
+    updates.title = document.getElementById('modalTitle').textContent;
+    await set(ref(db, `schedule/${editingKey}`), updates);
+    document.getElementById('blockModal').classList.add('hidden');
+  });
+
+  // helper: vrátit řetězec s vedoucím dne
+  function getDayLeaderString() {
+    const now = new Date();
+    const hours = now.getHours();
+    if(hours < 12) {
+      return 'Tobiáš';
+    } else {
+      return '????';
+    }
+  }
+
+  // helper: add current user to editors array
+  async function addCollaborator(key) {
+    if(!currentUser) return;
+    const refBlock = ref(db, `schedule/${key}`);
+    const snap = await get(refBlock);
+    const b = snap.val() || {};
+    const editors = b.editors || [];
+    if(!editors.find(e=>e.name === currentUser)) {
+      editors.push({ name: currentUser, when: new Date().toISOString() });
+      await set(refBlock, { ...b, editors });
+    }
+  }
+
+  // listen for schedule changes
+  onValue(ref(db,'schedule'), snap=>{
+    const data = snap.val() || {};
+    renderSchedule(data);
+  });
+
+  // init defaults once
+  ensureScheduleDefaults();
+
+  // ideas
+  const ideaList = document.getElementById('ideaList');
+  const addIdeaBtn = document.getElementById('addIdeaBtn');
+  const newIdeaText = document.getElementById('newIdeaText');
+
+  addIdeaBtn.addEventListener('click', () => {
+    const text = newIdeaText.value.trim();
+    if(text && currentUser) {
+      writeData('ideas', { text });
+      newIdeaText.value = '';
+    }
+  });
+
+  function renderIdea(id, idea) {
+    const div = document.createElement('div');
+    div.className = 'idea-card';
+    div.innerHTML = `
+      <div class="card-text">${idea.text}</div>
+      <div class="card-meta"><i class="fas fa-user"></i> ${idea.author || '??'}</div>
+    `;
+    return div;
+  }
+
+  loadList('ideas', ideaList, renderIdea);
+
+  // wire small modal buttons for Garant and Links
+  const openGarantBtn = document.getElementById('openGarantBtn');
+  const garantModal = document.getElementById('garantModal');
+  const garantEditInput = document.getElementById('garantEditInput');
+  const garantSave = document.getElementById('garantSave');
+  const garantCancel = document.getElementById('garantCancel');
+
+  const openLinksBtn = document.getElementById('openLinksBtn');
+  const linksModal = document.getElementById('linksModal');
+  const linksEditInput = document.getElementById('linksEditInput');
+  const linksSave = document.getElementById('linksSave');
+  const linksCancel = document.getElementById('linksCancel');
+
+  if(openGarantBtn) {
+    openGarantBtn.addEventListener('click', () => {
+      garantEditInput.value = document.getElementById('modalGarant').value || '';
+      garantModal.classList.remove('hidden');
+    });
+  }
+  if(garantCancel) garantCancel.addEventListener('click', ()=> garantModal.classList.add('hidden'));
+  if(garantSave) garantSave.addEventListener('click', ()=>{
+    document.getElementById('modalGarant').value = garantEditInput.value;
+    garantModal.classList.add('hidden');
+  });
+
+  if(openLinksBtn) {
+    openLinksBtn.addEventListener('click', () => {
+      linksEditInput.value = document.getElementById('modalLinks').value || '';
+      linksModal.classList.remove('hidden');
+    });
+  }
+  if(linksCancel) linksCancel.addEventListener('click', ()=> linksModal.classList.add('hidden'));
+  if(linksSave) linksSave.addEventListener('click', ()=>{
+    document.getElementById('modalLinks').value = linksEditInput.value;
+    linksModal.classList.add('hidden');
+  });
+
+  // goals
+  const goalList = document.getElementById('goalList');
+  const addGoalBtn = document.getElementById('addGoalBtn');
+  const newGoalDesc = document.getElementById('newGoalDesc');
+  const newGoalDeadline = document.getElementById('newGoalDeadline');
+  const newGoalAssignee = document.getElementById('newGoalAssignee');
+
+  addGoalBtn.addEventListener('click', () => {
+    const desc = newGoalDesc.value.trim();
+    const deadline = newGoalDeadline.value;
+    const assignee = newGoalAssignee.value || 'Všichni';
+    if(desc && currentUser) {
+      writeData('goals', { desc, deadline, assignee });
+      newGoalDesc.value = '';
+      newGoalDeadline.value = '';
+      newGoalAssignee.value = '';
+    }
+  });
+
+  function renderGoal(id, goal) {
+    const div = document.createElement('div');
+    let html = `<div class="card-text"><strong>${goal.desc}</strong></div>`;
+    
+    // assignee
+    if(goal.assignee) {
+      html += `<div class="text-sm text-blue-600 font-semibold mb-2"><i class="fas fa-user-check"></i> Týká se: ${goal.assignee}</div>`;
+    }
+    
+    if(goal.deadline) {
+      const d = new Date(goal.deadline);
+      const now = new Date();
+      const remaining = d - now;
+      const isUrgent = remaining < 86400000; // less than 1 day
+      const isPassed = remaining < 0;
+      html += `<div class="text-sm ${isPassed ? 'text-red-600' : isUrgent ? 'text-orange-600' : 'text-green-600'} font-semibold">`;
+      html += `<i class="fas ${isPassed ? 'fa-exclamation-circle' : 'fa-hourglass-end'}"></i> `;
+      html += `Deadline: ${d.toLocaleString()} `;
+      if(remaining > 0) {
+        const days = Math.floor(remaining / 86400000);
+        const hours = Math.floor((remaining % 86400000) / 3600000);
+        html += `(${days}d ${hours}h)`;
+      } else {
+        html += `(UPLYNULO)`;
+      }
+      html += `</div>`;
+      if(!goal.completed) {
+        div.className = isPassed ? 'goal-card urgent' : (isUrgent ? 'goal-card urgent' : 'goal-card normal');
+      } else {
+        div.className = 'goal-card completed';
+      }
+    } else {
+      div.className = goal.completed ? 'goal-card completed' : 'goal-card';
+    }
+    
+    // author
+    html += `<div class="card-meta"><i class="fas fa-user"></i> ${goal.author || '??'}</div>`;
+    
+    // action buttons
+    html += `<div class="goal-actions">`;
+    if(goal.completed) {
+      html += `<button class="goal-action-btn undo-goal-btn" data-goal-id="${id}" data-action="undo"><i class="fas fa-undo"></i> Vrátit</button>`;
+    } else {
+      html += `<button class="goal-action-btn complete-goal-btn" data-goal-id="${id}" data-action="complete"><i class="fas fa-check"></i> Splněno</button>`;
+    }
+    html += `<button class="goal-action-btn delete-goal-btn" data-goal-id="${id}" data-action="delete"><i class="fas fa-trash"></i> Smazat</button>`;
+    html += `</div>`;
+    
+    div.innerHTML = html;
+    
+    // attach handlers
+    div.querySelectorAll('[data-goal-id]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const action = btn.getAttribute('data-action');
+        if(action === 'complete') {
+          const snap = await get(ref(db, `goals/${id}`));
+          const existing = snap.val() || {};
+          await set(ref(db, `goals/${id}`), { ...existing, completed: true });
+        } else if(action === 'undo') {
+          const snap = await get(ref(db, `goals/${id}`));
+          const existing = snap.val() || {};
+          await set(ref(db, `goals/${id}`), { ...existing, completed: false });
+        } else if(action === 'delete') {
+          if(confirm('Opravdu smazat tento cíl?')) {
+            await set(ref(db, `goals/${id}`), null);
+          }
+        }
+      });
+    });
+    
+    return div;
+  }
+
+  loadList('goals', goalList, renderGoal);
+
+</script>
+</body>
+</html>
