@@ -175,6 +175,16 @@
     <i class="fas fa-lightbulb text-yellow-500"></i> Nápady a brainstorm
   </h2>
   <p class="text-sm text-gray-600 mb-6">Přidávejte nápady na programy a aktivity</p>
+  <!-- sorting options -->
+  <div class="mb-4 flex items-center gap-4">
+    <label class="text-sm font-semibold text-gray-700">Řadit podle:</label>
+    <select id="sortIdeas" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600">
+      <option value="newest">Nejnovější</option>
+      <option value="oldest">Nejstarší</option>
+      <option value="popular">Nejpopulárnější</option>
+      <option value="unpopular">Nejméně populární</option>
+    </select>
+  </div>
   <!-- input area for new idea -->
   <div class="mb-4">
     <textarea id="newIdeaText" rows="2" placeholder="Popis nápadu..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"></textarea>
@@ -736,6 +746,43 @@
   const ideaList = document.getElementById('ideaList');
   const addIdeaBtn = document.getElementById('addIdeaBtn');
   const newIdeaText = document.getElementById('newIdeaText');
+  const sortIdeas = document.getElementById('sortIdeas');
+
+  let currentSort = 'newest';
+  let currentIdeaData = {};
+
+  sortIdeas.addEventListener('change', () => {
+    currentSort = sortIdeas.value;
+    renderIdeaList();
+  });
+
+  function renderIdeaList() {
+    const entries = Object.entries(currentIdeaData);
+    
+    // sort based on currentSort
+    if (currentSort === 'newest') {
+      entries.sort((a, b) => new Date(b[1].updated || 0) - new Date(a[1].updated || 0));
+    } else if (currentSort === 'oldest') {
+      entries.sort((a, b) => new Date(a[1].updated || 0) - new Date(b[1].updated || 0));
+    } else if (currentSort === 'popular') {
+      entries.sort((a, b) => {
+        const aScore = (a[1].likes || []).length - (a[1].dislikes || []).length;
+        const bScore = (b[1].likes || []).length - (b[1].dislikes || []).length;
+        return bScore - aScore;
+      });
+    } else if (currentSort === 'unpopular') {
+      entries.sort((a, b) => {
+        const aScore = (a[1].likes || []).length - (a[1].dislikes || []).length;
+        const bScore = (b[1].likes || []).length - (b[1].dislikes || []).length;
+        return aScore - bScore;
+      });
+    }
+    
+    ideaList.innerHTML = '';
+    entries.forEach(([key, item]) => {
+      ideaList.appendChild(renderIdea(key, item));
+    });
+  }
 
   addIdeaBtn.addEventListener('click', () => {
     const text = newIdeaText.value.trim();
@@ -809,7 +856,11 @@
     await set(refIdea, idea);
   }
 
-  loadList('ideas', ideaList, renderIdea);
+  // load ideas with sorting
+  onValue(ref(db, 'ideas'), snapshot => {
+    currentIdeaData = snapshot.val() || {};
+    renderIdeaList();
+  });
 
   // wire small modal buttons for Garant and Links
   const openGarantBtn = document.getElementById('openGarantBtn');
@@ -945,3 +996,4 @@
 </script>
 </body>
 </html>
+
