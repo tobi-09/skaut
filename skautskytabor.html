@@ -158,6 +158,9 @@
   <div class="tab cursor-pointer px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 flex items-center gap-2 transition" data-panel="goalsPanel">
     <i class="fas fa-bullseye"></i> Cíle
   </div>
+  <div class="tab cursor-pointer px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 flex items-center gap-2 transition" data-panel="campGoalsPanel">
+    <i class="fas fa-tree"></i> Táborové cíle
+  </div>
 </nav>
 
 <section id="schedulePanel" class="panel active p-6 bg-gradient-to-b from-slate-50 to-white">
@@ -201,6 +204,32 @@
     </button>
   </div>
   <div id="ideaList" class="space-y-3"></div>
+</section>
+
+<section id="campGoalsPanel" class="panel p-6 bg-white">
+  <h2 class="text-2xl font-bold mb-2 text-blue-900 flex items-center gap-2">
+    <i class="fas fa-tree text-green-600"></i> TÁBOROVÉ CÍLE 2026
+  </h2>
+  <div class="prose text-gray-700 space-y-3 mt-3">
+    <h3>Cíle tábora</h3>
+    <h4>Celotáborové cíle</h4>
+    <ul class="list-disc ml-5">
+      <li>Na konci tábora má každý člen základní dovednosti woodcraftu.</li>
+      <li>Proběhnou 2 programy pro práce se dřevem (sekání, řezání, vyřezávání).</li>
+      <li>Proběhnou 3 programy pro vztah s přírodou (třídění odpadu, neničení stromů, jak pomoct přírodě…).</li>
+      <li>Program na přespání v lese, kde si každý jednotlivec postaví přístřešek a přespí.</li>
+      <li>Proběhnou alespoň 2 programy s mechanikou rozdělávání ohně, kde si to osvojí každý člen (i za mokra).</li>
+      <li>Na konci tábora je každý člen fyzicky zdatnější.</li>
+      <li>Proběhne minimálně 6 programů, které donutí členy vystoupit ze své komfortní zóny fyzických možností.</li>
+      <li>Na konci tábora bude mít každý člen splněnou alespoň jednu osobní výzvu.</li>
+      <li>Na konci tábora vařící hlídky vaří bez pomoci vedoucího.</li>
+      <li>Hlídky budou mít full připravený recepty.</li>
+      <li>Vedoucí budou v kuchyni k dispozici s minimální fyzickou pomocí, ale instrukce budou rozdávat vedoucí hlídek.</li>
+      <li>Vedoucí kontrolují, že vůdci hlídek nerozkazují ale vedou.</li>
+      <li>Na konci tábora členové mají základní znalosti vaření.</li>
+      <li>Vedoucí budou během vaření sledovat členy a dávat tips and tricks a vysvětlovat, jak co funguje a předávat know-how.</li>
+    </ul>
+  </div>
 </section>
 
 <section id="goalsPanel" class="panel p-6 bg-white">
@@ -485,13 +514,32 @@
     { title: 'Večerní klid', time: '21:30', colorId: 'blue' }
   ];
 
-  // ensure schedule path contains at least our default entries
+  // ensure schedule path contains at least our default entries (dedupe duplicate items)
   async function ensureScheduleDefaults() {
     const snap = await get(ref(db,'schedule'));
     const data = snap.val() || {};
-    const titles = Object.values(data).map(b => b.title);
+
+    // remove exact duplicate records (same title + time) to prevent doubling
+    const seen = new Set();
+    for (const [key, block] of Object.entries(data)) {
+      const title = (block.title || '').trim();
+      const time = (block.timeFrom || block.time || '').trim();
+      if (!title) continue;
+      const fingerprint = `${title.toLowerCase()}|${time}`;
+      if (seen.has(fingerprint)) {
+        await set(ref(db, `schedule/${key}`), null);
+      } else {
+        seen.add(fingerprint);
+      }
+    }
+
+    // refresh data after cleanup
+    const snap2 = await get(ref(db,'schedule'));
+    const cleanedData = snap2.val() || {};
+    const existingTitles = new Set(Object.values(cleanedData).map(b => (b.title || '').trim()));
+
     defaultSchedule.forEach(item => {
-      if(!titles.includes(item.title)) {
+      if(!existingTitles.has(item.title.trim())) {
         push(ref(db,'schedule'), { 
           title: item.title, 
           time: item.time,
@@ -650,6 +698,20 @@
       collabBtn.innerHTML = '<i class="fas fa-handshake"></i> Spolupracovat';
       collabBtn.addEventListener('click', ()=> addCollaborator(key));
       buttonsDiv.appendChild(collabBtn);
+
+      if (adminUsers.includes(currentUser)) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'action-btn delete-btn';
+        deleteBtn.style.background = '#ef4444';
+        deleteBtn.style.color = 'white';
+        deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Smazat';
+        deleteBtn.addEventListener('click', async () => {
+          if (confirm('Opravdu smazat tento blok?')) {
+            await set(ref(db, `schedule/${key}`), null);
+          }
+        });
+        buttonsDiv.appendChild(deleteBtn);
+      }
       
       card.appendChild(buttonsDiv);
       timelineBlock.appendChild(card);
@@ -742,13 +804,8 @@
 
   // helper: vrátit řetězec s vedoucím dne
   function getDayLeaderString() {
-    const now = new Date();
-    const hours = now.getHours();
-    if(hours < 12) {
-      return 'Tobiáš';
-    } else {
-      return '????';
-    }
+    // vždy oba vedoucí: dopoledne Tobiáš, odpoledne Kilian
+    return 'Tobiáš + Kilian';
   }
 
   // helper: add current user to editors array
