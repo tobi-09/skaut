@@ -113,6 +113,15 @@
   }
 
   // Project management functions
+  async function loadLocalProjects() {
+    const stored = localStorage.getItem('localProjects') || '[]';
+    try {
+      window.localProjects = JSON.parse(stored);
+    } catch {
+      window.localProjects = [];
+    }
+  }
+
   async function loadUserProjects() {
     if (!window.currentUser) return;
     
@@ -127,7 +136,9 @@
       const sharedSnapshot = await get(sharedRef);
       window.sharedProjects = sharedSnapshot.exists() ? Object.values(sharedSnapshot.val()) : [];
       
+      await loadLocalProjects();
       renderProjectMenu();
+      renderDashboard();
     } catch (error) {
       console.error('Error loading projects:', error);
     }
@@ -142,6 +153,17 @@
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     renderProjectMenu();
+    showDashboard();
+  }
+
+  function showDashboard() {
+    document.getElementById('projectDashboard').classList.remove('hidden');
+    document.getElementById('workspace').classList.add('hidden');
+  }
+
+  function showWorkspace() {
+    document.getElementById('projectDashboard').classList.add('hidden');
+    document.getElementById('workspace').classList.remove('hidden');
   }
 
   function renderProjectMenu() {
@@ -177,6 +199,53 @@
     
     html += '</div>';
     menu.innerHTML = html;
+  }
+
+  function renderDashboard() {
+    const container = document.getElementById('dashboardProjectList');
+    if (!container) return;
+
+    let content = '';
+    if (window.localProjects.length === 0) {
+      content += '<p class="text-gray-500 text-sm">Žádné lokální projekty</p>';
+    } else {
+      window.localProjects.forEach(project => {
+        content += `<div class="project-item" onclick="loadLocalProject('${project.id}')">
+          <div class="project-title">${project.name || 'Bez názvu'}</div>
+          <div class="project-meta">${project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('cs-CZ') : ''}</div>
+        </div>`;
+      });
+    }
+
+    content += '<div class="project-section mt-4"><h4 class="font-semibold">Online projekty</h4></div>';
+
+    if (window.userProjects.length === 0 && window.sharedProjects.length === 0) {
+      content += '<p class="text-gray-500 text-sm">Žádné online projekty</p>';
+    }
+
+    if (window.userProjects.length > 0) {
+      content += '<div class="project-section"><h5>Moje projekty</h5>';
+      window.userProjects.forEach(project => {
+        content += `<div class="project-item" onclick="loadProject('${project.id}')">
+          <div class="project-title">${project.name || 'Bez názvu'}</div>
+          <div class="project-meta">${project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('cs-CZ') : ''}</div>
+        </div>`;
+      });
+      content += '</div>';
+    }
+
+    if (window.sharedProjects.length > 0) {
+      content += '<div class="project-section"><h5>Sdílené projekty</h5>';
+      window.sharedProjects.forEach(project => {
+        content += `<div class="project-item" onclick="loadSharedProject('${project.id}')">
+          <div class="project-title">${project.name || 'Bez názvu'}</div>
+          <div class="project-meta">${project.permissions === 'edit' ? 'Úpravy povoleny' : 'Pouze čtení'}</div>
+        </div>`;
+      });
+      content += '</div>';
+    }
+
+    container.innerHTML = content;
   }
 
   // Placeholder functions for project loading
@@ -219,6 +288,7 @@
       }
       
       toggleProjectMenu();
+      showWorkspace();
       console.log('Loaded project:', projectId);
       
     } catch (error) {
@@ -276,12 +346,30 @@
       }
       
       toggleProjectMenu();
+      showWorkspace();
       console.log('Loaded shared project:', projectId, canEdit ? 'editable' : 'read-only');
       
     } catch (error) {
       console.error('Error loading shared project:', error);
       alert('Chyba při načítání sdíleného projektu: ' + error.message);
     }
+  };
+
+  window.loadLocalProject = function(projectId) {
+    const project = window.localProjects.find(p => p.id === projectId);
+    if (!project) {
+      alert('Lokální projekt nebyl nalezen');
+      return;
+    }
+
+    window.currentProjectId = projectId;
+    localStorage.setItem('sg_meta', JSON.stringify(project.meta || {}));
+    localStorage.setItem('sg_blocks', JSON.stringify(project.blocks || []));
+    localStorage.setItem('sg_groups', JSON.stringify(project.groups || []));
+    localStorage.setItem('sg_feedback_questions', JSON.stringify(project.feedbackQuestions || []));
+
+    if (typeof renderAll === 'function') renderAll();
+    showWorkspace();
   };
 
   // Login form handlers
@@ -328,6 +416,15 @@
   window.handleGoogleLogin = async function() {
     try {
       await window.auth.signInWithGoogle();
+      hideAuthError();
+    } catch (error) {
+      showAuthError(getAuthErrorMessage(error.code));
+    }
+  };
+
+  window.handleAnonymousLogin = async function() {
+    try {
+      await window.auth.signInAnonymously();
       hideAuthError();
     } catch (error) {
       showAuthError(getAuthErrorMessage(error.code));
@@ -392,6 +489,39 @@
     try {
       const projectId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       const projectData = {
+        id: projectId,
+        name: projectName,
+        owner: window.currentUser.uid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        meta: { name: projectName },
+        blocks: [],
+        groups: [],
+        feedbackQuestions: []
+      };
+      
+      // Save to Firebase
+      await set(ref(db, `projects/${projectId}`), projectData);
+      await set(ref(db, `users/${window.currentUser.uid}/projects/${projectId}`), {
+        id: projectId,
+        name: projectName,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Save local copy
+      window.localProjects.push({ id: projectId, name: projectName, meta: projectData.meta, blocks: projectData.blocks, groups: projectData.groups, feedbackQuestions: projectData.feedbackQuestions, updatedAt: projectData.updatedAt });
+      localStorage.setItem('localProjects', JSON.stringify(window.localProjects));
+      renderDashboard();
+      
+      await loadProject(projectId);
+      toggleProjectMenu();
+      
+      console.log('Created new project:', projectId);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      alert('Chyba při vytváření projektu: ' + error.message);
+    }
+  };      const projectData = {
         id: projectId,
         name: projectName,
         owner: window.currentUser.uid,
@@ -1570,7 +1700,16 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
   <div id="printMeta" class="text-sm text-slate-700"></div>
 </div>
 
-<main class="grid md:grid-cols-[360px_1fr] gap-6">
+<div id="projectDashboard" class="p-4">
+  <div class="p-4 bg-white rounded-2xl border shadow-sm">
+    <h2 class="text-xl font-semibold mb-3">Přehled projektů</h2>
+    <button onclick="createNewProject()" class="mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg">+ Nový projekt</button>
+    <button onclick="createFromTemplate()" class="mb-4 px-4 py-2 bg-green-600 text-white rounded-lg">📋 Ze šablony</button>
+    <div id="dashboardProjectList" class="space-y-2"></div>
+  </div>
+</div>
+
+<main id="workspace" class="hidden grid md:grid-cols-[360px_1fr] gap-6">
   <aside class="space-y-4 no-print">
       
       <section class="p-3 sm:p-4 rounded-2xl border-none shadow-lg no-print mb-4" style="background: linear-gradient(135deg, #255C9E 0%, #20649B 100%); color: #F6EBD8;">
@@ -2840,41 +2979,50 @@ renderFeedbackQuestions();
   };
 
   window.selectTemplate = function(index) {
-    // For now, just create a new project with a template name
     const templateNames = ['Prázdný projekt', 'Schůzka skautů', 'Táborový program'];
     const projectName = templateNames[index] + ' - ' + new Date().toLocaleDateString('cs-CZ');
-    
-    // TODO: Load actual template data
+
     createNewProjectWithName(projectName);
     document.querySelector('.fixed.inset-0').remove();
   };
 
   async function createNewProjectWithName(name) {
     if (!window.currentUser) return;
-    
+
     try {
       const projectId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       const projectData = {
         id: projectId,
-        name: name,
+        name,
         owner: window.currentUser.uid,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        meta: { name: name },
+        meta: { name },
         blocks: [],
         groups: [],
         feedbackQuestions: []
       };
-      
+
       await set(ref(db, `projects/${projectId}`), projectData);
       await set(ref(db, `users/${window.currentUser.uid}/projects/${projectId}`), {
         id: projectId,
-        name: name,
-        updatedAt: new Date().toISOString()
+        name,
+        updatedAt: projectData.updatedAt
       });
-      
+
+      window.localProjects.push({
+        id: projectId,
+        name,
+        meta: projectData.meta,
+        blocks: projectData.blocks,
+        groups: projectData.groups,
+        feedbackQuestions: projectData.feedbackQuestions,
+        updatedAt: projectData.updatedAt
+      });
+      localStorage.setItem('localProjects', JSON.stringify(window.localProjects));
+      renderDashboard();
+
       await loadProject(projectId);
-      
     } catch (error) {
       console.error('Error creating project from template:', error);
       alert('Chyba při vytváření projektu: ' + error.message);
@@ -2894,7 +3042,7 @@ renderFeedbackQuestions();
       <button onclick="window.auth.signOut()" class="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">🚪 Odhlásit se</button>
     `;
     document.body.appendChild(menu);
-    
+
     // Close menu when clicking outside
     const closeMenu = (e) => {
       if (!menu.contains(e.target) && e.target.id !== 'btnUser') {
@@ -2904,6 +3052,7 @@ renderFeedbackQuestions();
     };
     setTimeout(() => document.addEventListener('click', closeMenu), 100);
   };
+
 
 /* Done */
 </script>
