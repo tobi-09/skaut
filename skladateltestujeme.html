@@ -355,6 +355,118 @@
     }
   };
 
+  window.loadProjectFromShareInput = async function() {
+    const raw = document.getElementById('shareOrUrlInput')?.value?.trim();
+    if (!raw) {
+      alert('Zadejte kód sdílení nebo URL.');
+      return;
+    }
+
+    let shareId = raw;
+    let syncId = null;
+    try {
+      const url = new URL(raw, window.location.origin);
+      shareId = url.searchParams.get('share') || shareId;
+      syncId = url.searchParams.get('syncId') || syncId;
+    } catch (e) {
+      // neplatná URL, očekáváme čistý kód
+    }
+
+    const shareMatch = shareId.match(/[A-Za-z0-9_-]{6,}/);
+    if (shareMatch) {
+      shareId = shareMatch[0];
+    }
+
+    const syncMatch = raw.match(/([A-Za-z0-9_-]{6,})/);
+    if (!syncId && syncMatch) {
+      // pokusíme se dešifrovat jako syncId, pokud je tam explicitně prefix /synced/ nebo query syncId
+      if (/synced/.test(raw) || /syncId/.test(raw)) {
+        syncId = syncMatch[0];
+      }
+    }
+
+    if (!shareId && !syncId) {
+      alert('Nelze extrahovat share ID nebo sync ID z vašeho vstupu.');
+      return;
+    }
+
+    try {
+      let projectData;
+      let source = '';
+      if (syncId) {
+        const syncSnapshot = await get(ref(db, `synced/${syncId}`));
+        if (!syncSnapshot.exists()) {
+          alert('Synchronizovaný projekt nebyl nalezen (invalid sync ID).');
+          return;
+        }
+        projectData = syncSnapshot.val();
+        source = 'sync';
+      } else {
+        const shareSnapshot = await get(ref(db, `shares/${shareId}`));
+        if (!shareSnapshot.exists()) {
+          alert('Sdílený projekt nebyl nalezen (invalid share ID).');
+          return;
+        }
+        const shareData = shareSnapshot.val();
+        const projectId = shareData.projectId;
+        const projectSnapshot = await get(ref(db, `projects/${projectId}`));
+        if (!projectSnapshot.exists()) {
+          alert('Projekt podle sdíleného ID nebyl nalezen.');
+          return;
+        }
+        projectData = projectSnapshot.val();
+        source = 'share';
+      }
+
+      if (!projectData) {
+        alert('Projektová data nebyla nalezena.');
+        return;
+      }
+
+      localStorage.setItem('sg_meta', JSON.stringify(projectData.meta || {}));
+      localStorage.setItem('sg_blocks', JSON.stringify(projectData.blocks || []));
+      localStorage.setItem('sg_groups', JSON.stringify(projectData.groups || []));
+      localStorage.setItem('sg_feedback_questions', JSON.stringify(projectData.feedbackQuestions || []));
+
+      window.currentProjectId = projectData.id || null;
+
+      if (window.currentUser && !window.currentUser.isAnonymous && source === 'share') {
+        const shareSnapshot = await get(ref(db, `shares/${shareId}`));
+        if (shareSnapshot.exists()) {
+          const shareData = shareSnapshot.val();
+          const projectId = shareData.projectId;
+          await set(ref(db, `users/${window.currentUser.uid}/sharedProjects/${projectId}`), {
+            id: projectId,
+            name: projectData.name || 'Sdílený projekt',
+            permissions: shareData.permission || 'view',
+            sharedAt: shareData.sharedAt || new Date().toISOString()
+          });
+        }
+      }
+
+      updateUserDisplay();
+      renderProjectMenu();
+      renderDashboard();
+
+      const titleElement = document.querySelector('h1');
+      if (titleElement) {
+        const readonlyText = (source === 'share' && shareId ? ' (pouze čtení)' : '');
+        titleElement.textContent = (projectData.name || 'Skladatel skautských her') + readonlyText;
+      }
+
+      showWorkspace();
+      alert('Projekt načtený ze sdílení/URL' + (source === 'sync' ? ' (sync)' : ' (share)') + '.');
+    } catch (error) {
+      console.error('Chyba při načítání sdíleného projektu z inputu:', error);
+      alert('Chyba při načítání sdíleného projektu: ' + error.message);
+    }
+  };
+    } catch (error) {
+      console.error('Chyba při načítání sdíleného projektu z inputu:', error);
+      alert('Chyba při načítání sdíleného projektu: ' + error.message);
+    }
+  };
+
   window.loadLocalProject = function(projectId) {
     const project = window.localProjects.find(p => p.id === projectId);
     if (!project) {
@@ -513,35 +625,6 @@
       localStorage.setItem('localProjects', JSON.stringify(window.localProjects));
       renderDashboard();
       
-      await loadProject(projectId);
-      toggleProjectMenu();
-      
-      console.log('Created new project:', projectId);
-    } catch (error) {
-      console.error('Error creating project:', error);
-      alert('Chyba při vytváření projektu: ' + error.message);
-    }
-  };      const projectData = {
-        id: projectId,
-        name: projectName,
-        owner: window.currentUser.uid,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        meta: { name: projectName },
-        blocks: [],
-        groups: [],
-        feedbackQuestions: []
-      };
-      
-      // Save to Firebase
-      await set(ref(db, `projects/${projectId}`), projectData);
-      await set(ref(db, `users/${window.currentUser.uid}/projects/${projectId}`), {
-        id: projectId,
-        name: projectName,
-        updatedAt: new Date().toISOString()
-      });
-      
-      // Load the new project
       await loadProject(projectId);
       toggleProjectMenu();
       
@@ -1705,6 +1788,16 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
     <h2 class="text-xl font-semibold mb-3">Přehled projektů</h2>
     <button onclick="createNewProject()" class="mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg">+ Nový projekt</button>
     <button onclick="createFromTemplate()" class="mb-4 px-4 py-2 bg-green-600 text-white rounded-lg">📋 Ze šablony</button>
+
+    <div class="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+      <label for="shareOrUrlInput" class="block text-sm font-medium text-slate-700 mb-2">Načíst projekt ze sdílení / odkazu</label>
+      <div class="flex gap-2">
+        <input id="shareOrUrlInput" type="text" placeholder="Vložte kód (např. abc123) nebo URL" class="flex-1 p-2 border border-gray-300 rounded-lg" />
+        <button onclick="loadProjectFromShareInput()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Načíst</button>
+      </div>
+      <p class="text-xs text-gray-500 mt-2">Můžete vložit odkaz jako <code>?share=abc123</code> nebo čistý kód share ID.</p>
+    </div>
+
     <div id="dashboardProjectList" class="space-y-2"></div>
   </div>
 </div>
