@@ -26,6 +26,7 @@
   window.currentProjectId = null;
   window.userProjects = [];
   window.sharedProjects = [];
+  window.syncedProjects = [];
   window.isAnonymous = false;
 
   // Authentication functions
@@ -52,6 +53,19 @@
       }
     },
 
+    async signUpWithEmail(email, password, name) {
+      try {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        const user = result.user;
+        await updateProfile(user, { displayName: name });
+        console.log('Sign up successful');
+        return user;
+      } catch (error) {
+        console.error('Sign up error:', error);
+        throw error;
+      }
+    },
+
     async signInWithGoogle() {
       try {
         const result = await signInWithPopup(auth, googleProvider);
@@ -74,10 +88,123 @@
     }
   };
 
+  // Process pending share after auth
+  async function processPendingShare() {
+    const shareId = localStorage.getItem('pendingShareId');
+    const syncId = localStorage.getItem('pendingSyncId');
+    
+    if (!shareId && !syncId) return;
+
+    try {
+      let projectData;
+      let source = '';
+      let shareData = null;
+      let projectId = null;
+      
+      if (shareId) {
+        const shareSnapshot = await get(ref(db, `shares/${shareId}`));
+        if (shareSnapshot.exists()) {
+          shareData = shareSnapshot.val();
+          projectId = shareData.projectId;
+          const projectSnapshot = await get(ref(db, `projects/${projectId}`));
+          if (projectSnapshot.exists()) {
+            projectData = projectSnapshot.val();
+            source = 'share';
+          }
+        }
+      } else if (syncId) {
+        const syncSnapshot = await get(ref(db, `synced/${syncId}`));
+        if (syncSnapshot.exists()) {
+          projectData = syncSnapshot.val();
+          projectId = syncId;
+          source = 'sync';
+        }
+      }
+      
+      if (!projectData) return;
+
+      // Set global variables
+      window.currentProjectId = projectId;
+      setProjectStateFromData(projectData);
+      
+      // For sync, set currentSyncId
+      if (source === 'sync') {
+        window.currentSyncId = syncId;
+      }
+
+      // Add to local projects for both logged in and anonymous users
+      const existingIndex = window.localProjects.findIndex(p => p.id === projectId);
+      const projectEntry = {
+        id: projectId,
+        name: projectData.name || projectData.meta?.name || 'Synchronizovaný projekt',
+        meta: projectData.meta || {},
+        blocks: projectData.blocks || [],
+        groups: projectData.groups || [],
+        feedbackQuestions: projectData.feedbackQuestions || [],
+        updatedAt: shareData?.sharedAt || new Date().toISOString(),
+        isShared: source === 'share',
+        permission: shareData?.permission || 'edit'
+      };
+      
+      if (existingIndex >= 0) {
+        window.localProjects[existingIndex] = projectEntry;
+      } else {
+        window.localProjects.push(projectEntry);
+      }
+      localStorage.setItem('localProjects', JSON.stringify(window.localProjects));
+
+      // Update UI
+      renderProjectMenu();
+      if (typeof window.renderAll === 'function') {
+        setTimeout(() => { window.renderAll(); }, 100);
+      }
+
+      // Update header title
+      const titleElement = document.querySelector('h1');
+      if (titleElement) {
+        const readonlyText = (source === 'share' && shareData?.permission === 'view') ? ' (pouze čtení)' : '';
+        titleElement.textContent = (projectData.name || projectData.meta?.name || 'Skladatel skautských her') + readonlyText;
+      }
+
+      // Set view mode based on permission
+      if (source === 'share' && shareData?.permission === 'view') {
+        viewMode = 'read';
+        saveToLocal('sg_view_mode', viewMode);
+      } else {
+        viewMode = 'edit';
+        saveToLocal('sg_view_mode', viewMode);
+      }
+
+      // Update UI selects
+      document.getElementById('blockSortSelect').value = blockSortMode;
+      document.getElementById('viewModeSelect').value = viewMode;
+      document.getElementById('metaName').value = meta.name || '';
+      document.getElementById('metaAuthor').value = meta.author || '';
+      document.getElementById('metaAge').value = meta.age || '';
+
+      // Switch to workspace view
+      showWorkspace();
+
+      console.log('Loaded project:', projectId, 'source:', source);
+    } catch (e) {
+      console.error('Chyba při načítání projektu:', e);
+      alert('Chyba při načítání projektu: ' + e.message);
+    } finally {
+      // Remove pending items only for logged in users
+      if (!window.isAnonymous) {
+        localStorage.removeItem('pendingShareId');
+        localStorage.removeItem('pendingSyncId');
+      }
+    }
+  }
+
   // Auth state listener
   onAuthStateChanged(auth, async (user) => {
     window.currentUser = user;
     window.isAnonymous = user ? user.isAnonymous : false;
+    
+    // Load local projects for all users
+    await loadLocalProjects();
     
     if (user) {
       console.log('User signed in:', user.uid, user.displayName || 'Anonymous');
@@ -89,6 +216,9 @@
       updateUserDisplay();
       showLoginScreen();
     }
+    
+    // Process pending share for both logged in and anonymous users
+    await processPendingShare();
   });
 
   function updateUserDisplay() {
@@ -99,15 +229,15 @@
     
     if (window.currentUser) {
       if (window.isAnonymous) {
-        userDisplay.textContent = '👤 Anonym';
+        userDisplay.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Anonym';
         userBtn.title = 'Anonymní uživatel - omezené funkce';
       } else {
         const name = window.currentUser.displayName || window.currentUser.email || 'Uživatel';
-        userDisplay.textContent = '👤 ' + (name.length > 10 ? name.substring(0, 10) + '...' : name);
+        userDisplay.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> ' + (name.length > 10 ? name.substring(0, 10) + '...' : name);
         userBtn.title = name;
       }
     } else {
-      userDisplay.textContent = '👤';
+      userDisplay.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
       userBtn.title = 'Nepřihlášen';
     }
   }
@@ -136,6 +266,11 @@
       const sharedSnapshot = await get(sharedRef);
       window.sharedProjects = sharedSnapshot.exists() ? Object.values(sharedSnapshot.val()) : [];
       
+      // Load synced projects
+      const syncedRef = ref(db, `users/${window.currentUser.uid}/syncedProjects`);
+      const syncedSnapshot = await get(syncedRef);
+      window.syncedProjects = syncedSnapshot.exists() ? Object.values(syncedSnapshot.val()) : [];
+      
       await loadLocalProjects();
       renderProjectMenu();
       renderDashboard();
@@ -144,28 +279,32 @@
     }
   }
 
-  function showLoginScreen() {
+  window.showLoginScreen = function() {
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('mainApp').classList.add('hidden');
-  }
+  };
 
-  function showMainApp() {
+  window.showMainApp = function() {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     renderProjectMenu();
-    showDashboard();
-  }
+    window.showDashboard();
+  };
 
-  function showDashboard() {
+  window.showDashboard = function() {
     document.getElementById('projectDashboard').classList.remove('hidden');
     document.getElementById('workspace').classList.add('hidden');
-  }
+    // Skryj tlačítka pro práci s projektem
+    document.querySelectorAll('.project-tools').forEach(btn => btn.classList.add('hidden'));
+  };
 
-  function showWorkspace() {
+  window.showWorkspace = function() {
     document.getElementById('projectDashboard').classList.add('hidden');
     document.getElementById('workspace').classList.remove('hidden');
-  }
-
+    setTimeout(() => initTextareaAutosize(), 0);
+    // Zobraz tlačítka pro práci s projektem
+    document.querySelectorAll('.project-tools').forEach(btn => btn.classList.remove('hidden'));
+  };
   function renderProjectMenu() {
     const menu = document.getElementById('projectMenu');
     if (!menu) return;
@@ -176,9 +315,9 @@
       html += '<p class="text-gray-500 text-sm">Žádné projekty</p>';
     } else {
       window.userProjects.forEach(project => {
-        html += `<div class="project-item" onclick="loadProject('${project.id}')">
-          <div class="project-title">${project.name || 'Bez názvu'}</div>
-          <div class="project-meta">${project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('cs-CZ') : ''}</div>
+        html += `<div class="project-card" onclick="loadProject('${project.id}')">
+          <div class="project-card-title">${project.name || 'Bez názvu'}</div>
+          <div class="project-card-meta">${project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('cs-CZ') : 'Vlastní projekt'}</div>
         </div>`;
       });
     }
@@ -190,9 +329,9 @@
     } else {
       window.sharedProjects.forEach(project => {
         const canEdit = project.permissions === 'edit';
-        html += `<div class="project-item ${canEdit ? '' : 'readonly'}" onclick="loadSharedProject('${project.id}')">
-          <div class="project-title">${project.name || 'Bez názvu'}</div>
-          <div class="project-meta">${canEdit ? 'Úpravy povoleny' : 'Pouze čtení'}</div>
+        html += `<div class="project-card ${canEdit ? '' : 'readonly'}" onclick="loadSharedProject('${project.id}')">
+          <div class="project-card-title">${project.name || 'Bez názvu'}</div>
+          <div class="project-card-meta">${canEdit ? 'Úpravy povoleny' : 'Pouze čtení'}</div>
         </div>`;
       });
     }
@@ -205,41 +344,67 @@
     const container = document.getElementById('dashboardProjectList');
     if (!container) return;
 
+    const projectIcon = 'https://tobi-09.github.io/skaut/logo%20skaut%20web.png';
     let content = '';
+    
+    // Místní projekty
     if (window.localProjects.length === 0) {
       content += '<p class="text-gray-500 text-sm">Žádné lokální projekty</p>';
     } else {
       window.localProjects.forEach(project => {
-        content += `<div class="project-item" onclick="loadLocalProject('${project.id}')">
-          <div class="project-title">${project.name || 'Bez názvu'}</div>
-          <div class="project-meta">${project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('cs-CZ') : ''}</div>
+        content += `<div class="project-card project-card-inline" onclick="loadLocalProject('${project.id}')">
+          <div>
+            <div class="project-card-title">${project.name || 'Bez názvu'}</div>
+            <div class="project-card-meta text-xs text-gray-500">${project.isShared ? `Sdílený${project.permission === 'view' ? ' (pouze čtení)' : ''}` : (project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('cs-CZ') : 'Místní')}</div>
+          </div>
         </div>`;
       });
     }
 
-    content += '<div class="project-section mt-4"><h4 class="font-semibold">Online projekty</h4></div>';
+    content += '<div class="project-section mt-4"><h4 class="font-semibold">📡 Online projekty</h4></div>';
 
-    if (window.userProjects.length === 0 && window.sharedProjects.length === 0) {
+    if (window.userProjects.length === 0 && window.sharedProjects.length === 0 && window.syncedProjects.length === 0) {
       content += '<p class="text-gray-500 text-sm">Žádné online projekty</p>';
     }
 
+    // Vaše projekty
     if (window.userProjects.length > 0) {
-      content += '<div class="project-section"><h5>Moje projekty</h5>';
+      content += '<div class="project-section"><h5 class="font-semibold text-sm mb-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Moje projekty</h5>';
       window.userProjects.forEach(project => {
-        content += `<div class="project-item" onclick="loadProject('${project.id}')">
-          <div class="project-title">${project.name || 'Bez názvu'}</div>
-          <div class="project-meta">${project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('cs-CZ') : ''}</div>
+        content += `<div class="project-card project-card-inline" onclick="loadProject('${project.id}')">
+          <div>
+            <div class="project-card-title">${project.name || 'Bez názvu'}</div>
+            <div class="project-card-meta text-xs text-gray-500">${project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('cs-CZ') : 'Vlastní'}</div>
+          </div>
         </div>`;
       });
       content += '</div>';
     }
 
+    // Sdílené projekty
     if (window.sharedProjects.length > 0) {
-      content += '<div class="project-section"><h5>Sdílené projekty</h5>';
+      content += '<div class="project-section"><h5 class="font-semibold text-sm mb-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Sdílené projekty</h5>';
       window.sharedProjects.forEach(project => {
-        content += `<div class="project-item" onclick="loadSharedProject('${project.id}')">
-          <div class="project-title">${project.name || 'Bez názvu'}</div>
-          <div class="project-meta">${project.permissions === 'edit' ? 'Úpravy povoleny' : 'Pouze čtení'}</div>
+        content += `<div class="project-card project-card-inline ${project.permissions === 'edit' ? '' : 'readonly'}" onclick="loadSharedProject('${project.id}')">
+          <div>
+            <div class="project-card-title">${project.name || 'Bez názvu'}</div>
+            <div class="project-card-meta text-xs text-gray-500">${project.permissions === 'edit' ? 'Úpravy povoleny' : 'Pouze čtení'}</div>
+          </div>
+        </div>`;
+      });
+      content += '</div>';
+    }
+
+    // Synchronizované projekty
+    if (window.syncedProjects.length > 0) {
+      content += '<div class="project-section"><h5 class="font-semibold text-sm mb-2">🔄 Synchronizované projekty</h5>';
+      window.syncedProjects.forEach(project => {
+        content += `<div class="project-item flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer" onclick="loadSyncedProject('${project.id}')">
+          <img src="${project.icon || projectIcon}" alt="Sync" class="h-10 w-7.5 rounded">
+          <div class="flex-1">
+            <div class="project-title font-medium">${project.name || 'Bez názvu'}</div>
+            <div class="project-meta text-xs text-gray-500">📡 Synchronizované</div>
+          </div>
         </div>`;
       });
       content += '</div>';
@@ -249,6 +414,24 @@
   }
 
   // Placeholder functions for project loading
+  function setProjectStateFromData(projectData) {
+    if (!projectData || typeof projectData !== 'object') return;
+    window.currentProjectId = projectData.id || window.currentProjectId;
+    const metaData = projectData.meta || {};
+    meta.name = metaData.name || projectData.name || meta.name || 'Skladatel skautských her';
+    meta.author = metaData.author || meta.author || '';
+    meta.age = metaData.age || meta.age || '';
+    blocks = Array.isArray(projectData.blocks) ? projectData.blocks : [];
+    groups = Array.isArray(projectData.groups) ? projectData.groups : groups;
+    blockSortMode = projectData.blockSortMode || 'groups';
+    viewMode = projectData.viewMode || 'edit';
+    if (typeof window.feedbackQuestions !== 'undefined') {
+      window.feedbackQuestions = Array.isArray(projectData.feedbackQuestions) ? projectData.feedbackQuestions : window.feedbackQuestions || [];
+    }
+    saveAll();
+    saveToLocal('sg_feedback_questions', Array.isArray(projectData.feedbackQuestions) ? projectData.feedbackQuestions : (window.feedbackQuestions || []));
+  }
+
   window.loadProject = async function(projectId) {
     if (!projectId || !window.currentUser) return;
     
@@ -269,22 +452,16 @@
         return;
       }
       
-      // Load data into localStorage and memory
-      window.currentProjectId = projectId;
-      localStorage.setItem('sg_meta', JSON.stringify(projectData.meta || {}));
-      localStorage.setItem('sg_blocks', JSON.stringify(projectData.blocks || []));
-      localStorage.setItem('sg_groups', JSON.stringify(projectData.groups || []));
-      localStorage.setItem('sg_feedback_questions', JSON.stringify(projectData.feedbackQuestions || []));
+      setProjectStateFromData(projectData);
       
       // Update UI
       if (typeof renderAll === 'function') {
         renderAll();
       }
       
-      // Update header title
       const titleElement = document.querySelector('h1');
       if (titleElement) {
-        titleElement.textContent = projectData.name || 'Skladatel skautských her';
+        titleElement.textContent = meta.name || 'Skladatel skautských her';
       }
       
       toggleProjectMenu();
@@ -292,7 +469,7 @@
       console.log('Loaded project:', projectId);
       
     } catch (error) {
-      console.error('Error loading project:', error);
+      console.error('Error loading projekt:', error);
       alert('Chyba při načítání projektu: ' + error.message);
     }
   };
@@ -319,24 +496,18 @@
       }
       
       // Load data (read-only if no edit permission)
-      window.currentProjectId = projectId;
+      setProjectStateFromData(projectData);
       const canEdit = userSharedProjects.permissions === 'edit';
-      
-      localStorage.setItem('sg_meta', JSON.stringify(projectData.meta || {}));
-      localStorage.setItem('sg_blocks', JSON.stringify(projectData.blocks || []));
-      localStorage.setItem('sg_groups', JSON.stringify(projectData.groups || []));
-      localStorage.setItem('sg_feedback_questions', JSON.stringify(projectData.feedbackQuestions || []));
       
       // Update UI
       if (typeof renderAll === 'function') {
         renderAll();
       }
       
-      // Update header title with read-only indicator
       const titleElement = document.querySelector('h1');
       if (titleElement) {
         const readonlyText = canEdit ? '' : ' (pouze čtení)';
-        titleElement.textContent = (projectData.name || 'Skladatel skautských her') + readonlyText;
+        titleElement.textContent = meta.name + readonlyText;
       }
       
       // Disable editing if read-only
@@ -352,6 +523,51 @@
     } catch (error) {
       console.error('Error loading shared project:', error);
       alert('Chyba při načítání sdíleného projektu: ' + error.message);
+    }
+  };
+
+  window.loadSyncedProject = async function(syncId) {
+    if (!syncId || !window.currentUser) return;
+    
+    try {
+      const syncRef = ref(db, `synced/${syncId}`);
+      const snapshot = await get(syncRef);
+      
+      if (!snapshot.exists()) {
+        alert('Synchronizovaný projekt nebyl nalezen');
+        return;
+      }
+      
+      const projectData = snapshot.val();
+      
+      // Check if user has access to this synced project
+      const userSyncedProject = window.syncedProjects.find(p => p.id === syncId);
+      if (!userSyncedProject) {
+        alert('Nemáte přístup k tomuto synchronizovanému projektu');
+        return;
+      }
+      
+      // Load data into localStorage
+setProjectStateFromData(projectData);
+      window.currentProjectId = syncId;
+       
+      // Update UI
+      if (typeof renderAll === 'function') {
+        renderAll();
+      }
+      
+      const titleElement = document.querySelector('h1');
+      if (titleElement) {
+        const projectName = meta.name;
+        titleElement.textContent = projectName + ' (synchronizovaný)';
+      }
+      
+      showWorkspace();
+      console.log('Loaded synced project:', syncId);
+      
+    } catch (error) {
+      console.error('Error loading synced project:', error);
+      alert('Chyba při načítání synchronizovaného projektu: ' + error.message);
     }
   };
 
@@ -393,53 +609,70 @@
     try {
       let projectData;
       let source = '';
+      let shareData = null;
       if (syncId) {
         const syncSnapshot = await get(ref(db, `synced/${syncId}`));
-        if (!syncSnapshot.exists()) {
-          alert('Synchronizovaný projekt nebyl nalezen (invalid sync ID).');
-          return;
+        if (syncSnapshot.exists()) {
+          projectData = syncSnapshot.val();
+          source = 'sync';
+        } else {
+          // fallback: zkusit jako shareId
+          const shareSnapshot = await get(ref(db, `shares/${syncId}`));
+          if (shareSnapshot.exists()) {
+            shareData = shareSnapshot.val();
+            const projectId = shareData.projectId;
+            const projectSnapshot = await get(ref(db, `projects/${projectId}`));
+            if (projectSnapshot.exists()) {
+              projectData = projectSnapshot.val();
+              source = 'share';
+            }
+          }
         }
-        projectData = syncSnapshot.val();
-        source = 'sync';
-      } else {
+      } else if (shareId) {
         const shareSnapshot = await get(ref(db, `shares/${shareId}`));
-        if (!shareSnapshot.exists()) {
-          alert('Sdílený projekt nebyl nalezen (invalid share ID).');
-          return;
+        if (shareSnapshot.exists()) {
+          shareData = shareSnapshot.val();
+          const projectId = shareData.projectId;
+          const projectSnapshot = await get(ref(db, `projects/${projectId}`));
+          if (projectSnapshot.exists()) {
+            projectData = projectSnapshot.val();
+            source = 'share';
+          }
+        } else {
+          // fallback: zkusit jako syncId
+          const syncSnapshot = await get(ref(db, `synced/${shareId}`));
+          if (syncSnapshot.exists()) {
+            projectData = syncSnapshot.val();
+            source = 'sync';
+          }
         }
-        const shareData = shareSnapshot.val();
-        const projectId = shareData.projectId;
-        const projectSnapshot = await get(ref(db, `projects/${projectId}`));
-        if (!projectSnapshot.exists()) {
-          alert('Projekt podle sdíleného ID nebyl nalezen.');
-          return;
-        }
-        projectData = projectSnapshot.val();
-        source = 'share';
       }
 
       if (!projectData) {
-        alert('Projektová data nebyla nalezena.');
+        alert('Projekt nebyl nalezen (invalid share ID nebo sync ID).');
         return;
       }
 
-      localStorage.setItem('sg_meta', JSON.stringify(projectData.meta || {}));
-      localStorage.setItem('sg_blocks', JSON.stringify(projectData.blocks || []));
-      localStorage.setItem('sg_groups', JSON.stringify(projectData.groups || []));
-      localStorage.setItem('sg_feedback_questions', JSON.stringify(projectData.feedbackQuestions || []));
-
-      window.currentProjectId = projectData.id || null;
-
-      if (window.currentUser && !window.currentUser.isAnonymous && source === 'share') {
-        const shareSnapshot = await get(ref(db, `shares/${shareId}`));
-        if (shareSnapshot.exists()) {
-          const shareData = shareSnapshot.val();
+      setProjectStateFromData(projectData);
+      
+      // Zapiš přístup do Firebase
+      if (window.currentUser && !window.currentUser.isAnonymous) {
+        if (source === 'share' && shareData) {
           const projectId = shareData.projectId;
           await set(ref(db, `users/${window.currentUser.uid}/sharedProjects/${projectId}`), {
             id: projectId,
-            name: projectData.name || 'Sdílený projekt',
+            name: projectData.meta?.name || projectData.name || 'Sdílený projekt',
             permissions: shareData.permission || 'view',
             sharedAt: shareData.sharedAt || new Date().toISOString()
+          });
+        } else if (source === 'sync') {
+          // Pro synced projekty zapiš do syncedProjects
+          const syncProjectId = syncId || shareId;
+          await set(ref(db, `users/${window.currentUser.uid}/syncedProjects/${syncProjectId}`), {
+            id: syncProjectId,
+            name: projectData.meta?.name || projectData.name || 'Synchronizovaný projekt',
+            syncedAt: new Date().toISOString(),
+            icon: 'https://tobi-09.github.io/skaut/logo%20skaut%20web.png'
           });
         }
       }
@@ -450,17 +683,12 @@
 
       const titleElement = document.querySelector('h1');
       if (titleElement) {
-        const readonlyText = (source === 'share' && shareId ? ' (pouze čtení)' : '');
-        titleElement.textContent = (projectData.name || 'Skladatel skautských her') + readonlyText;
+        const readonlyText = (source === 'share' && shareData?.permission === 'view') ? ' (pouze čtení)' : '';
+        const projectName = projectData.meta?.name || projectData.name || 'Skladatel skautských her';
+        titleElement.textContent = projectName + readonlyText;
       }
 
-      showWorkspace();
-      alert('Projekt načtený ze sdílení/URL' + (source === 'sync' ? ' (sync)' : ' (share)') + '.');
-    } catch (error) {
-      console.error('Chyba při načítání sdíleného projektu z inputu:', error);
-      alert('Chyba při načítání sdíleného projektu: ' + error.message);
-    }
-  };
+      alert('Projekt načtený ze sdílení/URL prosím obnovte stránku.' + (source === 'sync' ? ' (sync)' : ' (share)') + '.');
     } catch (error) {
       console.error('Chyba při načítání sdíleného projektu z inputu:', error);
       alert('Chyba při načítání sdíleného projektu: ' + error.message);
@@ -474,11 +702,20 @@
       return;
     }
 
+    setProjectStateFromData(project);
     window.currentProjectId = projectId;
-    localStorage.setItem('sg_meta', JSON.stringify(project.meta || {}));
-    localStorage.setItem('sg_blocks', JSON.stringify(project.blocks || []));
-    localStorage.setItem('sg_groups', JSON.stringify(project.groups || []));
-    localStorage.setItem('sg_feedback_questions', JSON.stringify(project.feedbackQuestions || []));
+
+    // For shared projects with view-only permission, switch to read mode
+    if (project.isShared && project.permission === 'view') {
+      viewMode = 'read';
+      saveToLocal('sg_view_mode', viewMode);
+      document.getElementById('viewModeSelect').value = 'read';
+    } else {
+      // Allow editing for all other projects
+      viewMode = 'edit';
+      saveToLocal('sg_view_mode', viewMode);
+      document.getElementById('viewModeSelect').value = 'edit';
+    }
 
     if (typeof renderAll === 'function') renderAll();
     showWorkspace();
@@ -498,7 +735,9 @@
       await window.auth.signInWithEmail(email, password);
       hideAuthError();
     } catch (error) {
-      showAuthError(getAuthErrorMessage(error.code));
+      console.error('Login error:', error);
+      const errorCode = error.code || 'unknown';
+      showAuthError(getAuthErrorMessage(errorCode));
     }
   };
 
@@ -521,7 +760,9 @@
       await window.auth.signUpWithEmail(email, password, name);
       hideAuthError();
     } catch (error) {
-      showAuthError(getAuthErrorMessage(error.code));
+      console.error('Sign up error:', error);
+      const errorCode = error.code || 'unknown';
+      showAuthError(getAuthErrorMessage(errorCode));
     }
   };
 
@@ -530,7 +771,9 @@
       await window.auth.signInWithGoogle();
       hideAuthError();
     } catch (error) {
-      showAuthError(getAuthErrorMessage(error.code));
+      console.error('Google login error:', error);
+      const errorCode = error.code || 'unknown';
+      showAuthError(getAuthErrorMessage(errorCode));
     }
   };
 
@@ -539,7 +782,9 @@
       await window.auth.signInAnonymously();
       hideAuthError();
     } catch (error) {
-      showAuthError(getAuthErrorMessage(error.code));
+      console.error('Anonymous login error:', error);
+      const errorCode = error.code || 'unknown';
+      showAuthError(getAuthErrorMessage(errorCode));
     }
   };
 
@@ -574,7 +819,7 @@
       case 'auth/email-already-in-use':
         return 'Tento email je již registrován';
       case 'auth/weak-password':
-        return 'Heslo je příliš slabé';
+        return 'Heslo je příliš slabé (min. 6 znaků)';
       case 'auth/invalid-email':
         return 'Neplatný email';
       case 'auth/popup-closed-by-user':
@@ -583,8 +828,17 @@
         return 'Vyskakovací okno bylo blokováno prohlížečem';
       case 'auth/cancelled-popup-request':
         return 'Přihlášení bylo zrušeno';
+      case 'auth/invalid-credential':
+        return 'Neplatné přihlašovací údaje';
+      case 'auth/operation-not-allowed':
+        return 'Tato operace není povolena';
+      case 'auth/too-many-requests':
+        return 'Příliš mnoho pokusů. Zkuste později.';
+      case undefined:
+      case null:
+        return 'Chyba přihlášení. Zkuste později.';
       default:
-        return 'Chyba přihlášení: ' + code;
+        return 'Chyba přihlášení: ' + (code || 'Neznámá chyba');
     }
   }
 
@@ -644,6 +898,8 @@
         meta: JSON.parse(localStorage.getItem('sg_meta') || '{}'),
         blocks: JSON.parse(localStorage.getItem('sg_blocks') || '[]'),
         groups: JSON.parse(localStorage.getItem('sg_groups') || '[]'),
+        blockSortMode: blockSortMode,
+        viewMode: viewMode,
         feedbackQuestions: JSON.parse(localStorage.getItem('sg_feedback_questions') || '[]'),
         updatedAt: new Date().toISOString()
       };
@@ -742,7 +998,7 @@
           text: url,
           width: 150,
           height: 150,
-          colorDark: "#255C9E",
+          colorDark: "#294885",
           colorLight: "#ffffff",
           correctLevel: QRCode.CorrectLevel.H
         });
@@ -845,7 +1101,7 @@
               const pct = ((count / ratings.length) * 100).toFixed(0);
               resultsHtml += `<div class="flex items-center gap-2">
                 <span class="w-6">${i}★</span>
-                <div class="flex-1 bg-gray-300 rounded h-4" style="background: linear-gradient(to right, #255C9E ${pct}%, #e5e5e5 ${pct}%)"></div>
+                <div class="flex-1 bg-gray-300 rounded h-4" style="background: linear-gradient(to right, #294885 ${pct}%, #e5e5e5 ${pct}%)"></div>
                 <span>${count} (${pct}%)</span>
               </div>`;
             }
@@ -857,7 +1113,7 @@
           if(answers.length > 0) {
             resultsHtml += `<div class="space-y-2">`;
             answers.forEach(answer => {
-              resultsHtml += `<div class="p-2 bg-white rounded border-l-2 border-blue-500">
+              resultsHtml += `<div class="p-2 bg-cream rounded border-l-2 border-blue-500">
                 <p class="text-sm">"${answer}"</p>
               </div>`;
             });
@@ -1019,14 +1275,14 @@
       Object.entries(data).forEach(([id, confirmation]) => {
         const attendanceLabel = {
           'jedu': '✓ Určitě přijdu',
-          'pozde': '⏱️ Přijdu později',
+          'pozde': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline></svg> Přijdu později',
           'nejedu': '✗ Nemohu přijít'
         }[confirmation.attendance] || confirmation.attendance || 'Neuvedeno';
         
         html += `<div class="p-3 bg-gray-50 rounded border-l-4 border-green-600 mt-2">
           <p class="font-semibold text-sm text-slate-900">${confirmation.name || 'N/A'}</p>
           <p class="text-xs text-slate-600 mb-2">${confirmation.email || 'N/A'}</p>
-          <p class="text-xs font-medium text-slate-700 mb-1">📋 ${attendanceLabel}</p>
+          <p class="text-xs font-medium text-slate-700 mb-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> ${attendanceLabel}</p>
           ${confirmation.note ? `<p class="text-xs text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-1">„${confirmation.note}"</p>` : ''}
           ${confirmation.confirmedAt ? `<p class="text-xs text-slate-500 mt-2">✓ ${new Date(confirmation.confirmedAt).toLocaleDateString('cs-CZ')}</p>` : ''}
         </div>`;
@@ -1051,27 +1307,41 @@
     }
     
     // Show permission selection modal
+    // Note: Can share even in read-only mode to allow re-sharing
     showShareModal();
   };
 
   window.shareProject = async function(permission) {
-    const shareId = Math.random().toString(36).substring(2, 9);
+    if (!window.currentUser) {
+      alert('Pro sdílení projektu se musíte přihlásit');
+      return;
+    }
+    
+    if (!window.currentProjectId) {
+      alert('Žádný projekt není otevřený');
+      return;
+    }
+    
+    const syncId = Math.random().toString(36).substring(2, 9);
     
     try {
       const projectData = {
-        projectId: window.currentProjectId,
-        sharedBy: window.currentUser.uid,
+        meta: meta,
+        blocks: blocks,
+        groups: groups,
+        feedbackQuestions: window.feedbackQuestions || [],
+        publishedAt: new Date().toISOString(),
         permission: permission, // 'view' or 'edit'
-        sharedAt: new Date().toISOString()
+        sharedBy: window.currentUser.uid
       };
       
-      await set(ref(db, `shares/${shareId}`), projectData);
+      await set(ref(db, `synced/${syncId}`), projectData);
       
-      const url = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
+      const url = `${window.location.origin}${window.location.pathname}?syncId=${syncId}`;
       
       document.getElementById('programShareArea').classList.remove('hidden');
       document.getElementById('programUrlInput').value = url;
-      document.getElementById('syncIdInput').value = shareId;
+      document.getElementById('syncIdInput').value = syncId;
       
       const qrContainer = document.getElementById('programQR');
       if(qrContainer) {
@@ -1080,7 +1350,7 @@
           text: url,
           width: 150,
           height: 150,
-          colorDark: "#255C9E",
+          colorDark: "#294885",
           colorLight: "#ffffff",
           correctLevel: QRCode.CorrectLevel.H
         });
@@ -1089,7 +1359,8 @@
       hideShareModal();
       alert('Projekt sdílen! ' + (permission === 'view' ? 'Pouze pro čtení' : 'Úpravy povoleny') + '\n\nOdkaz: ' + url);
     } catch (e) {
-      alert('Chyba: ' + e.message);
+      console.error('Chyba při sdílení:', e);
+      alert('Chyba při sdílení: ' + e.message);
     }
   };
 
@@ -1160,78 +1431,15 @@
     
     // Handle new share system
     if(shareId) {
-      (async () => {
-        try {
-          const shareSnapshot = await get(ref(db, `shares/${shareId}`));
-          if(shareSnapshot.exists()) {
-            const shareData = shareSnapshot.val();
-            const projectId = shareData.projectId;
-            
-            // Load the project
-            const projectSnapshot = await get(ref(db, `projects/${projectId}`));
-            if(projectSnapshot.exists()) {
-              const projectData = projectSnapshot.val();
-              
-              // Load data into localStorage
-              localStorage.setItem('sg_meta', JSON.stringify(projectData.meta || {}));
-              localStorage.setItem('sg_blocks', JSON.stringify(projectData.blocks || []));
-              localStorage.setItem('sg_groups', JSON.stringify(projectData.groups || []));
-              localStorage.setItem('sg_feedback_questions', JSON.stringify(projectData.feedbackQuestions || []));
-              
-              window.currentProjectId = projectId;
-              
-              // If user is logged in, add to their shared projects
-              if(window.currentUser && !window.currentUser.isAnonymous) {
-                await set(ref(db, `users/${window.currentUser.uid}/sharedProjects/${projectId}`), {
-                  id: projectId,
-                  name: projectData.name || 'Sdílený projekt',
-                  permissions: shareData.permission,
-                  sharedAt: shareData.sharedAt
-                });
-              }
-              
-              // Update UI
-              if(typeof window.renderAll === 'function') {
-                setTimeout(() => { window.renderAll(); }, 100);
-              }
-              
-              // Update header title
-              const titleElement = document.querySelector('h1');
-              if (titleElement) {
-                const readonlyText = shareData.permission === 'view' ? ' (pouze čtení)' : '';
-                titleElement.textContent = (projectData.name || 'Skladatel skautských her') + readonlyText;
-              }
-              
-              console.log('Loaded shared project:', projectId, 'permission:', shareData.permission);
-            }
-          }
-        } catch(e) {
-          console.error('Chyba při načítání sdíleného projektu:', e);
-          alert('Chyba při načítání sdíleného projektu: ' + e.message);
-        }
-      })();
+      // Store for processing after auth
+      localStorage.setItem('pendingShareId', shareId);
+      console.log('Stored pending share ID:', shareId);
     }
     // Legacy syncId support
     else if(syncId && !shareId) {
-      (async () => {
-        try {
-          const snapshot = await get(ref(db, `synced/${syncId}`));
-          if(snapshot.exists()) {
-            const data = snapshot.val();
-            if(data.meta) localStorage.setItem('sg_meta', JSON.stringify(data.meta));
-            if(data.blocks) localStorage.setItem('sg_blocks', JSON.stringify(data.blocks));
-            if(data.groups) localStorage.setItem('sg_groups', JSON.stringify(data.groups));
-            if(data.feedbackQuestions) localStorage.setItem('sg_feedback_questions', JSON.stringify(data.feedbackQuestions));
-            
-            window.currentSyncId = syncId;
-            if(typeof window.renderAll === 'function') {
-              setTimeout(() => { window.renderAll(); }, 100);
-            }
-          }
-        } catch(e) {
-          console.error('Chyba při načítání z Firebase:', e);
-        }
-      })();
+      // Store for processing after auth
+      localStorage.setItem('pendingSyncId', syncId);
+      console.log('Stored pending sync ID:', syncId);
     }
   });
 
@@ -1270,7 +1478,7 @@
           text: url,
           width: 150,
           height: 150,
-          colorDark: "#255C9E",
+          colorDark: "#294885",
           colorLight: "#ffffff",
           correctLevel: QRCode.CorrectLevel.H
         });
@@ -1300,7 +1508,59 @@
   #calendarContainer .calendar-block { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   /* Rozbalit skupiny pro tisk */
   .group-collapsed .group-body { display: block !important; }
+  /* Skrýt ovládací prvky pro tisk */
+  aside { display: none !important; }
+  .p-4.bg-cream.rounded-2xl.border.mb-4 { display: none !important; }
+  /* Změnit pozadí na bílé */
+  .bg-cream { background: white !important; }
+  .block-card { background: white !important; }
+  /* Roztáhnout obsah na celou šířku */
+  #workspace { max-width: none !important; width: 100% !important; }
+  #blocksContainer { width: 100% !important; }
 }
+/* Nové barvy podle SGM */
+.bg-custom-light { background-color: #F6EBD8; }
+.text-custom-light { color: #0f172a; }
+.bg-custom-dark { background-color: #1A1410; }
+.text-custom-dark { color: #F6EBD8; }
+.bg-cream { background-color: #fff8ed; }
+
+/* Tlačítka podle SGM */
+.btn-primary { background-color: #294885; color: white; border: 1px solid #294885; }
+.btn-primary:hover { background-color: #255C9E; }
+.btn-secondary { background-color: #D3BFA0; color: #0f172a; border: 1px solid #D3BFA0; }
+.btn-secondary:hover { background-color: #CDD3D6; }
+.btn-positive { background-color: #008836; color: white; border: 1px solid #008836; }
+.btn-positive:hover { background-color: #48651D; }
+.btn-warning { background-color: #E53434; color: white; border: 1px solid #E53434; }
+.btn-warning:hover { background-color: #A21F16; }
+.btn-google { background-color: #EA614A; color: white; border: 1px solid #EA614A; }
+.btn-google:hover { background-color: #B85637; }
+
+/* Světlý režim - krémové pozadí místo bílé */
+body:not(.dark) .block-card { background-color: #fff8ed; }
+body:not(.dark) input, body:not(.dark) textarea, body:not(.dark) select { background-color: #fff8ed; }
+body:not(.dark) .modal-content { background-color: #fff8ed; }
+body:not(.dark) .results-response { background-color: #fff8ed; }
+body:not(.dark) .question-editor { background-color: #fff8ed; }
+body:not(.dark) .group { background-color: #fff8ed; }
+body:not(.dark) .project-item { background-color: #fff8ed; }
+
+/* Tmavý režim - tmavé pozadí pro všechny prvky */
+body.dark .bg-cream,
+body.dark .block-card,
+body.dark input,
+body.dark textarea,
+body.dark select,
+body.dark .modal-content,
+body.dark .results-response,
+body.dark .question-editor,
+body.dark .group,
+body.dark .project-item {
+  background-color: #111;
+  color: #fff;
+}
+
 /* Plynulý přechod barev při změně režimu */
 body, 
 body * {
@@ -1390,7 +1650,7 @@ body.dark #btnDarkMode .icon {
 .day-number {
   font-weight: 600;
   font-size: 12px;
-  color: #255C9E; /* hlavní modrá */
+  color: #294885; /* hlavní modrá */
 }
 
 /* Bloky aktivit */
@@ -1422,7 +1682,7 @@ body.dark #btnDarkMode .icon {
   font-weight: 600;
   margin-bottom: 6px;
   font-size: 13px;
-  color: #255C9E;
+  color: #294885;
 }
 
 .print-header {
@@ -1458,7 +1718,7 @@ body.dark #btnDarkMode .icon {
 }
 .group-title {
   font-weight:700;
-  color:#255C9E;
+  color:#294885;
 }
 .group-controls { display:flex; gap:6px; align-items:center; }
 .group-body { margin-top:8px; }
@@ -1471,7 +1731,7 @@ body.dark #btnDarkMode .icon {
 .pair-link {
   cursor: pointer;
   text-decoration: underline;
-  color:#205b9b;
+  color:#294885;
   margin-left:6px;
   font-weight:600;
   font-size:12px;
@@ -1481,15 +1741,15 @@ body.dark #btnDarkMode .icon {
 .contact-row input { width:100%; }
 
 /* dark (optional) */
-body.dark .day-cell { background:#294885; border-color:#255C9E; color:#F6EBD8; }
+body.dark .day-cell { background:#294885; border-color:#D3BFA0; color:#F6EBD8; }
 body.dark .day-cell:hover { background:#255C9E; }
 body.dark .day-number { color:#F6EBD8; }
 body.dark .calendar-block { background:#A4D2B2; color:#0f172a; border-color:rgba(255,255,255,0.1); }
-body.dark .week-column { background:#294885; border-color:#255C9E; }
+body.dark .week-column { background:#294885; border-color:#D3BFA0; }
 body.dark .day-header { color:#F6EBD8; }
 body.dark {
-  background: #000; 
-  color: #fff;
+  background: #1A1410; 
+  color: #F6EBD8;
 }
 
 body.dark .block-card {
@@ -1567,17 +1827,17 @@ body.dark .modal-header { border-bottom-color: #444; }
 .modal-body { padding: 24px; }
 .modal-footer { padding: 16px 24px; border-top: 1px solid #ddd; display: flex; gap: 12px; justify-content: flex-end; }
 body.dark .modal-footer { border-top-color: #444; }
-.question-editor { background: #f9f9f9; padding: 16px; border-radius: 10px; margin-bottom: 16px; border-left: 4px solid #255C9E; }
+.question-editor { background: #f9f9f9; padding: 16px; border-radius: 10px; margin-bottom: 16px; border-left: 4px solid #294885; }
 body.dark .question-editor { background: #2A241B; border-left-color: #D4C5B0; }
 
 /* Results visualization */
 .results-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
 body.dark .results-card { background: #2A241B; border-color: #444; }
-.results-title { font-weight: 600; font-size: 14px; color: #255C9E; margin-bottom: 8px; }
+.results-title { font-weight: 600; font-size: 14px; color: #294885; margin-bottom: 8px; }
 body.dark .results-title { color: #D4C5B0; }
 .results-stat { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
-.results-bar { background: linear-gradient(90deg, #255C9E 0%, #20649B 100%); height: 20px; border-radius: 4px; display: flex; align-items: center; padding: 0 6px; color: white; font-weight: 600; font-size: 11px; }
-.results-response { background: white; border-left: 3px solid #255C9E; padding: 8px; margin: 6px 0; font-size: 12px; border-radius: 4px; }
+.results-bar { background: linear-gradient(90deg, #294885 0%, #255C9E 100%); height: 20px; border-radius: 4px; display: flex; align-items: center; padding: 0 6px; color: white; font-weight: 600; font-size: 11px; }
+.results-response { background: white; border-left: 3px solid #294885; padding: 8px; margin: 6px 0; font-size: 12px; border-radius: 4px; }
 body.dark .results-response { background: #111; border-left-color: #D4C5B0; color: #E8DCC4; }
 .results-option { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; }
 
@@ -1593,7 +1853,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
 .project-section h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #255C9E;
+  color: #294885;
   margin-bottom: 0.5rem;
   border-bottom: 1px solid #e5e7eb;
   padding-bottom: 0.25rem;
@@ -1609,11 +1869,54 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
   background: white;
 }
 
+.project-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 22px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 35px rgba(23, 33, 50, 0.08);
+  border-color: #86a76c;
+}
+
+.project-card-inline {
+  padding: 1rem 1.1rem;
+}
+
+.project-card-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #1f2937;
+}
+
+.project-card-meta {
+  font-size: 0.79rem;
+  color: #6b7280;
+}
+
+.project-card.readonly {
+  opacity: 0.85;
+  border-style: dashed;
+}
+
+.project-card.readonly .project-card-title {
+  color: #4b5563;
+}
+
 .project-item:hover {
   background: #f8fafc;
-  border-color: #255C9E;
+  border-color: #294885;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(37, 92, 158, 0.1);
+  box-shadow: 0 2px 8px rgba(41, 72, 133, 0.1);
 }
 
 .project-item.readonly {
@@ -1631,12 +1934,67 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
   font-size: 0.75rem;
   color: #6b7280;
 }
+
+#loginScreen.login-hero {
+  background: radial-gradient(circle at top left, rgba(211,191,160,0.12), transparent 24%),
+              radial-gradient(circle at bottom right, rgba(101,127,111,0.14), transparent 22%),
+              linear-gradient(135deg, #D3BFA0 0%, #657F6F 56%, #48651D 100%);
+}
+
+#loginScreen .login-card,
+#projectDashboard .project-dashboard-panel {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+#loginScreen .login-card:hover,
+#projectDashboard .project-dashboard-panel:hover {
+  transform: translateY(-2px);
+}
+
+/* Blob animation styles */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animation-delay-6000 {
+  animation-delay: 6s;
+}
 </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-custom-light text-custom-light">
 <!-- Login Screen -->
-<div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-800">
-  <div class="bg-white rounded-xl shadow-2xl border-t-4 border-blue-600 p-8 max-w-md w-full mx-4">
+<div id="loginScreen" class="min-h-screen flex items-center justify-center relative overflow-hidden login-hero">
+  <!-- Blob background shapes -->
+  <div class="absolute inset-0 overflow-hidden">
+    <div class="absolute top-0 left-0 w-96 h-96 bg-[#D3BFA0] rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+    <div class="absolute top-0 right-0 w-96 h-96 bg-[#48651D] rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+    <div class="absolute -bottom-10 left-16 w-96 h-96 bg-[#657F6F] rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-4000"></div>
+    <div class="absolute bottom-10 right-16 w-80 h-80 bg-[#D3BFA0] rounded-full mix-blend-multiply filter blur-3xl opacity-55 animate-blob animation-delay-6000"></div>
+  </div>
+  <div class="relative z-10 max-w-md w-full mx-4 login-card" style="background: rgba(255,255,255,0.92); border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 30px 80px rgba(46,54,51,0.18); backdrop-filter: blur(16px); border-radius: 36px; padding: 2rem;">
     <div class="text-center mb-6">
       <img src="logo%20skaut%20web.png" alt="Skautský skladatel" class="h-16 mx-auto mb-4">
       <h2 class="text-2xl font-bold text-gray-800">Přihlášení</h2>
@@ -1653,10 +2011,10 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
         <label class="block text-sm font-medium text-gray-700 mb-1">Heslo</label>
         <input id="loginPassword" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
       </div>
-      <button onclick="handleEmailLogin()" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">
+      <button onclick="handleEmailLogin()" class="w-full btn-primary py-2 px-4 rounded-lg transition duration-200">
         Přihlásit se
       </button>
-      <button onclick="handleGoogleLogin()" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200 flex items-center justify-center gap-2">
+      <button onclick="handleGoogleLogin()" class="w-full btn-google py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2">
         <svg class="w-5 h-5" viewBox="0 0 24 24">
           <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -1715,22 +2073,22 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
   <div class="text-sm text-slate-600">Plánování, bloky, párování, skupiny a interní kalendář</div>
 </div>
 <div class="ml-auto flex gap-2">
-  <button id="btnProjects" class="no-print px-3 py-2 rounded-xl border bg-blue-600 text-white" onclick="toggleProjectMenu()">📁 Projekty</button>
-  <button id="btnUser" class="no-print px-3 py-2 rounded-xl border bg-gray-100" onclick="showUserMenu()">
-    <span id="userDisplay">👤</span>
+  <button id="btnProjects" class="no-print px-3 py-2 rounded-xl border btn-positive project-tools hidden" onclick="showDashboard()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> Projekty</button>
+  <button id="btnUser" class="no-print px-3 py-2 rounded-xl border btn-secondary" onclick="showUserMenu()">
+    <span id="userDisplay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
   </button>
-  <button id="btnPrint" class="no-print px-3 py-2 rounded-xl border bg-white">Tisk</button>
-  <button id="btnDarkMode" class="no-print px-3 py-2 rounded-xl border">
+  <button id="btnPrint" class="no-print px-3 py-2 rounded-xl border btn-secondary project-tools hidden">Tisk</button>
+  <button id="btnDarkMode" class="no-print px-3 py-2 rounded-xl border project-tools hidden">
   <span class="icon">🌙</span> Dark Mode
 </button>
 
 
 
-  <button id="btnExportJSON" class="no-print px-3 py-2 rounded-xl border bg-white">Export JSON</button>
-  <button id="btnImportJSON" class="no-print px-3 py-2 rounded-xl border bg-white">Import JSON</button>
-  <button id="btnImportBlocks" class="no-print px-3 py-2 rounded-xl border bg-white">Import bloků (přidat)</button>
+  <button id="btnExportJSON" class="no-print px-3 py-2 rounded-xl border bg-cream project-tools hidden">Export JSON</button>
+  <button id="btnImportJSON" class="no-print px-3 py-2 rounded-xl border bg-cream project-tools hidden">Import JSON</button>
+  <button id="btnImportBlocks" class="no-print px-3 py-2 rounded-xl border bg-cream project-tools hidden">Import bloků (přidat)</button>
   <input id="importFile" type="file" accept="application/json" class="hidden" />
-  <button id="btnFullscreen" class="no-print px-3 py-2 rounded-xl border bg-white" title="Fullscreen">
+  <button id="btnFullscreen" class="no-print px-3 py-2 rounded-xl border bg-cream" title="Fullscreen">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6M4 4v6M20 4h-6M20 4v6M4 20h6M4 20v-6M20 20h-6M20 20v-6"/></svg>
   </button>
        <div class="ml-auto flex gap-1 items-center">
@@ -1741,15 +2099,15 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
 
 <!-- Project Menu -->
 <div id="projectMenuContainer" class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 hidden" onclick="toggleProjectMenu()">
-  <div class="absolute top-20 left-1/2 transform -translate-x-1/2 bg-white rounded-xl shadow-2xl border max-w-md w-full mx-4 max-h-96 overflow-y-auto" onclick="event.stopPropagation()">
+  <div class="absolute top-20 left-1/2 transform -translate-x-1/2 bg-cream rounded-xl shadow-2xl border max-w-md w-full mx-4 max-h-96 overflow-y-auto" onclick="event.stopPropagation()">
     <div class="p-4 border-b">
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-bold">Projekty</h3>
-        <button onclick="toggleProjectMenu()" class="text-gray-500 hover:text-gray-700">✕</button>
+        <button onclick="toggleProjectMenu()" class="text-gray-500 hover:text-gray-700">×</button>
       </div>
       <div class="flex gap-2 mt-3">
-        <button onclick="createNewProject()" class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700">+ Nový projekt</button>
-        <button onclick="createFromTemplate()" class="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700">📋 Ze šablony</button>
+        <button onclick="createNewProject()" class="flex-1 btn-primary px-3 py-2 rounded-lg text-sm">+ Nový projekt</button>
+        <button onclick="createFromTemplate()" class="flex-1 btn-positive px-3 py-2 rounded-lg text-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Ze šablony</button>
       </div>
     </div>
     <div id="projectMenu" class="p-4">
@@ -1760,16 +2118,16 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
 
 <!-- Share Modal -->
 <div id="shareModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-  <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+  <div class="bg-cream rounded-xl p-6 max-w-md w-full mx-4">
     <h3 class="text-lg font-bold mb-4">Sdílet projekt</h3>
     <p class="text-sm text-gray-600 mb-4">Vyberte oprávnění pro sdílení:</p>
     <div class="space-y-3">
       <button onclick="shareProject('view')" class="w-full p-3 border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
-        <div class="font-medium">👁️ Pouze pro čtení</div>
+        <div class="font-medium"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Pouze pro čtení</div>
         <div class="text-sm text-gray-600">Příjemci mohou projekt prohlížet, ale neupravovat</div>
       </button>
       <button onclick="shareProject('edit')" class="w-full p-3 border border-blue-300 bg-blue-50 rounded-lg hover:bg-blue-100 text-left">
-        <div class="font-medium">✏️ Plná spolupráce</div>
+        <div class="font-medium"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Plná spolupráce</div>
         <div class="text-sm text-gray-600">Příjemci mohou projekt upravovat a spolupracovat</div>
       </button>
     </div>
@@ -1783,11 +2141,16 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
   <div id="printMeta" class="text-sm text-slate-700"></div>
 </div>
 
-<div id="projectDashboard" class="p-4">
-  <div class="p-4 bg-white rounded-2xl border shadow-sm">
+<div id="projectDashboard" class="p-4 relative overflow-hidden min-h-screen" style="background: radial-gradient(circle at top left, rgba(211,191,160,0.14), transparent 24%), radial-gradient(circle at bottom right, rgba(101,127,111,0.16), transparent 22%);">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-14 -left-10 w-72 h-72 rounded-full bg-[#D3BFA0] opacity-60 filter blur-3xl"></div>
+    <div class="absolute top-20 right-0 w-80 h-80 rounded-full bg-[#48651D] opacity-35 filter blur-3xl"></div>
+    <div class="absolute bottom-0 -right-16 w-96 h-96 rounded-full bg-[#657F6F] opacity-45 filter blur-3xl"></div>
+  </div>
+  <div class="relative p-4 rounded-2xl border shadow-2xl project-dashboard-panel" style="background: rgba(255,255,255,0.94); border-color: rgba(255,255,255,0.75);">
     <h2 class="text-xl font-semibold mb-3">Přehled projektů</h2>
-    <button onclick="createNewProject()" class="mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg">+ Nový projekt</button>
-    <button onclick="createFromTemplate()" class="mb-4 px-4 py-2 bg-green-600 text-white rounded-lg">📋 Ze šablony</button>
+    <button onclick="createNewProject()" class="mb-2 px-4 py-2 btn-primary rounded-lg">+ Nový projekt</button>
+    <button onclick="createFromTemplate()" class="mb-4 px-4 py-2 btn-positive rounded-lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Ze šablony</button>
 
     <div class="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
       <label for="shareOrUrlInput" class="block text-sm font-medium text-slate-700 mb-2">Načíst projekt ze sdílení / odkazu</label>
@@ -1805,19 +2168,19 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
 <main id="workspace" class="hidden grid md:grid-cols-[360px_1fr] gap-6">
   <aside class="space-y-4 no-print">
       
-      <section class="p-3 sm:p-4 rounded-2xl border-none shadow-lg no-print mb-4" style="background: linear-gradient(135deg, #255C9E 0%, #20649B 100%); color: #F6EBD8;">
+      <section class="p-3 sm:p-4 rounded-2xl border-none shadow-lg no-print mb-4" style="background: linear-gradient(135deg, #294885 0%, #255C9E 100%); color: #F6EBD8;">
   <h2 class="font-bold mb-3 italic flex items-center gap-2 text-sm sm:text-base">
     <span>🚀 Zveřejnit program</span>
   </h2>
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-    <button onclick="window.publishProgram()" class="text-[9px] sm:text-[10px] py-2 px-1 sm:px-2 rounded-lg font-bold hover:opacity-90 transition uppercase" style="background: #F6EBD8; color: #255C9E;">📱 Program</button>
+    <button onclick="window.publishProgram()" class="text-[9px] sm:text-[10px] py-2 px-1 sm:px-2 rounded-lg font-bold hover:opacity-90 transition uppercase" style="background: #F6EBD8; color: #294885;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> Program</button>
     <button onclick="window.openInvitationModal()" class="text-[9px] sm:text-[10px] py-2 px-1 sm:px-2 rounded-lg font-bold hover:opacity-90 transition uppercase" style="background: #ECA038; color: white;">📧 Pozvánka</button>
-    <button onclick="document.getElementById('feedbackModal').classList.add('open')" class="text-[9px] sm:text-[10px] py-2 px-1 sm:px-2 rounded-lg font-bold hover:opacity-90 transition uppercase col-span-2 sm:col-span-1" style="background: #008836; color: white;">📊 Feedback</button>
+    <button onclick="document.getElementById('feedbackModal').classList.add('open')" class="text-[9px] sm:text-[10px] py-2 px-1 sm:px-2 rounded-lg font-bold hover:opacity-90 transition uppercase col-span-2 sm:col-span-1" style="background: #008836; color: white;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Feedback</button>
   </div>
   <button onclick="document.getElementById('resultsModal').classList.add('open')" class="w-full text-[9px] sm:text-[10px] py-2 rounded-lg font-bold hover:opacity-90 transition uppercase" style="background: #A0067D; color: white;">📈 Výsledky</button>
   <div id="programShareArea" class="mt-3 hidden">
     <p class="text-[8px] sm:text-[9px] mb-1 font-bold uppercase" style="color: #F6EBD8; opacity: 0.8;">Odkaz na program:</p>
-    <input id="programUrlInput" readonly class="w-full p-2 text-[9px] sm:text-[10px] rounded border-none shadow-inner mb-2" onclick="this.select()" style="background: #F6EBD8; color: #255C9E;">
+    <input id="programUrlInput" readonly class="w-full p-2 text-[9px] sm:text-[10px] rounded border-none shadow-inner mb-2" onclick="this.select()" style="background: #F6EBD8; color: #294885;">
     <div class="flex gap-1 mb-2 text-[9px]">
       <button onclick="window.startSync()" class="flex-1 px-2 py-1 rounded font-bold" style="background: #A4D2B2; color: #0f172a;">🔄 Sync ON</button>
       <button onclick="window.stopSync()" class="flex-1 px-2 py-1 rounded font-bold" style="background: #EA614A; color: white;">⏹ OFF</button>
@@ -1837,7 +2200,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
   </div>
 </section>
 
-    <section class="p-4 bg-white rounded-2xl border">
+    <section class="p-4 bg-cream rounded-2xl border">
       <h2 class="font-semibold mb-2">Základ hry</h2>
       <label class="block text-sm mb-2">Název <input id="metaName" class="mt-1 w-full p-2 rounded-lg border"/></label>
       <label class="block text-sm mb-2">Autor <input id="metaAuthor" class="mt-1 w-full p-2 rounded-lg border"/></label>
@@ -1876,25 +2239,13 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
       <div id="groupsList" class="mt-2 space-y-2"></div>
     </section>
 
-    <section class="p-4 bg-white rounded-2xl border">
+    <section class="p-4 bg-cream rounded-2xl border">
       <h2 class="font-semibold mb-2">Šablony</h2>
       <div id="templates" class="space-y-2"></div>
     </section>
 
-    <section class="p-4 bg-white rounded-2xl border">
-      <h2 class="font-semibold mb-2">Mapka / hranice</h2>
-      <div class="text-sm mb-2">Klikni na plátno pro body hranice. Přetáhni pro posun. Export obrázku nebo souřadnic.</div>
-      <input type="file" id="uploadMap" accept="image/*" class="mb-2 block">
-      <canvas id="mapCanvas" width="280" height="200" class="border rounded-md w-full"></canvas>
-      <div class="flex gap-2 mt-2">
-        <button id="btnClearMap" class="px-2 py-1 rounded border">Vymazat</button>
-        <button id="btnExportMapPNG" class="px-2 py-1 rounded border">Export PNG</button>
-        <button id="btnExportMapCoords" class="px-2 py-1 rounded border">Export souřadnic</button>
-      </div>
-    </section>
-
-    <section class="p-4 bg-white rounded-2xl border">
-      <h2 class="font-semibold mb-2">📊 Výsledky zpětné vazby</h2>
+    <section class="p-4 bg-cream rounded-2xl border">
+      <h2 class="font-semibold mb-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Výsledky zpětné vazby</h2>
       <div class="space-y-3">
         <div>
           <label class="text-sm text-slate-600 block mb-1">ID zpětné vazby:</label>
@@ -1907,7 +2258,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
         </div>
         <button 
           onclick="window.loadFeedbackResultsInline(document.getElementById('feedbackResultsId').value)"
-          class="w-full px-3 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition text-sm"
+          class="w-full px-3 py-2 btn-primary rounded font-medium transition text-sm"
         >
           Načíst výsledky
         </button>
@@ -1917,8 +2268,8 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
       </div>
     </section>
 
-    <section class="p-4 bg-white rounded-2xl border">
-      <h2 class="font-semibold mb-2">📝 Potvrzení účastí</h2>
+    <section class="p-4 bg-cream rounded-2xl border">
+      <h2 class="font-semibold mb-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> Potvrzení účastí</h2>
       <div class="space-y-3">
         <div>
           <label class="text-sm text-slate-600 block mb-1">ID pozvánky:</label>
@@ -1943,10 +2294,27 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
   </aside>
 
   <section>
-    <!-- Blocks list -->
-    <div id="blocksContainer" class="space-y-3 p-2 bg-white rounded-2xl border scroll-area"></div>
+    <!-- Blocks sorting controls -->
+    <div class="p-4 bg-cream rounded-2xl border mb-4">
+      <div class="flex gap-4 items-center">
+        <label class="text-sm font-medium">Režim:</label>
+        <select id="viewModeSelect" class="p-2 border rounded">
+          <option value="edit">Editace</option>
+          <option value="read">Čtení</option>
+        </select>
+        <label class="text-sm font-medium ml-4">Řazení bloků:</label>
+        <select id="blockSortSelect" class="p-2 border rounded">
+          <option value="groups">Podle skupin</option>
+          <option value="time">Podle času</option>
+          <option value="type">Podle druhu</option>
+        </select>
+      </div>
+    </div>
 
-    <div class="p-4 bg-white rounded-2xl border mt-4">
+    <!-- Blocks list -->
+    <div id="blocksContainer" class="space-y-3 p-2 bg-cream rounded-2xl border scroll-area"></div>
+
+    <div class="p-4 bg-cream rounded-2xl border mt-4">
       <h3 class="font-semibold">Materiály — součet</h3>
       <div id="materialsSummary" class="mt-2 text-sm"></div>
       <button id="btnRefreshMaterials" class="mt-2 px-3 py-1 rounded border">Aktualizovat součet</button>
@@ -2002,7 +2370,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
       <button onclick="document.getElementById('feedbackModal').classList.remove('open')" class="px-4 py-2 border rounded-lg hover:bg-gray-50 transition">
         Zrušit
       </button>
-      <button onclick="window.saveFeedbackAndPublish()" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+      <button onclick="window.saveFeedbackAndPublish()" class="px-4 py-2 btn-primary rounded-lg font-medium transition">
         Uložit a publikovat
       </button>
     </div>
@@ -2027,7 +2395,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
         />
         <button 
           onclick="window.loadFeedbackResults(document.getElementById('feedbackIdInput').value)"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+          class="px-4 py-2 btn-primary rounded-lg font-medium transition"
         >
           Načíst
         </button>
@@ -2103,7 +2471,7 @@ body.dark .results-response { background: #111; border-left-color: #D4C5B0; colo
       <button onclick="document.getElementById('invitationModal').classList.remove('open')" class="px-4 py-2 border rounded-lg hover:bg-gray-50 transition">
         Zrušit
       </button>
-      <button onclick="window.publishInvitation()" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+      <button onclick="window.publishInvitation()" class="px-4 py-2 btn-primary rounded-lg font-medium transition">
         Zveřejnit pozvánku
       </button>
     </div>
@@ -2134,11 +2502,13 @@ btnDarkMode.addEventListener('click', () => {
    Default palette / colors
    ==================== */
 const COLORS = [
-  { id:'red', name:'Červená', hex:'#EA614A' },
-  { id:'blue', name:'Modrá', hex:'#20649B' },
+  { id:'blue', name:'Modrá (Tlumená)', hex:'#294885' },
   { id:'green', name:'Zelená', hex:'#008836' },
-  { id:'yellow', name:'Žlutá', hex:'#ECA038' },
-  { id:'purple', name:'Fialová', hex:'#A0067D' }
+  { id:'yellow', name:'Žlutá', hex:'#FCC11E' },
+  { id:'red', name:'Červená', hex:'#E53434' },
+  { id:'purple', name:'Fialová', hex:'#A0067D' },
+  { id:'orange', name:'Oranžová', hex:'#F9B200' },
+  { id:'brown', name:'Hnědá', hex:'#732813' }
 ];
 
 /* ====================
@@ -2146,6 +2516,8 @@ const COLORS = [
    ==================== */
 let blocks = loadFromLocal('sg_blocks', []);
 let groups = loadFromLocal('sg_groups', null);
+let blockSortMode = loadFromLocal('sg_block_sort_mode', 'groups'); // 'groups', 'time', 'type'
+let viewMode = loadFromLocal('sg_view_mode', 'edit'); // 'edit', 'read'
 if(!groups){
   // default groups
   groups = [
@@ -2166,29 +2538,23 @@ const groupsList = document.getElementById('groupsList');
 const materialsSummary = document.getElementById('materialsSummary');
 const calendarContainer = document.getElementById('calendarContainer');
 const calendarViewSelect = document.getElementById('calendarView');
+const blockSortSelect = document.getElementById('blockSortSelect');
+const viewModeSelect = document.getElementById('viewModeSelect');
 
-/* map canvas */
-const canvas = document.getElementById('mapCanvas');
-const ctx = canvas.getContext('2d');
+// Set initial values
+blockSortSelect.value = blockSortMode;
+viewModeSelect.value = viewMode;
 
-/* ====================
-   Map handlers (unchanged)
-   ==================== */
-document.getElementById('uploadMap').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(img,0,0);
-  };
-  img.src = URL.createObjectURL(file);
+blockSortSelect.addEventListener('change', () => {
+  blockSortMode = blockSortSelect.value;
+  saveToLocal('sg_block_sort_mode', blockSortMode);
+  renderBlocks();
 });
-document.getElementById('btnClearMap').addEventListener('click', () => { ctx.clearRect(0,0,canvas.width,canvas.height); });
-document.getElementById('btnExportMapPNG').addEventListener('click', () => {
-  const link = document.createElement('a'); link.href = canvas.toDataURL('image/png'); link.download = 'mapa.png'; link.click();
+
+viewModeSelect.addEventListener('change', () => {
+  viewMode = viewModeSelect.value;
+  saveToLocal('sg_view_mode', viewMode);
+  renderBlocks();
 });
 
 /* ====================
@@ -2206,19 +2572,59 @@ document.getElementById('metaAge').value = meta.age || '';
    Export / Import / Print
    ==================== */
 document.getElementById('btnExportJSON').addEventListener('click', ()=>{
-  let mapImage = null;
-  try { mapImage = canvas.toDataURL('image/png'); } catch{}
-  const payload = { meta, blocks, groups, map: { image: mapImage } };
+  const payload = { meta, blocks, groups, blockSortMode, viewMode };
   download(`${(meta.name||'hra').replace(/\s+/g,'_')}.json`, JSON.stringify(payload, null, 2), 'application/json');
 
 });
 document.getElementById('btnPrint').addEventListener('click', ()=>{
+  // Přepnout do režimu čtení
+  viewMode = 'read';
+  document.getElementById('viewModeSelect').value = 'read';
+  
+  // Skrýt ovládací prvky pro tisk
+  document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('aside').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.p-4.bg-cream.rounded-2xl.border.mb-4').forEach(el => el.style.display = 'none');
+  
+  // Změnit pozadí na bílé
+  document.body.style.background = 'white';
+  document.body.style.color = 'black';
+  document.querySelectorAll('.bg-cream').forEach(el => el.style.background = 'white');
+  document.querySelectorAll('.block-card').forEach(el => el.style.background = 'white');
+  
+  // Roztáhnout obsah na celou šířku
+  document.getElementById('workspace').style.maxWidth = 'none';
+  document.getElementById('workspace').style.width = '100%';
+  document.getElementById('blocksContainer').style.width = '100%';
+  
   // prepare print header and expand groups for print
   document.getElementById('printTitle').innerText = meta.name || '';
   document.getElementById('printMeta').innerText = `Autor: ${meta.author||''} — Počet: ${meta.age||''}`;
   // expand all groups temporarily for print
   document.querySelectorAll('.group').forEach(g=> g.classList.remove('group-collapsed'));
+  
+  // Re-render blocks in read mode
+  renderAll();
+  
+  // Spustit tisk
   window.print();
+  
+  // Po tisku obnovit původní stav
+  setTimeout(() => {
+    viewMode = 'edit';
+    document.getElementById('viewModeSelect').value = 'edit';
+    document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+    document.querySelectorAll('aside').forEach(el => el.style.display = '');
+    document.querySelectorAll('.p-4.bg-cream.rounded-2xl.border.mb-4').forEach(el => el.style.display = '');
+    document.body.style.background = '';
+    document.body.style.color = '';
+    document.querySelectorAll('.bg-cream').forEach(el => el.style.background = '');
+    document.querySelectorAll('.block-card').forEach(el => el.style.background = '');
+    document.getElementById('workspace').style.maxWidth = '';
+    document.getElementById('workspace').style.width = '';
+    document.getElementById('blocksContainer').style.width = '';
+    renderAll();
+  }, 1000);
 });
 
 const btnFullscreen = document.getElementById('btnFullscreen');
@@ -2239,20 +2645,14 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
       if(data.meta) Object.assign(meta, data.meta);
       if(Array.isArray(data.blocks)) blocks = data.blocks;
       if(Array.isArray(data.groups)) groups = data.groups;
-      if(data.map && data.map.image){
-        const img = new Image();
-        img.onload = () => {
-          canvas.width = img.width;
-          canvas.height = img.height;
-          ctx.clearRect(0,0,canvas.width,canvas.height);
-          ctx.drawImage(img,0,0);
-        };
-        img.src = data.map.image;
-      }
+      if(data.blockSortMode) blockSortMode = data.blockSortMode;
+      if(data.viewMode) viewMode = data.viewMode;
       saveAll(); renderAll();
       document.getElementById('metaName').value = meta.name;
       document.getElementById('metaAuthor').value = meta.author;
       document.getElementById('metaAge').value = meta.age;
+      blockSortSelect.value = blockSortMode;
+      viewModeSelect.value = viewMode;
     } catch(err) { alert('Soubor není platný JSON'); }
   };
   reader.readAsText(file);
@@ -2291,6 +2691,8 @@ function saveAll(){
   saveToLocal('sg_blocks', blocks);
   saveToLocal('sg_meta', meta);
   saveToLocal('sg_groups', groups);
+  saveToLocal('sg_block_sort_mode', blockSortMode);
+  saveToLocal('sg_view_mode', viewMode);
 }
 
 /* ====================
@@ -2344,60 +2746,209 @@ function renderGroupsList(){
   });
 }
 
-/* renderBlocks: show ungrouped first, then groups (respecting expanded) */
+/* renderBlocks: show blocks based on current sort mode and view mode */
 function renderBlocks(){
   blocksContainer.innerHTML = '';
 
   // helper pairing options
   const pairingOptionsHTML = blocks.map(b => `<option value="${b.id}">${escapeHtml(b.title||'(bez názvu)')} — ${b.type}</option>`).join('');
 
-  // --- Un-grouped blocks title ---
-  const ungrouped = blocks.filter(b=>!b.group);
-  if(ungrouped.length){
-    const uwrap = document.createElement('div');
-    uwrap.innerHTML = `<h3 class="font-semibold mb-2">Bez skupiny</h3>`;
-    blocksContainer.appendChild(uwrap);
-    ungrouped.forEach(b => {
-      const el = createBlockCard(b, pairingOptionsHTML);
+  if(viewMode === 'read'){
+    // Reading mode - clean text view like skautskytabor.html
+    const sortedBlocks = [...blocks].sort((a, b) => {
+      const aDate = a.date || '';
+      const bDate = b.date || '';
+      if(aDate !== bDate) return aDate.localeCompare(bDate);
+      const aTime = a.od || '';
+      const bTime = b.od || '';
+      return aTime.localeCompare(bTime);
+    });
+
+    sortedBlocks.forEach(b => {
+      const el = createReadOnlyBlockCard(b);
       blocksContainer.appendChild(el);
     });
-  }
+  } else {
+    // Edit mode - full editing interface
+    if(blockSortMode === 'groups'){
+      // Original grouping logic
+      // --- Un-grouped blocks title ---
+      const ungrouped = blocks.filter(b=>!b.group);
+      if(ungrouped.length){
+        const uwrap = document.createElement('div');
+        uwrap.innerHTML = `<h3 class="font-semibold mb-2">Bez skupiny</h3>`;
+        blocksContainer.appendChild(uwrap);
+        ungrouped.forEach(b => {
+          const el = createBlockCard(b, pairingOptionsHTML);
+          blocksContainer.appendChild(el);
+        });
+      }
 
-  // --- Groups ---
-  groups.forEach(g=>{
-    const gwrap = document.createElement('div');
-    gwrap.className = 'group' + (g.expanded ? '' : ' group-collapsed');
-    gwrap.dataset.groupId = g.id;
-    gwrap.innerHTML = `
-      <div class="group-header">
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="toggle-group-mini px-2 py-1 rounded" data-id="${g.id}">${g.expanded? '▾':'▸'}</button>
-          <div class="group-title">${escapeHtml(g.name)}</div>
-        </div>
-        <div class="group-controls">
-          <small class="text-slate-500">${blocks.filter(b=>b.group===g.id).length} bloků</small>
-        </div>
-      </div>
-      <div class="group-body"></div>
-    `;
-    // append to container
-    blocksContainer.appendChild(gwrap);
-    const body = gwrap.querySelector('.group-body');
-    // blocks in group
-    blocks.filter(b=>b.group===g.id).forEach(b=>{
-      const card = createBlockCard(b, pairingOptionsHTML);
-      body.appendChild(card);
-    });
-  });
+      // --- Groups ---
+      groups.forEach(g=>{
+        const gwrap = document.createElement('div');
+        gwrap.className = 'group' + (g.expanded ? '' : ' group-collapsed');
+        gwrap.dataset.groupId = g.id;
+        gwrap.innerHTML = `
+          <div class="group-header">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="toggle-group-mini px-2 py-1 rounded" data-id="${g.id}">${g.expanded? '▾':'▸'}</button>
+              <div class="group-title">${escapeHtml(g.name)}</div>
+            </div>
+            <div class="group-controls">
+              <small class="text-slate-500">${blocks.filter(b=>b.group===g.id).length} bloků</small>
+            </div>
+          </div>
+          <div class="group-body"></div>
+        `;
+        // append to container
+        blocksContainer.appendChild(gwrap);
+        const body = gwrap.querySelector('.group-body');
+        // blocks in group
+        blocks.filter(b=>b.group===g.id).forEach(b=>{
+          const card = createBlockCard(b, pairingOptionsHTML);
+          body.appendChild(card);
+        });
+      });
+    } else if(blockSortMode === 'time'){
+      // Sort by time (date + od)
+      const sortedBlocks = [...blocks].sort((a, b) => {
+        const aDate = a.date || '';
+        const bDate = b.date || '';
+        if(aDate !== bDate) return aDate.localeCompare(bDate);
+        const aTime = a.od || '';
+        const bTime = b.od || '';
+        return aTime.localeCompare(bTime);
+      });
+
+      sortedBlocks.forEach(b => {
+        const el = createBlockCard(b, pairingOptionsHTML);
+        blocksContainer.appendChild(el);
+      });
+    } else if(blockSortMode === 'type'){
+      // Group by type
+      const typeGroups = {};
+      blocks.forEach(b => {
+        const type = b.type || 'jiné';
+        if(!typeGroups[type]) typeGroups[type] = [];
+        typeGroups[type].push(b);
+      });
+
+      Object.keys(typeGroups).sort().forEach(type => {
+        const typeBlocks = typeGroups[type];
+        const twrap = document.createElement('div');
+        twrap.innerHTML = `<h3 class="font-semibold mb-2">${escapeHtml(type)} (${typeBlocks.length})</h3>`;
+        blocksContainer.appendChild(twrap);
+        typeBlocks.forEach(b => {
+          const el = createBlockCard(b, pairingOptionsHTML);
+          blocksContainer.appendChild(el);
+        });
+      });
+    }
+  }
 
   // attach event listeners for interactive elements inside cards (delegation)
   attachBlockCardListeners();
 }
 
-/* createBlockCard: returns DOM element for a block (used both grouped and ungrouped) */
+/* createReadOnlyBlockCard: returns DOM element for a block in read-only mode (clean text view) */
+function createReadOnlyBlockCard(b){
+  const blockEl = document.createElement('div');
+  blockEl.className = 'block-card p-3 border rounded mb-2 bg-cream';
+  blockEl.dataset.id = b.id;
+
+  // Left color border
+  const leftColor = COLORS.find(c=>c.id===b.barva)?.hex || COLORS[0].hex;
+  blockEl.style.borderLeft = `6px solid ${leftColor}`;
+
+  // Time + title
+  const timeStr = (b.od && b.do) ? `${b.od}–${b.do}` : (b.od || b.do || '–');
+  const header = document.createElement('div');
+  header.innerHTML = `
+    <div class="block-time" style="font-weight: 700; color: #255C9E; font-size: 1rem; margin-bottom: 0.25rem;">${timeStr}</div>
+    <div class="block-title" style="font-weight: 600; font-size: 0.95rem; color: #1a202c; margin-bottom: 0.5rem;">${escapeHtml(b.title||'Bez názvu')}</div>
+  `;
+  blockEl.appendChild(header);
+
+  // Short description (content)
+  if(b.content) {
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'block-detail';
+    contentDiv.style.fontSize = '0.85rem';
+    contentDiv.style.color = '#4a5568';
+    contentDiv.style.margin = '0.25rem 0';
+    contentDiv.innerHTML = `${b.content}`;
+    blockEl.appendChild(contentDiv);
+  }
+
+  // Organizuje
+  if(b.organizuje) {
+    const orgDiv = document.createElement('div');
+    orgDiv.className = 'block-detail';
+    orgDiv.innerHTML = `<strong>Organizuje:</strong> ${escapeHtml(b.organizuje)}`;
+    blockEl.appendChild(orgDiv);
+  }
+
+  // Date
+  if(b.date) {
+    const dateDiv = document.createElement('div');
+    dateDiv.className = 'block-detail';
+    dateDiv.innerHTML = `<strong>Datum:</strong> ${b.date}`;
+    blockEl.appendChild(dateDiv);
+  }
+
+  // Duration
+  if(b.duration) {
+    const durDiv = document.createElement('div');
+    durDiv.className = 'block-detail';
+    durDiv.innerHTML = `<strong>Délka:</strong> ${b.duration} min`;
+    blockEl.appendChild(durDiv);
+  }
+
+  // Type
+  if(b.type) {
+    const typeDiv = document.createElement('div');
+    typeDiv.className = 'block-detail';
+    typeDiv.innerHTML = `<strong>Typ:</strong> ${escapeHtml(b.type)}`;
+    blockEl.appendChild(typeDiv);
+  }
+
+  // Group
+  if(b.group) {
+    const groupObj = groups.find(g => g.id === b.group);
+    if(groupObj) {
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'block-detail';
+      groupDiv.innerHTML = `<strong>Skupina:</strong> ${escapeHtml(groupObj.name)}`;
+      blockEl.appendChild(groupDiv);
+    }
+  }
+
+  // Pairings
+  if(b.parovani && b.parovani.length > 0) {
+    const pairsDiv = document.createElement('div');
+    pairsDiv.className = 'block-detail';
+    const pairTitles = b.parovani.map(pid => {
+      const pb = blocks.find(x=>x.id===pid);
+      return pb ? escapeHtml(pb.title||'(bez názvu)') : '(smazaný)';
+    }).join(', ');
+    pairsDiv.innerHTML = `<strong>Propojené bloky:</strong> ${pairTitles}`;
+    blockEl.appendChild(pairsDiv);
+  }
+
+  // Block goals
+  if(b.blockGoals && b.blockGoals.length > 0) {
+    const goalsDiv = document.createElement('div');
+    goalsDiv.className = 'block-detail';
+    goalsDiv.innerHTML = `<strong>Cíle bloku:</strong><br>${b.blockGoals.map(g => `• ${escapeHtml(g)}`).join('<br>')}`;
+    blockEl.appendChild(goalsDiv);
+  }
+
+  return blockEl;
+}
 function createBlockCard(b, pairingOptionsHTML){
   const blockEl = document.createElement('div');
-  blockEl.className = 'block-card p-3 border rounded mb-2 bg-white';
+  blockEl.className = 'block-card p-3 border rounded mb-2 bg-cream';
   blockEl.dataset.id = b.id;
 
   // ensure fields exist
@@ -2523,10 +3074,26 @@ function attachBlockCardListeners(){
       if(field==='files') return;
       if(e.target.type==='number') block[field] = Number(e.target.value||0);
       else block[field] = e.target.value;
+      if(field==='date' && e.target.value){
+        const selectedDate = e.target.valueAsDate;
+        if(selectedDate && !isNaN(selectedDate.getTime())){
+          calDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        }
+      }
       if(field==='od' || field==='do' || field==='duration'){ syncTimeFields(block, field); }
       saveAll(); renderCalendar();
       if(field==='content') autoResizeTextarea(e.target);
     });
+
+    if(el.dataset.field === 'date'){
+      el.addEventListener('focus', e=>{
+        const focusedDate = e.target.valueAsDate;
+        if(focusedDate && !isNaN(focusedDate.getTime())){
+          calDate = new Date(focusedDate.getFullYear(), focusedDate.getMonth(), focusedDate.getDate());
+          renderCalendar();
+        }
+      });
+    }
   });
 
   // color choose
@@ -3123,15 +3690,10 @@ renderFeedbackQuestions();
   }
 
   window.showUserMenu = function() {
-    if (window.isAnonymous) {
-      alert('Jste přihlášeni anonymně. Pro správu účtu se přihlaste emailem.');
-      return;
-    }
-    
     const menu = document.createElement('div');
-    menu.className = 'fixed top-16 right-4 bg-white rounded-xl shadow-2xl border z-50 p-4 min-w-48';
+    menu.className = 'fixed top-16 right-4 bg-cream rounded-xl shadow-2xl border z-50 p-4 min-w-48';
     menu.innerHTML = `
-      <div class="text-sm text-gray-600 mb-2">${window.currentUser?.displayName || window.currentUser?.email || 'Uživatel'}</div>
+      <div class="text-sm text-gray-600 mb-2">${window.currentUser?.displayName || window.currentUser?.email || 'Anonymní uživatel'}</div>
       <button onclick="window.auth.signOut()" class="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">🚪 Odhlásit se</button>
     `;
     document.body.appendChild(menu);
