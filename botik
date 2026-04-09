@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Skaut Audio Loop</title>
+    <style>
+        body {
+            background-color: black; /* Černé pozadí */
+            color: white;           /* Bílý text */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+        }
+        .container {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Přehrávání ve smyčce</h1>
+        <audio controls loop>
+            <source src="https://tobi-09.github.io/skaut/tesit.mp3" type="audio/mpeg">
+            Váš prohlížeč nepodporuje přehrávání audia.
+        </audio>
+        <p>Zvuk se po skončení automaticky spustí znovu.</p>
+    </div>
+
+</body>
+</html>
