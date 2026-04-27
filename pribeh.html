@@ -136,6 +136,10 @@
             display: none;
             z-index: 100;
         }
+
+        /* Pomocné třídy pro zobrazení/skrytí */
+        .hidden { display: none !important; }
+        .input-main { margin-bottom:15px; padding:15px; border-radius:15px; border:1px solid #ddd; width:100%; box-sizing:border-box; font-family: 'Quicksand'; font-size: 1rem; }
     </style>
 </head>
 <body>
@@ -146,15 +150,26 @@
 <div class="container">
     <div id="screen-menu" class="screen active">
         <h1>Překládaný Příběh</h1>
-        <input type="text" id="input-name" placeholder="Tvé jméno" style="margin-bottom:15px; padding:15px; border-radius:15px; border:1px solid #ddd; width:100%; box-sizing:border-box;">
-        <button onclick="createRoom()">Vytvořit novou skupinu</button>
-        <div style="margin: 15px 0; color: #aaa;">— NEBO —</div>
-        <input type="text" id="input-code" placeholder="Kód místnosti" style="margin-bottom:15px; padding:15px; border-radius:15px; border:1px solid #ddd; width:100%; box-sizing:border-box;">
-        <button onclick="joinRoom()" style="background: var(--sage);">Vstoupit do hry</button>
+        
+        <input type="text" id="input-name" class="input-main" placeholder="Tvé jméno">
+
+        <div id="create-area">
+            <button onclick="createRoom()">Vytvořit novou skupinu</button>
+            <div style="margin: 15px 0; color: #aaa;">— NEBO —</div>
+            <input type="text" id="input-code" class="input-main" placeholder="Kód místnosti">
+        </div>
+
+        <div id="join-area" class="hidden">
+            <p id="room-info" style="color: var(--forest); font-weight: 600; margin-bottom: 15px;"></p>
+        </div>
+
+        <button id="btn-join" onclick="joinRoom()" style="background: var(--sage);">Vstoupit do hry</button>
+        
+        <button id="btn-reset" class="hidden" onclick="resetToDefault()" style="background:none; color:#888; text-decoration:underline; border:none; font-size:0.8rem; margin-top:10px; width:auto;">Vytvořit vlastní skupinu</button>
     </div>
 
     <div id="screen-lobby" class="screen">
-        <h2>Čekání v na ostatní </h2>
+        <h2>Čekání na ostatní</h2>
         <div style="font-size: 2rem; letter-spacing: 5px; color: var(--forest); font-weight: bold;" id="room-code-display">----</div>
         <button onclick="copyInviteLink()" class="btn-secondary" style="margin-top: 10px; width: auto;">📋 Sdílet odkaz</button>
         <div id="player-list" style="margin: 20px 0;"></div>
@@ -221,14 +236,31 @@
         ]
     };
 
-    // Automatické načtení kódu z URL
+    // Detekce odkazu při načtení
     window.addEventListener('load', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const roomCode = urlParams.get('room');
         if (roomCode) {
-            document.getElementById('input-code').value = roomCode.toUpperCase();
+            state.roomId = roomCode.toUpperCase();
+            document.getElementById('input-code').value = state.roomId;
+            
+            // UI úprava pro pozvaného hráče
+            document.getElementById('create-area').classList.add('hidden');
+            document.getElementById('join-area').classList.remove('hidden');
+            document.getElementById('btn-reset').classList.remove('hidden');
+            document.getElementById('room-info').innerText = `Máš pozvánku do místnosti ${state.roomId}`;
         }
     });
+
+    // Resetování zobrazení (zpět na "vytvořit")
+    window.resetToDefault = () => {
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.pushState({}, '', newUrl);
+        document.getElementById('create-area').classList.remove('hidden');
+        document.getElementById('join-area').classList.add('hidden');
+        document.getElementById('btn-reset').classList.add('hidden');
+        document.getElementById('input-code').value = "";
+    };
 
     window.copyInviteLink = () => {
         const url = window.location.origin + window.location.pathname + "?room=" + state.roomId;
@@ -239,7 +271,6 @@
         });
     };
 
-    // Částice
     function createParticles() {
         const container = document.getElementById('particle-container');
         for(let i=0; i<15; i++) {
@@ -274,7 +305,7 @@
     window.joinRoom = async () => {
         const name = document.getElementById('input-name').value;
         const code = document.getElementById('input-code').value.toUpperCase();
-        if (!name || !code) return alert("Vyplň vše!");
+        if (!name || !code) return alert("Vyplň jméno a kód!");
         const snap = await get(ref(db, 'rooms/' + code));
         if (!snap.exists()) return alert("Místnost neexistuje!");
         state.roomId = code;
