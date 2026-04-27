@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Překládaný Příběh</title>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Quicksand:wght@400;500;600&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2d5a27;
+            --sage: #94ad94;
+            --cream: #f9f7f2;
+            --paper: #ffffff;
+            --earth: #5d4037;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #e8f0e8 0%, #d1dbd1 100%);
+            color: var(--earth);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Částice na pozadí */
+        .particle {
+            position: absolute;
+            background: rgba(45, 90, 39, 0.15);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+        }
+
+        .container {
+            width: 95%;
+            max-width: 600px;
+            background: var(--cream);
+            padding: 40px;
+            border-radius: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 { font-family: 'Merriweather', serif; color: var(--forest); font-size: 2rem; }
+
+        .story-line {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .story-input {
+            border: none;
+            border-bottom: 2px solid var(--sage);
+            background: transparent;
+            font-family: 'Caveat', cursive;
+            font-size: 1.6rem;
+            padding: 2px 10px;
+            color: var(--forest);
+            outline: none;
+            min-width: 150px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 18px;
+            background: var(--forest);
+            color: white;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+
+        button:hover { transform: scale(1.02); background: #1e3d1a; }
+        button:active { transform: scale(0.96); }
+
+        .btn-secondary { background: var(--sage); font-size: 14px; padding: 10px; }
+
+        .screen { display: none; opacity: 0; transform: scale(0.95); transition: var(--transition); }
+        .screen.active { display: block; opacity: 1; transform: scale(1); }
+
+        .paper-sheet {
+            background: var(--paper);
+            padding: 40px 20px;
+            border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            border-left: 30px solid #f0f0f0;
+        }
+
+        .handwritten { font-family: 'Caveat', cursive; font-size: 1.5rem; font-weight: bold; }
+        .author-0 { color: #1a5fb4; } .author-1 { color: #c0392b; }
+        .author-2 { color: #27ae60; } .author-3 { color: #8e44ad; }
+        .author-4 { color: #d35400; }
+        
+        .connector { color: #777; font-family: 'Quicksand'; font-size: 1.1rem; }
+        .player-chip { background: #e0eadd; padding: 6px 15px; border-radius: 20px; margin: 4px; display: inline-block; border: 1px solid var(--sage); }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--forest);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div id="particle-container"></div>
+<div id="toast" class="toast">Odkaz zkopírován! 🌿</div>
+
+<div class="container">
+    <div id="screen-menu" class="screen active">
+        <h1>Překládaný Příběh</h1>
+        <input type="text" id="input-name" placeholder="Tvé jméno" style="margin-bottom:15px; padding:15px; border-radius:15px; border:1px solid #ddd; width:100%; box-sizing:border-box;">
+        <button onclick="createRoom()">Vytvořit novou skupinu</button>
+        <div style="margin: 15px 0; color: #aaa;">— NEBO —</div>
+        <input type="text" id="input-code" placeholder="Kód místnosti" style="margin-bottom:15px; padding:15px; border-radius:15px; border:1px solid #ddd; width:100%; box-sizing:border-box;">
+        <button onclick="joinRoom()" style="background: var(--sage);">Vstoupit do hry</button>
+    </div>
+
+    <div id="screen-lobby" class="screen">
+        <h2>Čekání v na ostatní </h2>
+        <div style="font-size: 2rem; letter-spacing: 5px; color: var(--forest); font-weight: bold;" id="room-code-display">----</div>
+        <button onclick="copyInviteLink()" class="btn-secondary" style="margin-top: 10px; width: auto;">📋 Sdílet odkaz</button>
+        <div id="player-list" style="margin: 20px 0;"></div>
+        <div id="admin-area" style="display:none;"><button onclick="startGame()">Vypustit příběhy</button></div>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <h3 id="current-question" style="color: var(--forest);">Kdo?</h3>
+        <div class="paper-sheet">
+            <div class="story-line">
+                <span id="prefix-text"></span>
+                <input type="text" id="answer-input" class="story-input" placeholder="...">
+                <span id="suffix-text"></span>
+            </div>
+        </div>
+        <button onclick="sendAnswer()">Poslat dál</button>
+    </div>
+
+    <div id="screen-wait" class="screen">
+        <h3>Šustění listí...</h3>
+        <p>Ostatní ještě píší své řádky.</p>
+    </div>
+
+    <div id="screen-results" class="screen">
+        <h2>Příběhy jsou dopsány</h2>
+        <div id="final-stories"></div>
+        <button onclick="location.reload()" style="background: none; color: var(--forest); text-decoration: underline; border: none;">Hrát znovu</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, update, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBiax9dVOdtX5k3Ajmq-otnfV6JOlOgS1Q",
+        authDomain: "projekce-0.firebaseapp.com",
+        databaseURL: "https://projekce-0-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "projekce-0",
+        storageBucket: "projekce-0.firebasestorage.app",
+        messagingSenderId: "976431090482",
+        appId: "1:976431090482:web:dabed64e8f20b10bc6252b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let state = {
+        roomId: null,
+        myId: 'u_' + Math.random().toString(36).substr(2, 7),
+        round: 0,
+        players: [],
+        questions: [
+            { q: "Kdo?", pre: "Příběh začíná:", suf: "" },
+            { q: "S kým?", pre: "... s", suf: "..." },
+            { q: "Kde?", pre: "... byli v", suf: "" },
+            { q: "Kdy?", pre: "... a bylo to", suf: "" },
+            { q: "Co dělali?", pre: "Zrovna tam", suf: "" },
+            { q: "Proč?", pre: "protože", suf: "" },
+            { q: "Kdo přišel?", pre: "Najednou přišel", suf: "" },
+            { q: "Co udělal?", pre: "a", suf: "" },
+            { q: "Reakce?", pre: "Reakce postav byla,", suf: "" },
+            { q: "Výsledek?", pre: "Nakonec z toho vzniklo:", suf: "" }
+        ]
+    };
+
+    // Automatické načtení kódu z URL
+    window.addEventListener('load', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomCode = urlParams.get('room');
+        if (roomCode) {
+            document.getElementById('input-code').value = roomCode.toUpperCase();
+        }
+    });
+
+    window.copyInviteLink = () => {
+        const url = window.location.origin + window.location.pathname + "?room=" + state.roomId;
+        navigator.clipboard.writeText(url).then(() => {
+            const toast = document.getElementById('toast');
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 2500);
+        });
+    };
+
+    // Částice
+    function createParticles() {
+        const container = document.getElementById('particle-container');
+        for(let i=0; i<15; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + 'vw';
+            p.style.width = p.style.height = (Math.random() * 10 + 5) + 'px';
+            p.style.animationDuration = (Math.random() * 5 + 5) + 's';
+            p.style.animationDelay = Math.random() * 5 + 's';
+            container.appendChild(p);
+        }
+    }
+    createParticles();
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    window.createRoom = async () => {
+        const name = document.getElementById('input-name').value;
+        if (!name) return alert("Zadej jméno!");
+        state.roomId = Math.random().toString(36).substr(2, 4).toUpperCase();
+        state.isAdmin = true;
+        await set(ref(db, 'rooms/' + state.roomId), { admin: state.myId, status: 'lobby', round: 0, players: {[state.myId]: name} });
+        initListener();
+        showScreen('screen-lobby');
+        document.getElementById('room-code-display').innerText = state.roomId;
+        document.getElementById('admin-area').style.display = 'block';
+    };
+
+    window.joinRoom = async () => {
+        const name = document.getElementById('input-name').value;
+        const code = document.getElementById('input-code').value.toUpperCase();
+        if (!name || !code) return alert("Vyplň vše!");
+        const snap = await get(ref(db, 'rooms/' + code));
+        if (!snap.exists()) return alert("Místnost neexistuje!");
+        state.roomId = code;
+        await update(ref(db, `rooms/${code}/players`), { [state.myId]: name });
+        initListener();
+        showScreen('screen-lobby');
+        document.getElementById('room-code-display').innerText = state.roomId;
+    };
+
+    function initListener() {
+        onValue(ref(db, 'rooms/' + state.roomId), (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+            state.players = Object.keys(data.players || {});
+            document.getElementById('player-list').innerHTML = Object.values(data.players).map(n => `<span class="player-chip">${n}</span>`).join('');
+            
+            if (data.status === 'playing' && data.round !== state.round) {
+                state.round = data.round;
+                const q = state.questions[state.round-1];
+                document.getElementById('current-question').innerText = q.q;
+                document.getElementById('prefix-text').innerText = q.pre;
+                document.getElementById('suffix-text').innerText = q.suf;
+                document.getElementById('answer-input').value = "";
+                showScreen('screen-game');
+            }
+            if (data.status === 'results') showResults(data.answers);
+
+            if (state.isAdmin && data.status === 'playing' && data.answers && data.answers[data.round]) {
+                if (Object.keys(data.answers[data.round]).length >= state.players.length) {
+                    setTimeout(() => {
+                        const nextRound = data.round + 1;
+                        if (nextRound <= state.questions.length) update(ref(db, 'rooms/' + state.roomId), { round: nextRound });
+                        else update(ref(db, 'rooms/' + state.roomId), { status: 'results' });
+                    }, 1000);
+                }
+            }
+        });
+    }
+
+    window.startGame = () => update(ref(db, 'rooms/' + state.roomId), { status: 'playing', round: 1 });
+
+    window.sendAnswer = () => {
+        const val = document.getElementById('answer-input').value;
+        if(!val) return;
+        const myIdx = state.players.indexOf(state.myId);
+        const target = (myIdx + state.round) % state.players.length;
+        set(ref(db, `rooms/${state.roomId}/answers/${state.round}/${state.myId}`), { text: val, storyTarget: target, authorIdx: myIdx });
+        showScreen('screen-wait');
+    };
+
+    function showResults(allAnswers) {
+        showScreen('screen-results');
+        const container = document.getElementById('final-stories');
+        container.innerHTML = "";
+        for (let s = 0; s < state.players.length; s++) {
+            let p = {}; let a = {};
+            for (let r = 1; r <= 10; r++) {
+                const part = Object.values(allAnswers[r] || {}).find(ans => ans.storyTarget === s);
+                if (part) { p[r] = part.text; a[r] = part.authorIdx; }
+            }
+            const wrap = (txt, auth) => `<span class="handwritten author-${auth%5}">${txt || '...'}</span>`;
+            
+            const html = `
+                <div class="result-card" style="background:white; padding:20px; border-radius:20px; margin-bottom:20px; text-align:left; line-height:1.8;">
+                ${wrap(p[1], a[1])} <span class="connector">s</span> ${wrap(p[2], a[2])} 
+                <span class="connector">byli v</span> ${wrap(p[3], a[3])} ${wrap(p[4], a[4])}. 
+                <span class="connector">Zrovna tam</span> ${wrap(p[5], a[5])}, <span class="connector">protože</span> ${wrap(p[6], a[6])}. 
+                <span class="connector">Najednou přišel</span> ${wrap(p[7], a[7])} <span class="connector">a</span> ${wrap(p[8], a[8])}. 
+                <span class="connector">Reakce</span> ${wrap(p[1], a[1])} <span class="connector">a</span> ${wrap(p[2], a[2])} <span class="connector">byla,</span> ${wrap(p[9], a[9])}. 
+                <span class="connector">Nakonec z toho vzniklo:</span> ${wrap(p[10], a[10])}.
+                </div>`;
+            container.innerHTML += html;
+        }
+    }
+</script>
+</body>
+</html>
