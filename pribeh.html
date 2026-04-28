@@ -24,11 +24,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            overflow-y: auto; /* Změněno: Povoleno skrolování stránky */
             position: relative;
+            padding: 20px 0;
         }
 
-        /* Částice na pozadí */
         .particle {
             position: absolute;
             background: rgba(45, 90, 39, 0.15);
@@ -54,6 +54,9 @@
             text-align: center;
             position: relative;
             z-index: 10;
+            /* Změněno: Přidáno vnitřní skrolování pro výsledky */
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         h1 { font-family: 'Merriweather', serif; color: var(--forest); font-size: 2rem; }
@@ -137,7 +140,6 @@
             z-index: 100;
         }
 
-        /* Pomocné třídy pro zobrazení/skrytí */
         .hidden { display: none !important; }
         .input-main { margin-bottom:15px; padding:15px; border-radius:15px; border:1px solid #ddd; width:100%; box-sizing:border-box; font-family: 'Quicksand'; font-size: 1rem; }
     </style>
@@ -150,21 +152,16 @@
 <div class="container">
     <div id="screen-menu" class="screen active">
         <h1>Překládaný Příběh</h1>
-        
         <input type="text" id="input-name" class="input-main" placeholder="Tvé jméno">
-
         <div id="create-area">
             <button onclick="createRoom()">Vytvořit novou skupinu</button>
             <div style="margin: 15px 0; color: #aaa;">— NEBO —</div>
             <input type="text" id="input-code" class="input-main" placeholder="Kód místnosti">
         </div>
-
         <div id="join-area" class="hidden">
             <p id="room-info" style="color: var(--forest); font-weight: 600; margin-bottom: 15px;"></p>
         </div>
-
         <button id="btn-join" onclick="joinRoom()" style="background: var(--sage);">Vstoupit do hry</button>
-        
         <button id="btn-reset" class="hidden" onclick="resetToDefault()" style="background:none; color:#888; text-decoration:underline; border:none; font-size:0.8rem; margin-top:10px; width:auto;">Vytvořit vlastní skupinu</button>
     </div>
 
@@ -191,6 +188,9 @@
     <div id="screen-wait" class="screen">
         <h3>Šustění listí...</h3>
         <p>Ostatní ještě píší své řádky.</p>
+        <div id="wait-counter" style="background: #e8f0e8; padding: 10px; border-radius: 15px; color: var(--forest); font-weight: bold; margin-top: 20px;">
+            Odevzdalo: 0 / 0
+        </div>
     </div>
 
     <div id="screen-results" class="screen">
@@ -236,15 +236,12 @@
         ]
     };
 
-    // Detekce odkazu při načtení
     window.addEventListener('load', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const roomCode = urlParams.get('room');
         if (roomCode) {
             state.roomId = roomCode.toUpperCase();
             document.getElementById('input-code').value = state.roomId;
-            
-            // UI úprava pro pozvaného hráče
             document.getElementById('create-area').classList.add('hidden');
             document.getElementById('join-area').classList.remove('hidden');
             document.getElementById('btn-reset').classList.remove('hidden');
@@ -252,7 +249,6 @@
         }
     });
 
-    // Resetování zobrazení (zpět na "vytvořit")
     window.resetToDefault = () => {
         const newUrl = window.location.origin + window.location.pathname;
         window.history.pushState({}, '', newUrl);
@@ -322,6 +318,13 @@
             state.players = Object.keys(data.players || {});
             document.getElementById('player-list').innerHTML = Object.values(data.players).map(n => `<span class="player-chip">${n}</span>`).join('');
             
+            // Logika počítadla odevzdaných odpovědí
+            if (data.status === 'playing' && data.answers && data.answers[data.round]) {
+                const submitted = Object.keys(data.answers[data.round]).length;
+                const total = state.players.length;
+                document.getElementById('wait-counter').innerText = `Odevzdalo: ${submitted} / ${total}`;
+            }
+
             if (data.status === 'playing' && data.round !== state.round) {
                 state.round = data.round;
                 const q = state.questions[state.round-1];
@@ -329,6 +332,7 @@
                 document.getElementById('prefix-text').innerText = q.pre;
                 document.getElementById('suffix-text').innerText = q.suf;
                 document.getElementById('answer-input').value = "";
+                document.getElementById('wait-counter').innerText = `Odevzdalo: 0 / ${state.players.length}`;
                 showScreen('screen-game');
             }
             if (data.status === 'results') showResults(data.answers);
@@ -369,7 +373,7 @@
             const wrap = (txt, auth) => `<span class="handwritten author-${auth%5}">${txt || '...'}</span>`;
             
             const html = `
-                <div class="result-card" style="background:white; padding:20px; border-radius:20px; margin-bottom:20px; text-align:left; line-height:1.8;">
+                <div class="result-card" style="background:white; padding:20px; border-radius:20px; margin-bottom:20px; text-align:left; line-height:1.8; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 ${wrap(p[1], a[1])} <span class="connector">s</span> ${wrap(p[2], a[2])} 
                 <span class="connector">byli v</span> ${wrap(p[3], a[3])} ${wrap(p[4], a[4])}. 
                 <span class="connector">Zrovna tam</span> ${wrap(p[5], a[5])}, <span class="connector">protože</span> ${wrap(p[6], a[6])}. 
