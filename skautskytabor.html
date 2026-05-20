@@ -35,6 +35,8 @@
     .action-btn i { font-size: 0.9rem; }
     .action-btn.collab { background: #059669; }
     .action-btn.collab:hover { background: #047857; }
+    .action-btn.program-btn { background: #EC4899; }
+    .action-btn.program-btn:hover { background: #DB2777; }
     /* idea and goal cards */
     .idea-card { background: white; border-top: 4px solid #3B82F6; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: box-shadow 0.3s ease; }
     .idea-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
@@ -74,6 +76,12 @@
     .day-leader-badge { display: inline-block; padding: 0.4rem 0.8rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.5rem; }
     /* improve description display */
     .block-detail.italic { font-style: italic; color: #6B7280; margin: 0.5rem 0; }
+    /* program form styles */
+    .form-section { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #E5E7EB; }
+    .form-section:last-child { border-bottom: none; }
+    .form-section h4 { font-weight: 700; color: #1F2937; margin-bottom: 0.75rem; font-size: 0.95rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-grid.full { grid-template-columns: 1fr; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -375,6 +383,129 @@
   </div>
 </div>
 
+<!-- Program form modal -->
+<div id="programFormModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-40 backdrop-blur-sm">
+  <div class="bg-white rounded-xl w-full max-w-4xl shadow-2xl border-t-4 border-green-600 max-h-[95vh] overflow-y-auto">
+    <div class="sticky top-0 bg-gradient-to-r from-green-700 to-green-800 text-white px-8 py-6 flex items-center justify-between shadow-md">
+      <div class="flex items-center gap-3">
+        <i class="fas fa-file-alt text-2xl"></i>
+        <h3 class="text-2xl font-bold" id="programFormTitle">Vyplnit program</h3>
+      </div>
+      <button id="programFormCloseX" class="text-2xl hover:opacity-80 transition">&times;</button>
+    </div>
+    
+    <div class="p-8 space-y-6">
+      <!-- Základní info -->
+      <div class="form-section">
+        <h4><i class="fas fa-info-circle text-green-600 mr-2"></i>Základní informace</h4>
+        <div class="form-grid">
+          <label class="block">
+            <span class="text-sm font-semibold text-gray-700">Vedoucí (garant)</span>
+            <input type="text" id="programLeader" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600" placeholder="jméno vedoucího" />
+          </label>
+          <label class="block">
+            <span class="text-sm font-semibold text-gray-700">Časová dotace (min)</span>
+            <input type="number" id="programDuration" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600" placeholder="např. 60" />
+          </label>
+          <label class="block">
+            <span class="text-sm font-semibold text-gray-700">Místo (ideálně)</span>
+            <input type="text" id="programPlace" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600" placeholder="místo konání" />
+          </label>
+          <label class="block">
+            <span class="text-sm font-semibold text-gray-700">Vytížení vedoucích</span>
+            <input type="text" id="programWorkload" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600" placeholder="počet lidí, příprava, úklid..." />
+          </label>
+        </div>
+      </div>
+
+      <!-- Cíle a popis -->
+      <div class="form-section">
+        <h4><i class="fas fa-bullseye text-green-600 mr-2"></i>Cíle a popis</h4>
+        <label class="block mb-4">
+          <span class="text-sm font-semibold text-gray-700">Cíle programu</span>
+          <textarea id="programGoals" rows="3" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Jaké jsou cíle? Co mají účastníci získat?"></textarea>
+        </label>
+        <label class="block mb-4">
+          <span class="text-sm font-semibold text-gray-700">Anotace programu (stručný popis)</span>
+          <textarea id="programAnnotation" rows="3" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Jakou má formu? Jak probíhá? Co je cílem? Cca jeden odstavec..."></textarea>
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-gray-700">Detailní popis programu</span>
+          <textarea id="programDescription" rows="5" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Harmonogram s časováním, zodpovědnosti, pomůcky, úvod, reflexe..."></textarea>
+        </label>
+      </div>
+
+      <!-- Varianty a omezení -->
+      <div class="form-section">
+        <h4><i class="fas fa-cloud-rain text-green-600 mr-2"></i>Varianty a flexibilita</h4>
+        <label class="block mb-4">
+          <span class="text-sm font-semibold text-gray-700">Dešťová varianta</span>
+          <textarea id="programRainVariant" rows="2" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Co se změní v případě špatného počasí?"></textarea>
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-gray-700">Co lze zkrátit</span>
+          <textarea id="programShorten" rows="2" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Kterou část lze vynechat, aby celek stále měl smysl?"></textarea>
+        </label>
+      </div>
+
+      <!-- Údaje o realizaci -->
+      <div class="form-section">
+        <h4><i class="fas fa-cogs text-green-600 mr-2"></i>Realizace a prostředky</h4>
+        <label class="block mb-4">
+          <span class="text-sm font-semibold text-gray-700">Zapojení dalších vedoucích</span>
+          <textarea id="programInvolvement" rows="2" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Kolik vedoucích? Jako účastníci? Pozorovatelé? Pomocná síla?"></textarea>
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-gray-700">Rozpočet programu (přibližně)</span>
+          <input type="text" id="programBudget" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600" placeholder="Kolik Kč? Na co?" />
+        </label>
+      </div>
+
+      <!-- Rizika -->
+      <div class="form-section">
+        <h4><i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>Rizika a jejich řešení</h4>
+        <label class="block mb-4">
+          <span class="text-sm font-semibold text-gray-700">Identifikovaná rizika</span>
+          <textarea id="programRisks" rows="3" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Zranění, selhání materiálu, překročení času, atd."></textarea>
+        </label>
+        <label class="block mb-4">
+          <span class="text-sm font-semibold text-gray-700">Prevence rizik</span>
+          <textarea id="programPrevention" rows="3" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Co dělat, aby se rizika nestala?"></textarea>
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-gray-700">Krizový plán</span>
+          <textarea id="programCrisis" rows="2" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Co dělat, když se něco stane?"></textarea>
+        </label>
+      </div>
+
+      <!-- Zhodnocení -->
+      <div class="form-section">
+        <h4><i class="fas fa-star text-yellow-500 mr-2"></i>Zhodnocení po programu</h4>
+        <label class="block mb-4">
+          <span class="text-sm font-semibold text-gray-700">Zpětná vazba účastníků (slovně)</span>
+          <textarea id="programFeedback" rows="2" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Co říkali účastníci?"></textarea>
+        </label>
+        <label class="block mb-4">
+          <span class="text-sm font-semibold text-gray-700">Poznámky autorů</span>
+          <textarea id="programAuthorNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Co jsme si všimli?"></textarea>
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-gray-700">Ostatní poznámky</span>
+          <textarea id="programOtherNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none" placeholder="Poznámky druhých očí, dalších vedoucích..."></textarea>
+        </label>
+      </div>
+    </div>
+    
+    <div class="sticky bottom-0 bg-gray-100 px-8 py-4 flex justify-end gap-3 border-t">
+      <button id="programFormCancel" class="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-lg transition">
+        <i class="fas fa-times mr-2"></i> Zavřít
+      </button>
+      <button id="programFormSave" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition shadow">
+        <i class="fas fa-save mr-2"></i> Uložit program
+      </button>
+    </div>
+  </div>
+</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
@@ -705,6 +836,12 @@
       collabBtn.addEventListener('click', ()=> addCollaborator(key));
       buttonsDiv.appendChild(collabBtn);
 
+      const programBtn = document.createElement('button');
+      programBtn.className = 'action-btn program-btn';
+      programBtn.innerHTML = '<i class="fas fa-file-alt"></i> Vyplnit program';
+      programBtn.addEventListener('click', ()=> openProgramForm(key, block.title));
+      buttonsDiv.appendChild(programBtn);
+
       if (adminUsers.includes(currentUser)) {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'action-btn delete-btn';
@@ -826,6 +963,109 @@
       await set(refBlock, { ...b, editors });
     }
   }
+
+  // program form modal
+  let currentProgramScheduleKey = null;
+  
+  async function openProgramForm(scheduleKey, scheduleTitle) {
+    currentProgramScheduleKey = scheduleKey;
+    const modal = document.getElementById('programFormModal');
+    document.getElementById('programFormTitle').textContent = `Vyplnit program: ${scheduleTitle}`;
+    
+    // Clear form fields
+    document.getElementById('programLeader').value = '';
+    document.getElementById('programDuration').value = '';
+    document.getElementById('programPlace').value = '';
+    document.getElementById('programWorkload').value = '';
+    document.getElementById('programGoals').value = '';
+    document.getElementById('programAnnotation').value = '';
+    document.getElementById('programDescription').value = '';
+    document.getElementById('programRainVariant').value = '';
+    document.getElementById('programShorten').value = '';
+    document.getElementById('programInvolvement').value = '';
+    document.getElementById('programBudget').value = '';
+    document.getElementById('programRisks').value = '';
+    document.getElementById('programPrevention').value = '';
+    document.getElementById('programCrisis').value = '';
+    document.getElementById('programFeedback').value = '';
+    document.getElementById('programAuthorNotes').value = '';
+    document.getElementById('programOtherNotes').value = '';
+    
+    // Try to load existing program data
+    try {
+      const snap = await get(ref(db, `programs/${scheduleKey}`));
+      const existingData = snap.val();
+      if(existingData) {
+        document.getElementById('programLeader').value = existingData.leader || '';
+        document.getElementById('programDuration').value = existingData.duration || '';
+        document.getElementById('programPlace').value = existingData.place || '';
+        document.getElementById('programWorkload').value = existingData.workload || '';
+        document.getElementById('programGoals').value = existingData.goals || '';
+        document.getElementById('programAnnotation').value = existingData.annotation || '';
+        document.getElementById('programDescription').value = existingData.description || '';
+        document.getElementById('programRainVariant').value = existingData.rainVariant || '';
+        document.getElementById('programShorten').value = existingData.shorten || '';
+        document.getElementById('programInvolvement').value = existingData.involvement || '';
+        document.getElementById('programBudget').value = existingData.budget || '';
+        document.getElementById('programRisks').value = existingData.risks || '';
+        document.getElementById('programPrevention').value = existingData.prevention || '';
+        document.getElementById('programCrisis').value = existingData.crisis || '';
+        document.getElementById('programFeedback').value = existingData.feedback || '';
+        document.getElementById('programAuthorNotes').value = existingData.authorNotes || '';
+        document.getElementById('programOtherNotes').value = existingData.otherNotes || '';
+      }
+    } catch(e) {
+      console.log('No existing program data for this schedule item');
+    }
+    
+    modal.classList.remove('hidden');
+  }
+  
+  // Program form modal controls
+  document.getElementById('programFormCloseX').addEventListener('click', ()=> {
+    document.getElementById('programFormModal').classList.add('hidden');
+  });
+  
+  document.getElementById('programFormCancel').addEventListener('click', ()=> {
+    document.getElementById('programFormModal').classList.add('hidden');
+  });
+  
+  document.getElementById('programFormSave').addEventListener('click', async ()=> {
+    if(!currentProgramScheduleKey || !currentUser) return;
+    
+    const programData = {
+      leader: document.getElementById('programLeader').value,
+      duration: document.getElementById('programDuration').value,
+      place: document.getElementById('programPlace').value,
+      workload: document.getElementById('programWorkload').value,
+      goals: document.getElementById('programGoals').value,
+      annotation: document.getElementById('programAnnotation').value,
+      description: document.getElementById('programDescription').value,
+      rainVariant: document.getElementById('programRainVariant').value,
+      shorten: document.getElementById('programShorten').value,
+      involvement: document.getElementById('programInvolvement').value,
+      budget: document.getElementById('programBudget').value,
+      risks: document.getElementById('programRisks').value,
+      prevention: document.getElementById('programPrevention').value,
+      crisis: document.getElementById('programCrisis').value,
+      feedback: document.getElementById('programFeedback').value,
+      authorNotes: document.getElementById('programAuthorNotes').value,
+      otherNotes: document.getElementById('programOtherNotes').value,
+      author: currentUser,
+      updated: new Date().toISOString()
+    };
+    
+    await set(ref(db, `programs/${currentProgramScheduleKey}`), programData);
+    alert('Program byl úspěšně uložen! ✅');
+    document.getElementById('programFormModal').classList.add('hidden');
+  });
+  
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e)=> {
+    if(e.key === 'Escape' && !document.getElementById('programFormModal').classList.contains('hidden')) {
+      document.getElementById('programFormModal').classList.add('hidden');
+    }
+  });
 
   // listen for schedule changes
   onValue(ref(db,'schedule'), snap=>{
