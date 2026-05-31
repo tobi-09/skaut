@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MAGIE RUN — Imerzivní audiovizuální instalace a rituál</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #181818;
+            --accent: #fff;
+            --muted: #aaa;
+            --border: rgba(255, 255, 255, 0.15);
+            --font-main: 'Inter', sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; font-family: var(--font-main);
+            background: var(--bg); color: var(--accent);
+            line-height: 1.4; -webkit-font-smoothing: antialiased;
+        }
+        .lang-switcher { position: fixed; top: 30px; right: 40px; z-index: 1000; display: flex; gap: 15px; }
+        .lang-link {
+            background: transparent; border: none; color: #fff;
+            font-size: 12px; font-weight: 700; text-transform: uppercase; 
+            cursor: pointer; opacity: 0.4; letter-spacing: 0.1em;
+        }
+        .lang-link:hover { opacity: 1; }
+        #lang-overlay {
+            position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #lang-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; transition: 0.8s; }
+        .lang-btn {
+            background: transparent; border: 1px solid var(--border); color: #fff;
+            padding: 15px 40px; cursor: pointer; text-transform: uppercase; margin: 10px;
+            font-size: 13px; letter-spacing: 0.2em;
+        }
+        .lang-btn:hover { background: #fff; color: #000; }
+        #notice-overlay {
+            position: fixed; inset: 0; background: var(--bg); z-index: 9998;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 0.8s;
+        }
+        #notice-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .notice-box {
+            border: 1px solid var(--border); padding: 48px 32px; border-radius: 12px;
+            background: rgba(24,24,24,0.98); box-shadow: 0 4px 32px #000a;
+            display: flex; flex-direction: column; align-items: center; min-width: 320px;
+        }
+        .notice-title {
+            font-family: var(--font-main); font-size: 18px; letter-spacing: 0.3em;
+            text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 24px;
+        }
+        .notice-text {
+            font-family: var(--font-main); font-size: 20px; color: var(--accent);
+            text-align: center; margin-bottom: 36px; font-weight: 300; letter-spacing: 0.01em;
+        }
+        .notice-btn {
+            background: transparent; border: 1px solid var(--border); color: #fff;
+            padding: 15px 40px; cursor: pointer; text-transform: uppercase; margin: 10px;
+            font-size: 13px; letter-spacing: 0.2em; border-radius: 4px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .notice-btn:hover { background: #fff; color: #000; }
+        .hero { position: relative; width: 100%; height: 100vh; margin-bottom: 120px; }
+        .hero-media { width: 100%; height: 100%; }
+        .hero-media img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6); }
+        .hero-info { position: absolute; bottom: 80px; left: 50px; z-index: 10; }
+        .hero-info h1 { 
+            font-size: clamp(50px, 12vw, 140px); 
+            margin: 0; text-transform: uppercase; 
+            letter-spacing: -0.05em; line-height: 0.8; font-weight: 500;
+        }
+        .wrap { max-width: 1500px; margin: 0 auto; padding: 0 50px; }
+        .desc { 
+            font-size: clamp(22px, 2.5vw, 32px); 
+            color: var(--accent); line-height: 1.5; 
+            white-space: pre-line; margin-bottom: 150px; 
+            font-weight: 300; max-width: 1100px;
+            letter-spacing: -0.02em;
+        }
+        .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 0; margin-bottom: 120px; }
+        .meta .card { border-top: 1px solid var(--border); padding: 50px 0; }
+        .meta pre { 
+            white-space: pre-wrap; font-family: var(--font-main); 
+            color: var(--muted); font-size: 15px; line-height: 1.8; margin: 0; 
+        }
+        .video-section { margin: 120px 0; }
+        video { width: 100%; display: block; border: 1px solid var(--border); }
+        .chapter { border-top: 1px solid var(--border); padding-top: 100px; margin-top: 150px; }
+        .chapter .title { 
+            font-size: 14px; text-transform: uppercase; letter-spacing: 0.5em; 
+            margin-bottom: 40px; color: var(--muted); font-weight: 700;
+        }
+        .chapter .text { 
+            color: var(--accent); font-size: clamp(20px, 2vw, 26px); 
+            line-height: 1.6; margin-bottom: 80px; max-width: 900px; font-weight: 300;
+        }
+        .chapter-hero, .slide { width: 100%; height: 85vh; background: #000; }
+        .chapter-hero img, .slide img { width: 100%; height: 100%; object-fit: cover; }
+        .slider { position: relative; margin-top: 60px; overflow: hidden; }
+        .track { display: flex; transition: transform 0.9s cubic-bezier(0.23, 1, 0.32, 1); }
+        .slide { min-width: 100%; }
+        .nav { position: absolute; top: 50%; width: 100%; display: flex; justify-content: space-between; transform: translateY(-50%); pointer-events: none; padding: 0 30px; }
+        .btn { 
+            pointer-events: auto; background: rgba(255,255,255,0.1); border: none; 
+            color: #fff; width: 60px; height: 60px; cursor: pointer; font-size: 30px;
+        }
+        .btn:hover { background: #fff; color: #000; }
+        .dots { position: absolute; bottom: 40px; left: 50px; display: flex; gap: 15px; }
+        .dot { width: 40px; height: 2px; background: rgba(255,255,255,0.2); border: none; cursor: pointer; }
+        .dot.active { background: #fff; width: 80px; transition: 0.4s; }
+        @media (max-width: 768px) {
+            .wrap { padding: 0 25px; }
+            .hero-info { left: 25px; }
+            .desc { font-size: 20px; }
+            .chapter-hero, .slide { height: 50vh; }
+        }
+    </style>
+</head>
+<body>
+    <div class="lang-switcher">
+        <li><a href="https://tobi-09.github.io/skaut/rozhan%C3%AD%20videomaping.html">Works</a></li>
+        <button class="lang-link" onclick="setLanguage('cs')">CS</button>
+        <button class="lang-link" onclick="setLanguage('en')">EN</button>
+    </div>
+    <div id="lang-overlay">
+        <h2 style="letter-spacing:0.5em; text-transform:uppercase; font-weight:400; font-size:16px; margin-bottom:40px;">MAGIE RUN</h2>
+        <div>
+            <button class="lang-btn" onclick="setLanguage('cs')">Čeština</button>
+            <button class="lang-btn" onclick="setLanguage('en')">English</button>
+        </div>
+    </div>
+    <div id="notice-overlay" class="hidden">
+        <div class="notice-box">
+            <div class="notice-title" id="notice-title"></div>
+            <div class="notice-text" id="notice-text"></div>
+            <button class="notice-btn" id="notice-btn"></button>
+        </div>
+    </div>
+    <header class="hero">
+        <div class="hero-media"><img src="https://tobi-09.github.io/skaut/img/IMG_5668%20(kopie).jpeg"></div>
+        <div class="hero-info">
+            <div style="font-size:13px; letter-spacing:0.6em; opacity:0.6; margin-bottom:25px; font-weight:700;">IMMERSIVE EXPERIENCE</div>
+            <h1 id="h-title"></h1>
+        </div>
+    </header>
+    <div class="wrap">
+        <p class="desc" id="h-desc"></p>
+        <section class="video-section">
+            <video controls playsinline poster="https://tobi-09.github.io/skaut/img/lahvicky.jpeg">
+                <source src="" type="video/mp4">
+            </video>
+        </section>
+        <section class="meta">
+            <div class="card"><div style="font-size:11px; opacity:0.4; margin-bottom:25px; text-transform:uppercase; letter-spacing:0.3em;">Info</div><pre id="m-info"></pre></div>
+            <div class="card"><div style="font-size:11px; opacity:0.4; margin-bottom:25px; text-transform:uppercase; letter-spacing:0.3em;">Credits</div><pre id="m-credits"></pre></div>
+        </section>
+        <div id="content-root"></div>
+    </div>
+    <script>
+        const data = {
+            cs: {
+                title: "MAGIE RUN",
+                desc: `„Magie run“ je imerzivní audiovizuální instalace a prostorový zážitek, který zkoumá hranice strachu, dětské představivosti a kolektivního rituálu v zatemněném prostoru školní tělocvičny. Projekt vznikl jako vyvrcholení a finální narativní bod širšího celku – celovečerní noční hry se spaním v prostorách základní školy.\n\nInstalace transformuje všední prostor tělocvičny v mystické epicentrum pomocí podlahové projekce pulzujících symbolů a sofistikovaného prostorového zvukového designu řízeného skrze QLab. Diváci (týmy dětí) vnášejí do instalace reálné fyzické objekty v podobě získaných svítících lahviček, které se stávají přímým spouštěčem změn v audiovizuální smyčce. Strach a napětí z neznáma se skrze gradující projekci mění v katarzi a hluboký pozitivní zážitek.`,
+                info: "Role: Režie · Design · Koncept\nTyp: Imerzivní zážitek\nDatum: 2026\nOriginální jazyk dabingu: čeština",
+                credits: "REŽIE · DESIGN · KONCEPT\nTobiáš Pejsar\n\nVIZUÁLNÍ ART & PROJEKČNÍ OBSAH\nTobiáš Pejsar\n\nSOUND DESIGN & HUDBA\nTobiáš Pejsar\n\nTEXT / NARACE\nTobiáš Pejsar\n\nTECHNICKÝ & PROSTOROVÝ DESIGN\nTobiáš Pejsar\n\nFOTOGRAFIE\nTobiáš Pejsar\n\nPEDAGOGICKÝ DOZOR / KOORDINACE DĚTÍ\nTomáš Svoboda, Lucie Hradecká",
+                chaps: [
+                    { t: "ČÁST 1 — DISTRES", d: "Zvuk: Atmosféra větru a hlubokého dunění simulující vzdálené kroky nestvůry ve stejné budově. Zvukové pole občas protnou nečekané rány a vzdálené výbuchy.\nVideo: Statická, rudě zbarvená runa, která nestabilně bliká a imituje vadnou zářivku." },
+                    { t: "ČÁST 2 — PIANO / PROSTOR MONOLOGU", d: "Zvuk: Hororový klavírní motiv vystupující z temného ambientního pozadí, vytvářející prostor pro vyprávění a monolog.\nVideo: Runa zůstává bez pohybu, je zbarvená do červena a stále neklidně bliká." },
+                    { t: "ČÁST 3 — DÉMON ÚTOČÍ (Obsahuje monolog)", d: `Zvuk: Agresivní a intenzivní kombinace přednahraného narativního audia a vrstvených zvukových efektů útoku. Zvukové pole se dynamicky přelévá mezi reproduktory a hlas získává na absolutní všudypřítomnosti.\nVideo: Červená runa bliká jako zářivka, následně však během monologu definitivně mizí a projekční pole pohltí absolutní černota.\n\nNarace (Dabing: Tobiáš Pejsar):\n„Velmi dlouhá doba uplynula od chvíle, kdy jsem vás spatřil naposledy. Slepě jste mě následovali jako svého průvodce. I když se zdá, že k mému rituálu máte všechno potřebné, osobně se zaručím za to, aby se vám to nepovedlo.\n\nPorozhlížíte se, kde jsem? Jsem tady... nebo tady? Tady? Tady... Jsem všude, a vy stále netušíte, kde vlastně stojíte. Jsem všude kolem vás, a přesto mi nedokážete pohlédnout do tváře.\n\nJsem Pán stínů a démonů. Pohádky kvůli mně slábnou a mění se v prach. Mě neporazíte. Moji poslové se o to právě teď postarali!“` },
+                    { t: "ČÁST 4 — VÝPLŇ", d: "Zvuk: Naprosté ticho chodeb je občas narušeno nepříjemným, psychoakustickým zvukem o vysoké pískavé frekvenci.\nVideo: Bez obrazového signálu (Blackout)." },
+                    { t: "ČÁST 5 — ZNOVUOBJEVENÍ RUNY A RITUÁL", d: "Zvuk: Zvuk větru doprovázený mechanickým zvukem rotace. Zvukové pole se otevírá a vytváří prostor pro závěrečný rituální dialog dětí s průvodcem.\nVideo: Runa se znovu objevuje z temnoty. Z původní červené barvy plynule přechází do žluto-oranžovo-bílo-červené fáze. Runa ožívá a každá její jednotlivá část se samostatně točí." },
+                    { t: "ČÁST 6 — VYVRCHOLENÍ / VÝBUCH", d: "Zvuk: Zvuk točení dosahuje maximální intenzity, vítr graduje a rituální dialog vrcholí. Následuje masivní zvukový výbuch na plnou hlasitost.\nVideo: Runa exploduje do oslepující čisté bílé barvy a následně plynule přechází do vizuálu pomalu se pohybujících černých hvězd." }
+                ]
+            },
+            en: {
+                title: "RUNIC MAGIC",
+                desc: `"Runic Magic" is an immersive audiovisual installation and spatial experience that explores the boundaries of fear, childhood imagination, and collective ritual within the darkened space of a school gymnasium. The project was conceived as the climax and final narrative anchor of a larger framework—a full-scale night game and overnight school stay.\n\nThe installation transforms a mundane educational space into a mystical epicenter using floor projections of pulsating symbols and a sophisticated spatial sound design controlled via QLab. The audience (teams of children) bring real physical objects into the installation field in the form of recovered glowing vials, which act as direct triggers for shifts in the audiovisual loop. Through the escalating projection, the initial fear and tension of the unknown dissolve into a profound catharsis and a powerful positive experience.`,
+                info: "Role: Direction & Design & Concept\nType: Immersive Experience\nDate: 2026\nOriginal Dubbing Language: Czech",
+                credits: "DIRECTION, DESIGN & CONCEPT\nTobiáš Pejsar\n\nVISUAL ART & PROJECTION CONTENT\nTobiáš Pejsar\n\nSOUND DESIGN & MUSIC\nTobiáš Pejsar\n\nTEXT / NARRATION\nTobiáš Pejsar\n\nTECHNICAL & SPATIAL DESIGN\nTobiáš Pejsar\n\nPHOTOGRAPHY\nTobiáš Pejsar\n\nSUPERVISION / CHILD COORDINATION\nTomáš Svoboda, Lucie Hradecká",
+                chaps: [
+                    { t: "PART 1 — DISTRESS", d: "Sound: Ambient wind and deep sub-bass rumbling, simulating distant heavy footsteps within the building. The soundscape is punctuated by occasional sudden thuds and distant explosions.\nVideo: A static, red-colored rune that flickers unstably, mimicking a failing fluorescent light." },
+                    { t: "PART 2 — PIANO / MONOLOGUE SPACE", d: "Sound: A haunting horror-piano motif emerging from the dark ambient background, creating a sonic space for narration and monologue.\nVideo: The rune remains motionless, colored in deep red, continuing its unstable flickering." },
+                    { t: "PART 3 — DEMON ATTACK (Featuring Monologue)", d: `Sound: An aggressive, high-intensity combination of pre-recorded voiceover narration and layered sound effects of an attack. The audio fields dynamically shift across the speakers, achieving absolute omnipresence.\nVideo: The red rune flickers intensely like a broken light, then completely vanishes during the monologue, leaving the projection field in absolute blackness.\n\nNarration (Voice acting: Tobiáš Pejsar):\n"A very long time has passed since I last laid eyes on you. Blindly, you followed me as your guide. Even though it seems you have gathered everything required for my ritual, I will personally ensure that you fail.\n\nAre you looking around, wondering where I am? I am here... or perhaps here? Here? Or here? I am everywhere, yet you still have no idea where you truly stand. I am all around you, yet you cannot look me in the face.\n\nI am the Lord of Shadows and Demons. Because of me, fairy tales are fading, dissolving into the dark. You cannot defeat me. My messengers have already seen to it!"` },
+                    { t: "PART 4 — THE VOID", d: "Sound: The absolute silence of the hallways is broken only by an occasional, unsettling high-pitched ringing frequency.\nVideo: No visual signal (Complete Blackout)." },
+                    { t: "PART 5 — REAPPEARANCE & THE RITUAL", d: "Sound: Rising wind sounds combined with a mechanical spinning audio signature. The soundstage opens up, allowing room for the final ritual dialogue between the children and the guide.\nVideo: The rune reappears from the darkness. It smoothly transitions from red into a complex yellow-orange-white-red gradient. The rune comes alive, with each of its individual components spinning independently." },
+                    { t: "PART 6 — CLIMAX / EXPLOSION", d: "Sound: The spinning audio effect reaches its maximum velocity, the wind peaks, and the ritual dialogue culminates. This is followed by a sudden, massive sonic explosion at full volume.\nVideo: The rune explodes into a blinding, pure white flash, before smoothly transitioning into a slow-moving visual field of black stars." }
+                ]
+            }
+        };
+        const photoGroups = [
+            ["https://tobi-09.github.io/skaut/img/IMG_5668%20(kopie).jpeg", "https://tobi-09.github.io/skaut/img/lahvicky.jpeg"]
+        ];
+        let timers = [];
+        const noticeContent = {
+            cs: {
+                title: "Web v přípravě",
+                text: "Tento web se stále připravuje a obsah je průběžně doplňován. Některé sekce mohou být neúplné nebo chybět.",
+                btn: "Vstoupit i přesto"
+            },
+            en: {
+                title: "Website in Progress",
+                text: "This website is still under construction and content is being added. Some sections may be incomplete or missing.",
+                btn: "Enter anyway"
+            }
+        };
+        function setLanguage(l) {
+            localStorage.setItem('lang', l);
+            document.getElementById('lang-overlay').classList.add('hidden');
+            setTimeout(() => {
+                showNotice(l);
+            }, 400);
+        }
+
+        function showNotice(l) {
+            const n = noticeContent[l];
+            document.getElementById('notice-title').textContent = n.title;
+            document.getElementById('notice-text').textContent = n.text;
+            const btn = document.getElementById('notice-btn');
+            btn.textContent = n.btn;
+            document.getElementById('notice-overlay').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            btn.onclick = () => {
+                document.getElementById('notice-overlay').classList.add('hidden');
+                document.body.style.overflow = 'auto';
+                render(l);
+            };
+        }
+        function render(l) {
+            const t = data[l];
+            document.getElementById('h-title').textContent = t.title;
+            document.getElementById('h-desc').textContent = t.desc;
+            document.getElementById('m-info').textContent = t.info;
+            document.getElementById('m-credits').textContent = t.credits;
+            const root = document.getElementById('content-root');
+            root.innerHTML = '';
+            timers.forEach(clearInterval);
+            timers = [];
+            t.chaps.forEach((chap, i) => {
+                const sec = document.createElement('section');
+                sec.className = 'chapter';
+                sec.innerHTML = `
+                    <div class="title">${chap.t}</div>
+                    <p class="text">${chap.d.replace(/\n/g, '<br>')}</p>
+                    <div class="chapter-hero"><img src="${photoGroups[0][i%photoGroups[0].length]}"></div>
+                `;
+                root.appendChild(sec);
+            });
+        }
+        window.onload = () => {
+            const saved = localStorage.getItem('lang');
+            if (saved) {
+                document.getElementById('lang-overlay').classList.add('hidden');
+                showNotice(saved);
+            } else {
+                document.body.style.overflow = 'hidden';
+            }
+        };
+    </script>
+</body>
+</html>
