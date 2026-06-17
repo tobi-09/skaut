@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCHŮZKA: DEZINFORMACE 2026</title>
+    <style>
+        :root {
+            --bg-color: #03030d;
+            --card-bg: rgba(15, 23, 42, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-brand: #2563eb;
+            --accent-red: #ef4444;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        .ambient-glow {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 85% 85%, rgba(37, 99, 235, 0.08) 0%, transparent 50%);
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        /* 1. HERO HEADER S VIDEEM NA POZADÍ */
+        .hero-video-section {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .hero-video-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.35; /* Vyvážená viditelnost videa vůči textu */
+            z-index: 0;
+        }
+
+        .video-overlay-mockup {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(3, 3, 13, 0.2) 0%, rgba(3, 3, 13, 0.95) 100%);
+            z-index: 1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .hero-title {
+            font-size: 45pt;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            text-transform: uppercase;
+            margin: 0;
+            line-height: 1.1;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 18pt;
+            font-weight: 700;
+            color: var(--accent-brand);
+            letter-spacing: 5px;
+            margin-top: 15px;
+            text-transform: uppercase;
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            color: var(--text-secondary);
+            font-size: 9.5pt;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translate(-50%, 0); }
+            40% { transform: translate(-50%, -12px); }
+            60% { transform: translate(-50%, -6px); }
+        }
+
+        /* 2. STICKY NAVBAR */
+        .sticky-navbar {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            background: rgba(3, 3, 13, 0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+            padding: 16px 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 10.5pt;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-links a.special-page {
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 5px 14px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            font-size: 10pt;
+            transition: all 0.2s ease;
+        }
+        .nav-links a.special-page:hover {
+            background: rgba(37, 99, 235, 0.1);
+            border-color: var(--accent-brand);
+        }
+        .nav-links a.special-page.psych {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.05);
+            color: #f87171;
+        }
+        .nav-links a.special-page.psych:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        /* Container & Structure */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        .section-title {
+            font-size: 22pt;
+            font-weight: 800;
+            margin-top: 20px;
+            margin-bottom: 40px;
+            border-left: 5px solid var(--accent-brand);
+            padding-left: 16px;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+        }
+
+        /* 3. EXPERTS & REALIZATION TEAM */
+        .team-grid {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 70px;
+        }
+
+        .team-card {
+            flex: 1;
+            min-width: 260px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px 20px;
+            text-align: center;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .team-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-brand);
+        }
+
+        .avatar-circle {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            margin: 0 auto 22px auto;
+            background: #111126;
+            border: 3px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s ease;
+        }
+        .team-card:hover .avatar-circle {
+            border-color: var(--accent-brand);
+        }
+        .avatar-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar-placeholder {
+            font-size: 10pt;
+            font-weight: bold;
+            color: var(--text-secondary);
+        }
+
+        .team-name {
+            font-size: 13.5pt;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0 0 4px 0;
+        }
+
+        .team-role {
+            font-size: 9pt;
+            font-weight: 700;
+            color: var(--accent-brand);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .team-desc {
+            font-size: 9.5pt;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* 4. THE 3 CORE SCROLLDOWN SECTIONS */
+        .main-part-block {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 45px;
+            scroll-margin-top: 100px;
+            transition: border-color 0.2s ease;
+        }
+        .main-part-block:hover {
+            border-color: rgba(37, 99, 235, 0.2);
+        }
+
+        .part-meta {
+            font-size: 9.5pt;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-brand);
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .part-main-title {
+            font-size: 20pt;
+            font-weight: 800;
+            margin: 0 0 20px 0;
+            color: #ffffff;
+        }
+
+        .part-description {
+            font-size: 11pt;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+            background: #000;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-top: 20px;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .media-web-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .media-web-card {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            border-top: 3px solid var(--border-color);
+            transition: border-top-color 0.2s ease, transform 0.2s ease;
+        }
+        .media-web-card:hover {
+            border-top-color: var(--accent-brand);
+            transform: translateY(-2px);
+        }
+        .media-card-title {
+            font-size: 13pt;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .media-title-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-decoration: none;
+            color: inherit;
+        }
+        .media-title-link:hover span {
+            color: var(--accent-brand);
+        }
+        .item-row {
+            margin-bottom: 12px;
+            font-size: 9.5pt;
+            line-height: 1.5;
+        }
+        .item-row strong {
+            display: block;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+
+        .standalone-section {
+            border: 1px dashed var(--border-color);
+            background: rgba(15, 23, 42, 0.2);
+            border-radius: 16px;
+            padding: 40px;
+            margin-top: 60px;
+            scroll-margin-top: 100px;
+        }
+
+        .footer {
+            background: #010105;
+            border-top: 1px solid var(--border-color);
+            padding: 45px 20px;
+            margin-top: 100px;
+        }
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .footer-branding {
+            font-size: 9.5pt;
+            color: #475569;
+        }
+        .footer-links {
+            display: flex;
+            gap: 25px;
+        }
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 9.5pt;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+        .footer-links a:hover {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow"></div>
+
+    <div class="hero-video-section">
+        <video class="hero-video-bg" autoplay loop muted playsinline>
+            <source src="https://tobi-09.github.io/skaut/img/Timeline%201.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay-mockup"></div>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">Schůzka: Dezinformace</h1>
+            <div class="hero-subtitle">Ginkgo 2026</div>
+        </div>
+        
+        <div class="scroll-hint">Sroluj dolů pro obsah ⇅</div>
+    </div>
+
+    <div class="sticky-navbar">
+        <div class="nav-container">
+            <div class="nav-links">
+                <a href="#tym">Tým</a>
+                <a href="#dezinformace">1. Dezinformace</a>
+                <a href="#zdravotnictvi">2. Zdravotní sekce</a>
+                <a href="#media">3. Mediální štít</a>
+            </div>
+            <div class="nav-links">
+                <a href="#psychicka-pomoc" class="special-page psych">První pomoc psychiky</a>
+                <a href="#organizatori" class="special-page">Kontakt na organizátory</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div id="tym" style="scroll-margin-top: 100px;">
+            <h2 class="section-title">Odborný garant & realizační tým</h2>
+            <div class="team-grid">
+                
+                <div class="team-card">
+                    <div class="avatar-circle">
+                        <img src="https://media.licdn.com/dms/image/v2/D4E03AQHCAaS4yOpbEQ/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1724796415467?e=1782345600&v=beta&t=ep6U9qlXPZTYfpLUHa7lrdJgp8t_7lYAQfA5EQ1rgEw" alt="Oldřich Neuman">
+                    </div>
+                    <h3 class="team-name">Oldřich Neuman</h3>
+                    <span class="team-role">Odborný garant – Média</span>
+                    <p class="team-desc">Redaktor zpravodajství ČT24. Zajišťuje stoprocentní faktickou správnost, metodické vedení mediální části schůzky and ověření novinářských postupů podle reálné praxe.</p>
+                </div>
+
+                <div class="team-card">
+                    <div class="avatar-circle">
+                        <img src="https://media.licdn.com/dms/image/v2/D4D03AQFokFt-sqVgPw/profile-displayphoto-crop_800_800/B4DZ5I.VCbK0AM-/0/1779340759496?e=1782345600&v=beta&t=RSOCs4KOh5f7pe6vkDkEqWY3wCj9763L_hg5mOANGQc" alt="Prezík">
+                    </div>
+                    <h3 class="team-name">Prezík</h3>
+                    <span class="team-role">Odborný garant – Medicína</span>
+                    <p class="team-desc">Lékař s kardiologickou specializací, člen oddílu. Zajišťuje odbornou garanci zdravotnických témat, faktů o virech a klidný lékařský pohled z reálné praxe.</p>
+                </div>
+
+                <div class="team-card">
+                    <div class="avatar-circle">
+                        <img src="https://media.licdn.com/dms/image/v2/D4D03AQHKc454RXgdaA/profile-displayphoto-crop_800_800/B4DZ4gqRf.HIAI-/0/1778664414214?e=1782345600&v=beta&t=Eg7e_ruJB0fcgkBAM95G12r6mEkQg8lN62yrGkuxqkM" alt="Jitka Kostelníková">
+                    </div>
+                    <h3 class="team-name">Jitka Kostelníková</h3>
+                    <span class="team-role">Dabing & Audio</span>
+                    <p class="team-desc">Profesionální hlas nahrávky pro fázi uzemnění. Zajišťuje psychologicky citlivé namluvení meditačního doprovodu pro zklidnění družiny na matracích.</p>
+                </div>
+
+                <div class="team-card">
+                    <div class="avatar-circle">
+                        <div class="avatar-placeholder">SKAUT</div>
+                    </div>
+                    <h3 class="team-name">Tobiáš Pejsar</h3>
+                    <span class="team-role">Autor programu & Web</span>
+                    <p class="team-desc">Vedoucí z Modré družiny Pražské Dvojky. Návrh herního konceptu pro Ginkgo, tvorba struktury, scénáře a kompletního webového rozhraní archivu.</p>
+                </div>
+
+            </div>
+        </div>
+
+
+        <h2 class="section-title">Obsah schůzky</h2>
+
+        <div class="main-part-block" id="dezinformace">
+            <span class="part-meta">Část První</span>
+            <h3 class="part-main-title">1. Simulace digitálního tlaku a dezinformace</h3>
+            <p class="part-description">
+                Úvodní zážitková fáze hry vystavila kluky zmatku a simulované záplavě zpráv na sociálních sítích. Tato část demonstruje, jak snadno lze pomocí manipulovaných záběrů zaútočit na lidské emoce, vyvolat bezprostřední strach a bleskově rozšířit falešnou poplašnou zprávu.
+            </p>
+            <h4 style="color:#ffffff; margin-bottom:10px; font-size:11pt;">Doprovodný video materiál (Simulace manipulace):</h4>
+            <div class="video-wrapper">
+                <iframe src="https://www.youtube.com/embed/sVuLofWsXUk?si=xTluYcfuqBcyEDiS" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <div class="main-part-block" id="zdravotnictvi">
+            <span class="part-meta">Část Druhá</span>
+            <h3 class="part-main-title">2. Zdravotní sekce (Ebola, Hantavirus & Fakta)</h3>
+            <p class="part-description">
+                Po dekompresní relaxaci na matracích (namluvené Jitkou Kostelníkovou) nastoupila fáze uzemnění reality. Odborný garant Prezík uvedl na pravou míru medicínská fakta o virech Ebola a Hantavirus. Sekce rozebírá hrozbu medicínských fám, nesmysly o zdraví generované umělou inteligencí (AI) a ukazuje reálnou připravenost a klidnou sílu našeho zdravotního systému.
+            </p>
+        </div>
+
+        <div class="main-part-block" id="media">
+            <span class="part-meta">Část Třetí</span>
+            <h3 class="part-main-title">3. Digitální štít: Role médií a ověřování informací</h3>
+            <p class="part-description">
+                Závěrečný blok schůzky se věnoval nástrojům obrany a jasnému rozlišení mediálního prostředí. Pod odborným dohledem redaktora ČT24 Oldřicha Neumana jsme do výuku zakomponovali globální krédo veřejnoprávního poslání: <strong>„Informovat, vzdělávat a bavit“</strong> (původní myšlenka britské BBC).
+            </p>
+
+            <h4 style="color:#ffffff; margin-bottom:10px; font-size:11pt;">Metodické instruktážní video k analýze médií:</h4>
+            <div class="video-wrapper">
+                <iframe src="https://www.youtube.com/embed/aSqTHmCTJsU?si=9qTEGpfUGdr4jSJ1" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+
+            <h4 style="color:#ffffff; margin-top:40px; margin-bottom:5px; font-size:14pt;">Pilíře veřejnoprávního zpravodajství v ČR</h4>
+            <p style="font-size:10pt; color:var(--text-secondary); margin-bottom:20px;">Kliknutím na záhlaví libovolné karty přejdete přímo na oficiální stránky daného média.</p>
+
+            <div class="media-web-grid">
+                <div class="media-web-card">
+                    <div class="media-card-title">
+                        <a href="https://ct24.ceskatelevize.cz" class="media-title-link" target="_blank">
+                            <span style="color:#ffffff; font-weight:700;">Česká televize (ČT)</span>
+                            <img src="https://ctfs.ceskatelevize.cz/static/v8.20/assets/images/Ceska_televize_logo.c18ac7a00af1952d4a74b7e9c4792aa7.svg" alt="ČT Logo" style="height: 20px; filter: brightness(0) invert(1);">
+                        </a>
+                    </div>
+                    <div class="item-row" style="margin-top: 15px;"><strong>Zřízení a cíl:</strong> Zřízena zákonem o České televizi. Jejím hlavním posláním je poskytovat objektivní, ověřené a vyvážené informace. Naplňuje veřejný trojúhelník zájmů: informovat, vzdělávat a bavit.</div>
+                    <div class="item-row"><strong>Financování:</strong> Financována lidmi skrze koncesionářské poplatky, což legislativně garantuje její nezávislost na aktuální vládě i inzerentských tlacích.</div>
+                    <div class="item-row"><strong>Reklamy:</strong> Přísné limity (na ČT1 a ČT24 téměř vůbec). Veškerý případný drobný zisk z komerčních sdělení jde ze zákona striktně zpět do výroby nových pořadů.</div>
+                    <div class="item-row"><strong>Kontrola:</strong> Jde o kontrolní orgán, který dohlíží na fungování a hospodaření média, a jeho členy volí Parlament ČR.</div>
+                </div>
+
+                <div class="media-web-card">
+                    <div class="media-card-title">
+                        <a href="https://www.rozhlas.cz" class="media-title-link" target="_blank">
+                            <span style="color:#ffffff; font-weight:700;">Český rozhlas (ČRo)</span>
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/eb/Cesky_rozhlas_logo_V.png?_=20200720191043" alt="ČRo Logo" style="height: 24px; filter: brightness(0) invert(1);">
+                        </a>
+                    </div>
+                    <div class="item-row" style="margin-top: 15px;"><strong>Zřízení a cíl:</strong> Zřízen zákonem o Českém rozhlase za účelem šíření rychlého nestranného zpravodajství, rozvoje kultury a povinného udržování sítě regionálních studií ve všech krajích.</div>
+                    <div class="item-row"><strong>Financování:</strong> Financován přímo občany skrze pravidelné poplatky. Tento model drží rozhlas zcela mimo přímou sféru finančního vlivu politických stran.</div>
+                    <div class="item-row"><strong>Reklamy:</strong> Celoplošné stanice smí vysílat max. 3 minuty reklamy denně. Příjmy tvoří zanedbatelnou část rozpočtu a pokrývají pouze technický provoz vysílačů.</div>
+                    <div class="item-row"><strong>Kontrola:</strong> Jde o kontrolní orgán, který dohlíží na fungování a hospodaření média, a jeho členy volí Parlament ČR.</div>
+                </div>
+
+                <div class="media-web-card">
+                    <div class="media-card-title">
+                        <a href="https://www.ctk.cz" class="media-title-link" target="_blank">
+                            <span style="color:#ffffff; font-weight:700;">Česká tisková kancelář (ČTK)</span>
+                            <img src="https://i3.cn.cz/15/1496263652_ctk_logo_800.jpg" alt="ČTK Logo" style="height: 22px; border-radius: 2px; filter: grayscale(1) brightness(1.5);">
+                        </a>
+                    </div>
+                    <div class="item-row" style="margin-top: 15px;"><strong>Zřízení a cíl:</strong> Zřízena zákonem o ČTK jako národní zpravodajská agentura. Vydává čistá fakta. Ze zákona má striktně zakázáno do svých textů vkládat subjektivní názory či emoce.</div>
+                    <div class="item-row"><strong>Financování:</strong> Na rozdíl od ČT a ČRo nedostává žádné poplatky od lidí ani dotace od státu. Vydělává si sama komerčním prodejem svého objektivního servisu ostatním redakcím.</div>
+                    <div class="item-row"><strong>Reklamy:</strong> Běžnou bannerovou reklamu na webech nemá. Její existence nestojí na senzačních titulcích ani na klikání běžných uživatelů.</div>
+                    <div class="item-row"><strong>Kontrola:</strong> Jde o kontrolní orgán, který dohlíží na fungování a hospodaření média, a jeho členy volí Parlament ČR.</div>
+                </div>
+            </div>
+
+            <h4 style="color:#ffffff; margin-top:50px; margin-bottom:20px; font-size:14pt;">Doprovodný přehled: Rozdělení komerčního trhu a platforem</h4>
+            <div class="media-web-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+                
+                <div class="media-web-card" style="border-top-color: #64748b;">
+                    <div class="media-card-title" style="color:#ffffff; font-weight:700;">Bulvární média</div>
+                    <p style="font-size:9.5pt; color:var(--text-secondary); margin:0; line-height:1.5;">
+                        Typickým příkladem vyloženě bulvárního deníku je u nás <strong>Blesk</strong>. Jejich prvořadým cílem je vyvolat okamžité silné emoce (šok, zvědavost, hněv), prodávat senzace a detailně rozebírat soukromí známých osobností. Informace často výrazně zjednodušují nebo dramatizují.
+                    </p>
+                </div>
+
+                <div class="media-web-card" style="border-top-color: #64748b;">
+                    <div class="media-card-title" style="color:#ffffff; font-weight:700;">Komerční média</div>
+                    <p style="font-size:9.5pt; color:var(--text-secondary); margin:0; line-height:1.5;">
+                        Patří sem soukromé televizní stanice (Nova, Prima) nebo soukromé velké zpravodajské weby. Jejich kompletní byznys model stojí na zisku z komerční reklamy. Životně potřebují vysokou čtenost a sledovanost, což se může odrážet ve skladbě témat.
+                    </p>
+                </div>
+
+                <div class="media-web-card" style="border-top-color: #64748b;">
+                    <div class="media-card-title" style="color:#ffffff; font-weight:700;">Sociální sítě</div>
+                    <p style="font-size:9.5pt; color:var(--text-secondary); margin:0; line-height:1.5;">
+                        Platformy jako TikTok, Instagram nebo Facebook nespadají pod klasická média. Neplatí pro ně tiskové zákony ani novinářské kodexy. Obsah neprochází redakční kontrolou věcné správnosti – publikovat zde může v podstatě cokoliv a kdokoliv bez jakékoliv odpovědnosti.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+
+        <div class="standalone-section" id="psychicka-pomoc">
+            <h3 style="margin-top:0; color: #f87171; font-size:16pt;">První pomoc psychiky</h3>
+            <p style="font-size:10.5pt; color:#cbd5e1;">
+                Digitální svět, záplavy poplašných zpráv, kyberšikana nebo dezinformační útoky mohou vyvolat silný vnitřní tlak, strach a úzkost. Je naprosto v pořádku cítit se zahlcený. Pamatuj, že na to nejsi sám a existuje okamžité bezpečné zázemí.
+            </p>
+            <div style="background:rgba(239, 68, 68, 0.07); padding:20px; border-radius:10px; border:1px solid rgba(239, 68, 68, 0.2); margin:20px 0; color:#ffffff;">
+                <strong style="color:#f87171; display:block; margin-bottom:5px; font-size:11pt;">Linka bezpečí (pro děti, mládež a studenty):</strong>
+                Telefonní číslo: <span style="font-size:14pt; color:#ffffff; font-weight:800;">116 111</span><br>
+                Funguje čtyřiadvacet hodin denně, sedm dní v týdnu. Je naprosto anonymní a zcela zdarma z jakéhokoliv mobilního telefonu.
+            </div>
+            <p style="font-size:9.5pt; color:var(--text-secondary); margin:0;">
+                Neboj se o svých pocitech mluvit se svými skautskými vedoucími, rodiči, nebo právě s vyškolenými odborníky na Lince bezpečí. Zvládneme to společně.
+            </p>
+        </div>
+
+        <div class="standalone-section" id="organizatori">
+            <h3 style="margin-top:0; color: #ffffff; font-size:16pt;">Kontakty a metodické podklady</h3>
+            <p style="font-size:10.5pt; color:#cbd5e1; margin-bottom:20px;">
+                Tento projekt vznikl v rámci interního vzdělávacího programu 22. skautského střediska Pražská Dvojka pro družinu Ginkgo. Pokud máte metodické dotazy ke schůzce, nebo chcete materiály replikovat ve svém oddíle, využijte kontaktní rozcestník:
+            </p>
+            <ul>
+                <li style="margin-bottom:10px;"><strong>Metodika a realizace:</strong> Tobiáš Pejsar (kontakt přes interní oddílový komunikační kanál Modré družiny).</li>
+                <li style="margin-bottom:10px;"><strong>Technická koordinace:</strong> Štěpán (Pd) – správa sdílených dokumentů a podkladů v oddílovém cloudu.</li>
+                <li style="margin-bottom:10px;"><strong>Odborný dohled (Média):</strong> Oldřich Neuman (Redaktor zpravodajství ČT24).</li>
+                <li style="margin-bottom:10px;"><strong>Ověřené metodické materiály a hry pro mládež:</strong> 
+                    <a href="https://zvolsi.info/materialy" style="color:var(--accent-brand); font-weight:600;" target="_blank">Zvol si info (Surfařův průvodce a hry)</a>
+                </li>
+                <li style="margin-bottom:10px;"><strong>Prevence kybernetických hrozeb a podvodů:</strong> 
+                    <a href="https://www.pruvodcepodnikanim.cz/kyberodolnost/" style="color:var(--accent-brand); font-weight:600;" target="_blank">Portál Kyberodolnost (ČSOB & Policie ČR)</a>
+                </li>
+                <li style="margin-bottom:10px;"><strong>Nezávislé externí zdroje pro ověřování faktů v budoucnu:</strong> 
+                    <a href="https://manipulatori.cz" style="color:var(--accent-brand); font-weight:600;" target="_blank">Manipulátoři.cz</a> | 
+                    <a href="https://demagog.cz" style="color:var(--accent-brand); font-weight:600;" target="_blank">Demagog.cz</a> | 
+                    <a href="https://fakticke.info" style="color:var(--accent-brand); font-weight:600;" target="_blank">Faktické.info</a>
+                </li>
+            </ul>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="footer-container">
+            <div class="footer-links">
+                <span style="font-size:9.5pt; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1px; margin-right:10px;">Spřízněné portály:</span>
+                <a href="https://prazskadvojka.cz" target="_blank">Pražská Dvojka</a>
+                <a href="https://skaut.cz" target="_blank">Junák – český skaut</a>
+                <a href="https://ct24.ceskatelevize.cz" target="_blank">ČT24 Zpravodajství</a>
+            </div>
+            <div class="footer-branding">
+                22. středisko Pražská Dvojka • Zelená družina Ginkgo • 2026
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
