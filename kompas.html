@@ -17,6 +17,7 @@
             align-items: center;
             min-height: 100vh;
             box-sizing: border-box;
+            user-select: none;
         }
 
         h1 { margin: 10px 0; color: #00ff88; font-size: 24px; }
@@ -42,9 +43,17 @@
             border: 5px solid #333;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 4px 10px rgba(0,0,0,0.3);
             margin: 15px auto;
+            overflow: hidden;
         }
 
-        .rose { position: absolute; width: 100%; height: 100%; top: 0; left: 0; }
+        .rose { 
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            top: 0; 
+            left: 0;
+            transition: transform 0.1s ease-out;
+        }
         .direction { position: absolute; font-weight: bold; font-size: 16px; }
         .north { top: 10px; left: 50%; transform: translateX(-50%); color: #ff3333; }
         .south { bottom: 10px; left: 50%; transform: translateX(-50%); }
@@ -65,6 +74,7 @@
             transform-origin: bottom center;
             transform: rotate(0deg);
             filter: drop-shadow(0 0 5px rgba(0,255,136,0.6));
+            pointer-events: none;
         }
 
         button {
@@ -80,7 +90,10 @@
             max-width: 280px;
             margin: 5px 0;
             box-shadow: 0 4px 10px rgba(0,255,136,0.2);
+            transition: background 0.2s;
         }
+
+        button:active { opacity: 0.8; }
 
         button.secondary {
             background-color: #444;
@@ -116,6 +129,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: background 0.2s;
+        }
+        li:hover, li:active {
+            background: #444;
+        }
+        li.active-target {
+            border-color: #00ff88;
+            background: #253a30;
         }
     </style>
 </head>
@@ -125,11 +148,11 @@
     
     <div class="card">
         <div>Vzdálenost: <strong id="distance">-</strong></div>
-        <div class="info-text" id="gps-status">Klikněte kamkoliv pro aktivaci senzorů</div>
+        <div class="info-text" id="gps-status">Klepněte kamkoliv pro aktivaci kompasu a GPS</div>
     </div>
 
-    <div class="compass-container" id="compass">
-        <div class="rose">
+    <div class="compass-container">
+        <div class="rose" id="compass">
             <span class="direction north">N</span>
             <span class="direction east">E</span>
             <span class="direction south">S</span>
@@ -149,7 +172,7 @@
         <input type="text" id="new-name-input" placeholder="Název nového stanoviště">
         <button class="secondary" onclick="saveCurrentLocation()">📍 Uložit moji polohu jako bod</button>
         
-        <h3>Uložené body:</h3>
+        <h3>Uložené body (klepnutím naviguj):</h3>
         <ul id="points-list"></ul>
         <button class="danger" onclick="clearAllCheckpoints()" style="margin-top: 15px;">🗑️ Smazat vše</button>
     </div>
@@ -180,9 +203,12 @@
             if (checkpoints.length === 0) {
                 nameEl.textContent = "Žádné stanoviště";
                 distEl.textContent = "-";
+                renderPointsList();
                 return;
             }
+            if (currentIdx >= checkpoints.length) currentIdx = 0;
             nameEl.textContent = checkpoints[currentIdx].name;
+            renderPointsList();
             updateNavigation();
         }
 
@@ -190,6 +216,13 @@
             if (checkpoints.length === 0) return;
             currentIdx = (currentIdx + 1) % checkpoints.length;
             updateCheckpointUI();
+        }
+
+        function selectCheckpoint(idx) {
+            if (idx >= 0 && idx < checkpoints.length) {
+                currentIdx = idx;
+                updateCheckpointUI();
+            }
         }
 
         function saveCurrentLocation() {
@@ -213,29 +246,36 @@
             localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
             
             nameInputEl.value = "";
-            renderPointsList();
+            // Po uložení rovnou přepneme navigaci na tento nový bod
+            currentIdx = checkpoints.length - 1;
             updateCheckpointUI();
-            alert(`Uloženo: ${customName}`);
         }
 
         function clearAllCheckpoints() {
             if(confirm("Opravdu chcete smazat všechna stanoviště?")) {
                 checkpoints = [];
                 localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
-                renderPointsList();
+                currentIdx = 0;
                 updateCheckpointUI();
             }
         }
 
         function renderPointsList() {
             pointsListEl.innerHTML = "";
-            checkpoints.forEach((pt) => {
+            checkpoints.forEach((pt, idx) => {
                 const li = document.createElement('li');
+                if (idx === currentIdx && checkpoints.length > 0) {
+                    li.className = "active-target";
+                }
+                // Kliknutím na řádek se spustí navigace na tento bod
+                li.onclick = () => selectCheckpoint(idx);
+                
                 li.innerHTML = `
                     <div>
                         <strong>${pt.name}</strong><br>
-                        <span style="font-size:11px; color:#aaa;">${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)}</span>
+                        <span style="font-size:11px; color:#aaa;">${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)}</span>
                     </div>
+                    <span style="font-size: 18px;">${idx === currentIdx ? '🎯' : '📍'}</span>
                 `;
                 pointsListEl.appendChild(li);
             });
@@ -243,44 +283,67 @@
 
         function startGPS() {
             if (navigator.geolocation) {
+                // Přidáno highAccuracy a vypnutí cache pro okamžité reakce v terénu
                 navigator.geolocation.watchPosition(position => {
                     userLat = position.coords.latitude;
                     userLon = position.coords.longitude;
-                    statusEl.textContent = "GPS signál: OK";
+                    statusEl.textContent = "GPS signál: Aktivní";
                     currentGpsEl.textContent = `Moje poloha: ${userLat.toFixed(5)}, ${userLon.toFixed(5)}`;
                     updateNavigation();
                 }, error => {
-                    statusEl.textContent = "Chyba GPS: Zapněte polohu.";
-                }, { enableHighAccuracy: true });
+                    statusEl.textContent = "Chyba GPS: Povolte polohové služby.";
+                    console.error(error);
+                }, { 
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0 
+                });
             } else {
-                statusEl.textContent = "GPS nepodporováno.";
+                statusEl.textContent = "GPS prohlížečem nepodporováno.";
             }
         }
 
         function initSensors() {
             startGPS();
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            
+            // Podpora pro iOS (Safari vyžaduje povolení)
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
                         if (permissionState === 'granted') {
                             window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                        } else {
+                            statusEl.textContent = "Přístup ke kompasu byl zamítnut.";
                         }
                     }).catch(console.error);
             } else {
-                window.addEventListener('deviceorientation', handleOrientation, true);
+                // Pro Android a ostatní prohlížeče
                 window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                window.addEventListener('deviceorientation', handleOrientation, true);
             }
+            statusEl.textContent = "Senzory inicializovány.";
         }
 
+        // Spuštění po prvním kliknutí kamkoliv na displej (podmínka mobilních prohlížečů)
         document.body.addEventListener('click', initSensors, { once: true });
 
         function handleOrientation(event) {
+            // Správné ošetření pro iOS (webkitCompassHeading) i Android (alpha)
             let heading = event.webkitCompassHeading || event.alpha;
+            
             if (heading !== null && heading !== undefined) {
-                if (event.webkitCompassHeading === undefined) heading = 360 - heading; 
+                if (event.webkitCompassHeading === undefined) {
+                    // Android posílá hodnoty v opačném směru než iOS
+                    heading = 360 - heading; 
+                }
                 compassHeading = heading;
+                
+                // Otáčíme růžicí kompasu proti směru chodu, aby sever (N) ukazoval na reálný sever
                 compassEl.style.transform = `rotate(${-compassHeading}deg)`;
-                arrowEl.style.transform = `rotate(${targetBearing}deg)`;
+                
+                // Šipka cíle se musí otáčet vůči kompasu
+                const arrowRotation = targetBearing - compassHeading;
+                arrowEl.style.transform = `rotate(${arrowRotation}deg)`;
             }
         }
 
@@ -288,12 +351,13 @@
             if (userLat === null || userLon === null || checkpoints.length === 0) return;
 
             const target = checkpoints[currentIdx];
-            const R = 6371e3; 
+            const R = 6371e3; // Poloměr Země v metrech
             const phi1 = userLat * Math.PI / 180;
             const phi2 = target.lat * Math.PI / 180;
             const deltaPhi = (target.lat - userLat) * Math.PI / 180;
             const deltaLambda = (target.lon - userLon) * Math.PI / 180;
 
+            // Haversine vzorec pro výpočet vzdálenosti
             const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
                       Math.cos(phi1) * Math.cos(phi2) *
                       Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
@@ -306,16 +370,19 @@
                 distEl.textContent = `${Math.round(distance)} m`;
             }
 
+            // Výpočet azimutu k cíli (bearing)
             const y = Math.sin(deltaLambda) * Math.cos(phi2);
             const x = Math.cos(phi1) * Math.sin(phi2) -
                       Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
             let theta = Math.atan2(y, x);
             targetBearing = (theta * 180 / Math.PI + 360) % 360;
 
-            arrowEl.style.transform = `rotate(${targetBearing}deg)`;
+            // Aktualizace šipky na základě aktuálního natočení
+            const arrowRotation = targetBearing - compassHeading;
+            arrowEl.style.transform = `rotate(${arrowRotation}deg)`;
         }
 
-        renderPointsList();
+        // Úvodní vykreslení
         updateCheckpointUI();
     </script>
 </body>
