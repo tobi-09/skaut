@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Kompas s ukládáním bodů</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 { margin: 10px 0; color: #00ff88; font-size: 24px; }
+        h2 { color: #00ff88; font-size: 18px; margin-top: 20px; }
+
+        .card {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 350px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .compass-container {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            background: #222;
+            border: 5px solid #333;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 4px 10px rgba(0,0,0,0.3);
+            margin: 15px auto;
+        }
+
+        .rose { position: absolute; width: 100%; height: 100%; top: 0; left: 0; }
+        .direction { position: absolute; font-weight: bold; font-size: 16px; }
+        .north { top: 10px; left: 50%; transform: translateX(-50%); color: #ff3333; }
+        .south { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .east { right: 10px; top: 50%; transform: translateY(-50%); }
+        .west { left: 10px; top: 50%; transform: translateY(-50%); }
+
+        #target-arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-bottom: 80px solid #00ff88;
+            margin-top: -80px;
+            margin-left: -12px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+            filter: drop-shadow(0 0 5px rgba(0,255,136,0.6));
+        }
+
+        button {
+            background-color: #00ff88;
+            color: #121212;
+            border: none;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            width: 100%;
+            max-width: 280px;
+            margin: 5px 0;
+            box-shadow: 0 4px 10px rgba(0,255,136,0.2);
+        }
+
+        button.secondary {
+            background-color: #444;
+            color: #fff;
+            box-shadow: none;
+        }
+
+        button.danger {
+            background-color: #ff3333;
+            color: #fff;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background: #333;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        .info-text { font-size: 13px; color: #aaa; margin-top: 5px; }
+        
+        ul { list-style: none; padding: 0; width: 100%; text-align: left; }
+        li { 
+            background: #333; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 5px; 
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Cíl: <span id="checkpoint-name">-</span></h1>
+    
+    <div class="card">
+        <div>Vzdálenost: <strong id="distance">-</strong></div>
+        <div class="info-text" id="gps-status">Klikněte kamkoliv pro aktivaci senzorů</div>
+    </div>
+
+    <div class="compass-container" id="compass">
+        <div class="rose">
+            <span class="direction north">N</span>
+            <span class="direction east">E</span>
+            <span class="direction south">S</span>
+            <span class="direction west">W</span>
+        </div>
+        <div id="target-arrow"></div>
+    </div>
+
+    <button id="next-btn" onclick="nextCheckpoint()">🧭 Další stanoviště</button>
+
+    <hr style="width:100%; max-width:350px; border-color:#333; margin:20px 0;">
+
+    <div class="card">
+        <h2>🛠️ Správa stanovišť v terénu</h2>
+        <div class="info-text" id="current-gps-display">Moje poloha: Načítání...</div>
+        
+        <input type="text" id="new-name-input" placeholder="Název nového stanoviště">
+        <button class="secondary" onclick="saveCurrentLocation()">📍 Uložit moji polohu jako bod</button>
+        
+        <h3>Uložené body:</h3>
+        <ul id="points-list"></ul>
+        <button class="danger" onclick="clearAllCheckpoints()" style="margin-top: 15px;">🗑️ Smazat vše</button>
+    </div>
+
+    <script>
+        const defaultCheckpoints = [
+            { name: "1. Pražský hrad", lat: 50.0902, lon: 14.4005 },
+            { name: "2. Staroměstské náměstí", lat: 50.0875, lon: 14.4212 }
+        ];
+
+        let checkpoints = JSON.parse(localStorage.getItem('my_compass_points')) || defaultCheckpoints;
+        let currentIdx = 0;
+        let userLat = null;
+        let userLon = null;
+        let compassHeading = 0; 
+        let targetBearing = 0;  
+
+        const compassEl = document.getElementById('compass');
+        const arrowEl = document.getElementById('target-arrow');
+        const nameEl = document.getElementById('checkpoint-name');
+        const distEl = document.getElementById('distance');
+        const statusEl = document.getElementById('gps-status');
+        const currentGpsEl = document.getElementById('current-gps-display');
+        const pointsListEl = document.getElementById('points-list');
+        const nameInputEl = document.getElementById('new-name-input');
+
+        function updateCheckpointUI() {
+            if (checkpoints.length === 0) {
+                nameEl.textContent = "Žádné stanoviště";
+                distEl.textContent = "-";
+                return;
+            }
+            nameEl.textContent = checkpoints[currentIdx].name;
+            updateNavigation();
+        }
+
+        function nextCheckpoint() {
+            if (checkpoints.length === 0) return;
+            currentIdx = (currentIdx + 1) % checkpoints.length;
+            updateCheckpointUI();
+        }
+
+        function saveCurrentLocation() {
+            if (userLat === null || userLon === null) {
+                alert("Nelze uložit! GPS poloha ještě nebyla načtena.");
+                return;
+            }
+
+            let customName = nameInputEl.value.trim();
+            if (!customName) {
+                customName = `Stanoviště ${checkpoints.length + 1}`;
+            }
+
+            const newPoint = {
+                name: customName,
+                lat: userLat,
+                lon: userLon
+            };
+
+            checkpoints.push(newPoint);
+            localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
+            
+            nameInputEl.value = "";
+            renderPointsList();
+            updateCheckpointUI();
+            alert(`Uloženo: ${customName}`);
+        }
+
+        function clearAllCheckpoints() {
+            if(confirm("Opravdu chcete smazat všechna stanoviště?")) {
+                checkpoints = [];
+                localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
+                renderPointsList();
+                updateCheckpointUI();
+            }
+        }
+
+        function renderPointsList() {
+            pointsListEl.innerHTML = "";
+            checkpoints.forEach((pt) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <strong>${pt.name}</strong><br>
+                        <span style="font-size:11px; color:#aaa;">${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)}</span>
+                    </div>
+                `;
+                pointsListEl.appendChild(li);
+            });
+        }
+
+        function startGPS() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(position => {
+                    userLat = position.coords.latitude;
+                    userLon = position.coords.longitude;
+                    statusEl.textContent = "GPS signál: OK";
+                    currentGpsEl.textContent = `Moje poloha: ${userLat.toFixed(5)}, ${userLon.toFixed(5)}`;
+                    updateNavigation();
+                }, error => {
+                    statusEl.textContent = "Chyba GPS: Zapněte polohu.";
+                }, { enableHighAccuracy: true });
+            } else {
+                statusEl.textContent = "GPS nepodporováno.";
+            }
+        }
+
+        function initSensors() {
+            startGPS();
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                        }
+                    }).catch(console.error);
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation, true);
+                window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+            }
+        }
+
+        document.body.addEventListener('click', initSensors, { once: true });
+
+        function handleOrientation(event) {
+            let heading = event.webkitCompassHeading || event.alpha;
+            if (heading !== null && heading !== undefined) {
+                if (event.webkitCompassHeading === undefined) heading = 360 - heading; 
+                compassHeading = heading;
+                compassEl.style.transform = `rotate(${-compassHeading}deg)`;
+                arrowEl.style.transform = `rotate(${targetBearing}deg)`;
+            }
+        }
+
+        function updateNavigation() {
+            if (userLat === null || userLon === null || checkpoints.length === 0) return;
+
+            const target = checkpoints[currentIdx];
+            const R = 6371e3; 
+            const phi1 = userLat * Math.PI / 180;
+            const phi2 = target.lat * Math.PI / 180;
+            const deltaPhi = (target.lat - userLat) * Math.PI / 180;
+            const deltaLambda = (target.lon - userLon) * Math.PI / 180;
+
+            const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distance = R * c; 
+
+            if (distance >= 1000) {
+                distEl.textContent = `${(distance / 1000).toFixed(2)} km`;
+            } else {
+                distEl.textContent = `${Math.round(distance)} m`;
+            }
+
+            const y = Math.sin(deltaLambda) * Math.cos(phi2);
+            const x = Math.cos(phi1) * Math.sin(phi2) -
+                      Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+            let theta = Math.atan2(y, x);
+            targetBearing = (theta * 180 / Math.PI + 360) % 360;
+
+            arrowEl.style.transform = `rotate(${targetBearing}deg)`;
+        }
+
+        renderPointsList();
+        updateCheckpointUI();
+    </script>
+</body>
+</html>
