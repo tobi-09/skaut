@@ -1,618 +1,322 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="cs">
 <head>
-<link rel="icon" type="image/svg+xml" href="logo-skaut.png">
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Portfolio HTML projektů — demo</title>
-<style>
-:root{--bg:#0f1724;--card:#0b1220;--accent:#10B981;--muted:#94a3b8;--glass: rgba(255,255,255,0.03)}
-*{box-sizing:border-box}
-body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,'Helvetica Neue',Arial; margin:0; background:linear-gradient(180deg,#051023 0%, #071327 50%); color:#e6eef6; -webkit-font-smoothing:antialiased}
-.wrap{max-width:1100px;margin:36px auto;padding:20px}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-h1{margin:0;font-size:1.6rem}
-.controls{display:flex;gap:8px;align-items:center}
-button{background:var(--accent);border:0;padding:8px 12px;border-radius:8px;color:#022;cursor:pointer;font-weight:600}
-.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px 10px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:20px}
-.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:16px;border-radius:14px;box-shadow: 0 6px 20px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
-.meta{display:flex;justify-content:space-between;align-items:center}
-.muted{color:var(--muted);font-size:0.92rem}
-.tags{display:flex;gap:6px}
-.tag{font-size:0.78rem;padding:6px 8px;border-radius:999px;background:var(--glass);color:var(--muted)}
-.actions{margin-top:12px;display:flex;gap:8px}
-.hidden-badge{background:#7c3aed;color:#fff;padding:4px 8px;border-radius:8px;font-size:0.78rem}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Kompas s ukládáním bodů</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
 
-/* NOVÉ CSS PRO OBRÁZKY */
-.card-image {
-width: 100%;
-height: 100px; /* Pevná výška pro obdélníkový banner */
-object-fit: cover; /* Zajistí pokrytí bez deformace */
-border-radius: 8px;
-margin-top: 10px; 
-margin-bottom: 10px;
-display: block;
-border: 1px solid rgba(255,255,255,0.05);
-}
-/* Konec NOVÉHO CSS */
+        h1 { margin: 10px 0; color: #00ff88; font-size: 24px; }
+        h2 { color: #00ff88; font-size: 18px; margin-top: 20px; }
 
-/* Modal */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:20px}
-.modal{background:#071426;padding:18px;border-radius:12px;max-width:640px;width:100%;border:1px solid rgba(255,255,255,0.04)}
-label{display:block;margin-bottom:8px;color:var(--muted);font-size:0.9rem}
-input[type=text], input[type=password], textarea, select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-.row{display:flex;gap:8px}
-.row > *{flex:1}
-footer{margin-top:30px;color:var(--muted);font-size:0.9rem;text-align:center}
-.note{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;color:var(--muted);font-size:0.9rem}
-.small{font-size:0.85rem;color:var(--muted)}
-</style>
+        .card {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 350px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .compass-container {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            background: #222;
+            border: 5px solid #333;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 4px 10px rgba(0,0,0,0.3);
+            margin: 15px auto;
+        }
+
+        .rose { position: absolute; width: 100%; height: 100%; top: 0; left: 0; }
+        .direction { position: absolute; font-weight: bold; font-size: 16px; }
+        .north { top: 10px; left: 50%; transform: translateX(-50%); color: #ff3333; }
+        .south { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .east { right: 10px; top: 50%; transform: translateY(-50%); }
+        .west { left: 10px; top: 50%; transform: translateY(-50%); }
+
+        #target-arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-bottom: 80px solid #00ff88;
+            margin-top: -80px;
+            margin-left: -12px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+            filter: drop-shadow(0 0 5px rgba(0,255,136,0.6));
+        }
+
+        button {
+            background-color: #00ff88;
+            color: #121212;
+            border: none;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            width: 100%;
+            max-width: 280px;
+            margin: 5px 0;
+            box-shadow: 0 4px 10px rgba(0,255,136,0.2);
+        }
+
+        button.secondary {
+            background-color: #444;
+            color: #fff;
+            box-shadow: none;
+        }
+
+        button.danger {
+            background-color: #ff3333;
+            color: #fff;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background: #333;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        .info-text { font-size: 13px; color: #aaa; margin-top: 5px; }
+        
+        ul { list-style: none; padding: 0; width: 100%; text-align: left; }
+        li { 
+            background: #333; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 5px; 
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
-<div class="wrap">
-<header>
-<div>
-<h1>Portfolio HTML projektů</h1>
-<div class="small">Výběr projektů — část je veřejná, část vyžaduje přihlášení nebo PIN.</div>
-</div>
-<div class="controls">
-<div id="user-info" class="small muted">Nejste přihlášen</div>
-<button id="btn-login">Přihlásit</button>
-<button id="btn-logout" style="display:none" class="ghost">Odhlásit</button>
-<button id="btn-admin" class="ghost" style="display:none">Admin</button>
-</div>
-</header>
 
-<section style="margin-top:18px">
-<div class="note">Public view: bez přihlášení uvidíte jen veřejné projekty a jejich popisy. Pro otevření některých projektů je nutné přihlášení a/nebo zadání PINu.**</div>
-</section>
-
-<main>
-<div class="grid" id="project-grid">
-</div>
-
-</main>
-
-<footer>
-<div class="small">Tobi 2025</div>
-</footer>
-</div>
-
-<div class="modal-backdrop" id="modal-backdrop">
-<div class="modal" id="modal">
-</div>
-</div>
-
-<script>
-// ---------------------------
-// Demo data & persistence (Nyní pouze v paměti)
-// ---------------------------
-// Proměnná pro projekty
-const DEFAULT_PROJECTS = [
-{
-id: 'p1',
-title: 'Videomapping Autlainer',
-desc: 'Interaktivní videomappingový projekt s projekcí a ambientní hudbou.',
-public: true,
-requiresLogin: false,
-requiresPin: false,
-pin: null,
-url: 'videomaping.html',
-hidden: false,
-image: 'https://1884403144.rsc.cdn77.org/foto/videomapping-videomapovani/Zml0LWluLzk5OXg5OTkvZmlsdGVyczpxdWFsaXR5KDg1KTpub191cHNjYWxlKCkvaW1n/7404639.jpg?v=0&st=n-qvlSC9X64ngAXeES6_1_kbipvUX6xo1dCHifmIaPg&ts=1600812000&e=0'
-},
-{
-id: 'p2',
-title: 'Skautský skladatel programu a her',
-desc: 'Aplikace pro plánování skautských programů a her.',
-public: true,
-requiresLogin: false,
-requiresPin: false,
-pin: null,
-url: 'skautskyskladatel.html',
-hidden: false,
-image: 'logo skaut web.png'
-},
-{
-id: 'p3',
-title: 'IZS Dispečing',
-desc: 'Simulace dispečinku integrovaného záchranného systému.',
-public: false,
-requiresLogin: true,
-requiresPin: true,
-pin: '1234',
-url: 'izs.dispecing.html',
-hidden: false,
-image: 'https://www.nasepraha.cz/wp-content/uploads/2022/06/spoluprace_izsok-820x590.jpg'
-},
-    {
-        id: 'p5',
-        title: 'videomaping tečky',
-        desc: 'převod videa na tečky .',
-        public: false,
-        requiresLogin: true,
-        requiresPin: true,
-        pin: '1234',
-        url: 'online_viewer_net (56).html',
-        hidden: false,
-        image: ''
-    },    
-{
-id: 'p4',
-title: 'izs dispečing s firebese',
-desc: 'pokročilý dispečerský programv testovacím režimu',
-public: true,
-requiresLogin: false,
-requiresPin: false,
-pin: null,
-url: 'test.html',
-hidden: false,
-timeAccess: {startTime: '12:00', endTime: '23:30'},
-image: 'https://www.nasepraha.cz/wp-content/uploads/2022/06/spoluprace_izsok-820x590.jpg'
-},
-{
-id: 'p6',
-title: 'Projekty-vidomaping',
-desc: 'zde jsou ukazky projktu v vidomapingu  .',
-public: true,
-requiresLogin: false,
-requiresPin: false,
-pin: null,
-url: 'https://tobi-09.github.io/skaut/rozhan%C3%AD%20videomaping.html',
-hidden: false,
-image: 'https://tobi-09.github.io/skaut//img/IMG_4253.jpg'
-},      
-{
-id: 'p7',
-title: 'Nová verze Skaladatele programu a her ',
-desc: ' pro lepší programy spolupraci i organizovanost  .',
-public: true,
-requiresLogin: false,
-requiresPin: false,
-pin: null,
-url: 'https://tobi-09.github.io/skaut/skladateltestujeme.html',
-hidden: false,
-image: 'https://tobi-09.github.io/skaut/logo%20skaut%20web.png'
-},          
-{
-id: 'p5',
-title: 'skautskytabor',
-desc: 'připrava programu na tabor.',
-public: true,
-requiresLogin: false,
-requiresPin: false,
-pin: null,
-url: 'https://tobi-09.github.io/skaut/skautskytabor.html',
-hidden: false,
-image: 'http://tobi-09.github.io/skaut/img/PDSL-Tabor-2025-0983.jpg'
-},    
-];
+    <h1>Cíl: <span id="checkpoint-name">-</span></h1>
     
-// Používáme let pro možnost změny stavu v rámci relace (Admin panel)
-let projects = DEFAULT_PROJECTS.slice(); 
-let currentUserData = null; // Přihlášený uživatel (platí jen do obnovení stránky)
+    <div class="card">
+        <div>Vzdálenost: <strong id="distance">-</strong></div>
+        <div class="info-text" id="gps-status">Klikněte kamkoliv pro aktivaci senzorů</div>
+    </div>
 
+    <div class="compass-container" id="compass">
+        <div class="rose">
+            <span class="direction north">N</span>
+            <span class="direction east">E</span>
+            <span class="direction south">S</span>
+            <span class="direction west">W</span>
+        </div>
+        <div id="target-arrow"></div>
+    </div>
 
-// --- PŘEDDEFINOVANÉ UŽIVATELSKÉ ÚČTY ---
-const USERS = {
-'admin': { password: 'admin123', role: 'admin' },
-'user': { password: 'user123', role: 'standard' },
-'guest': { password: 'guest123', role: 'standard' }
-};
-// ----------------------------------------
+    <button id="next-btn" onclick="nextCheckpoint()">🧭 Další stanoviště</button>
 
-const ADMIN_USERNAME = 'admin';
+    <hr style="width:100%; max-width:350px; border-color:#333; margin:20px 0;">
 
-
-// Logika načítání a ukládání (nyní jen v paměti)
-function loadProjects(){
-return projects;
-}
-function saveProjects(arr){ 
-projects = arr; 
-}
-
-// user session (nyní jen v paměti)
-function currentUser(){ 
-return currentUserData;
-}
-function setCurrentUser(u){ 
-currentUserData = u; 
-renderHeader(); 
-}
-function clearUser(){ 
-currentUserData = null; 
-renderHeader(); 
-}
-
-// -----------------------------------
-// NOVÁ LOGIKA: Kontrola časového přístupu
-// -----------------------------------
-function isProjectAvailable(project) {
-// Kontrola standardního skrytí (Admin/hidden flag)
-if (project.hidden && currentUser()?.role !== 'admin') {
-return false;
-}
-
-// Kontrola časového omezení
-if (project.timeAccess && project.timeAccess.startTime && project.timeAccess.endTime) {
-const now = new Date();
-const hours = now.getHours().toString().padStart(2, '0');
-const minutes = now.getMinutes().toString().padStart(2, '0');
-const currentTimeStr = `${hours}:${minutes}`;
-
-const start = project.timeAccess.startTime;
-const end = project.timeAccess.endTime;
-
-// Projekt je dostupný, pokud je aktuální čas mezi start a end.
-if (currentTimeStr >= start && currentTimeStr < end) {
-return true;
-} else {
-return false; // Mimo časový limit
-}
-}
-
-// Pokud není nastaveno časové omezení ani admin hidden flag, je projekt dostupný
-return true;
-}
-
-// Funkce, která pravidelně aktualizuje zobrazení projektů
-function checkTimeAccess() {
-const currentProjects = loadProjects();
-let needsUpdate = false;
-
-currentProjects.forEach(p => {
-const shouldBeAvailable = isProjectAvailable(p);
-// Využijeme novou dočasnou vlastnost `isTemporarilyHidden` pro kontrolu stavu.
-// Poznámka: Tato vlastnost se vynuluje při obnovení stránky.
-const isCurrentlyDisplayed = !p.isTemporarilyHidden;
-
-if (shouldBeAvailable !== isCurrentlyDisplayed) {
-// Překlopí se viditelnost:
-p.isTemporarilyHidden = !shouldBeAvailable;
-needsUpdate = true;
-}
-});
-
-if (needsUpdate) {
-console.log("Stav projektů se změnil, aktualizuji zobrazení.");
-renderProjects();
-}
-}
-
-
-// ---------------------------
-// UI rendering
-// ---------------------------
-const grid = document.getElementById('project-grid');
-const modalBackdrop = document.getElementById('modal-backdrop');
-const modal = document.getElementById('modal');
-const btnLogin = document.getElementById('btn-login');
-const btnLogout = document.getElementById('btn-logout');
-const btnAdmin = document.getElementById('btn-admin');
-const userInfo = document.getElementById('user-info');
-
-function renderHeader(){
-const u = currentUser();
-if(u){ 
-userInfo.textContent = 'Přihlášen: ' + u.username + (u.role === 'admin' ? ' (Admin)' : ''); 
-btnLogin.style.display='none'; 
-btnLogout.style.display='inline-block'; 
-btnAdmin.style.display=(u.role==='admin')?'inline-block':'none'; 
-}
-else { 
-userInfo.textContent='Nejste přihlášen'; 
-btnLogin.style.display='inline-block'; 
-btnLogout.style.display='none'; 
-btnAdmin.style.display='none'; 
-}
-}
-
-function renderProjects(){
-const currentProjects = loadProjects();
-grid.innerHTML='';
-const u = currentUser();
-const isAdmin = u && u.role === 'admin';
-currentProjects.forEach(p=>{
-
-// HLAVNÍ KONTROLA VIDITELNOSTI (včetně nového časového omezení)
-let isVisible = isProjectAvailable(p);
-
-if (isAdmin) {
-// Admin vždy vidí kartu, ale s indikátory
-} else if (!isVisible) {
-return; // Není admin a projekt je časově/adminem skrytý -> neukazovat
-}
-
-const card = document.createElement('div'); card.className='card';
-const meta = document.createElement('div'); meta.className='meta';
-
-let titleText = p.title;
-if (isAdmin) {
-if (p.hidden) titleText += ' (Admin skryt)';
-if (!isVisible && p.timeAccess) titleText += ' (Časově skryt)';
-}
-
-const title = document.createElement('strong'); title.textContent = titleText;
-const tags = document.createElement('div'); tags.className='tags';
-if(p.public) tags.innerHTML = '<span class="tag">veřejné</span>';
-if(p.requiresLogin) tags.innerHTML += '<span class="tag">vyžaduje přihlášení</span>';
-if(p.requiresPin) tags.innerHTML += '<span class="tag">PIN</span>';
-if(p.timeAccess) tags.innerHTML += '<span class="tag">ČASOVÝ LIMIT</span>';
-
-meta.appendChild(title); meta.appendChild(tags);
-card.appendChild(meta);
-
-// START NOVÉ LOGIKY PRO OBRÁZEK
-if (p.image) {
-const img = document.createElement('img');
-img.src = p.image;
-img.className = 'card-image';
-img.alt = p.title;
-card.appendChild(img);
-}
-// KONEC NOVÉ LOGIKY PRO OBRÁZEK
-
-const desc = document.createElement('div'); desc.className='muted'; desc.style.marginTop='8px'; desc.textContent = p.desc;
-const actions = document.createElement('div'); actions.className='actions';
-
-const btnOpen = document.createElement('button'); btnOpen.textContent = 'Otevřít';
-btnOpen.onclick = ()=> handleOpenProject(p);
-
-// ZABLOKOVÁNÍ TLAČÍTKA MIMO DOSTUPNOST
-if (!isVisible && !isAdmin) {
-btnOpen.disabled = true;
-btnOpen.textContent = `Nedostupné (Dostupné: ${p.timeAccess.startTime} - ${p.timeAccess.endTime})`;
-btnOpen.style.backgroundColor = 'var(--muted)';
-}
-
-actions.appendChild(btnOpen);
-
-// admin shortcuts in card
-if(isAdmin){
-const btnEdit = document.createElement('button'); btnEdit.className='ghost'; btnEdit.textContent='Upravit';
-btnEdit.onclick = ()=> openAdminEdit(p.id);
-actions.appendChild(btnEdit);
-}
-
-
-card.appendChild(desc);
-card.appendChild(actions);
-grid.appendChild(card);
-});
-}
-
-// ---------------------------
-// Project opening logic
-// ---------------------------
-function handleOpenProject(p){
-// Kontrola, zda je projekt aktuálně dostupný (včetně časové kontroly)
-if (!isProjectAvailable(p) && currentUser()?.role !== 'admin') {
-alert('Projekt je momentálně mimo časový limit dostupnosti.');
-return;
-}
-
-const u = currentUser();
-if(p.requiresLogin && !u){
-showModalLogin('Pro otevření projektu "'+p.title+'" je třeba se přihlásit.');
-return;
-}
-if(p.requiresPin){
-showModalPin(p);
-return;
-}
-// otherwise open project in new window/tab
-openProjectUrl(p);
-}
-
-function openProjectUrl(p){
-// In demo we open in new tab; in production you would host projects on server.
-window.open(p.url, '_blank');
-}
-
-// ---------------------------
-// Modals: login / pin / admin
-// ---------------------------
-function showModal(contentHtml){ modal.innerHTML = contentHtml; modalBackdrop.style.display='flex'; }
-function closeModal(){ modalBackdrop.style.display='none'; modal.innerHTML=''; }
-
-modalBackdrop.addEventListener('click', (e)=>{ if(e.target===modalBackdrop) closeModal(); });
-
-function showModalLogin(message){
-showModal(`
-<h3>Přihlášení</h3>
-<p class="small">${escapeHtml(message || '')}</p>
-       <p class="small">
-<input id="login-username" type="text" value="" />
-<label>Heslo</label>
-<input id="login-password" type="password" value="" />
-<div style="margin-top:12px;display:flex;gap:8px">
-<button id="login-do">Přihlásit</button>
-<button id="login-cancel" class="ghost">Zrušit</button>
-</div>
-`);
-document.getElementById('login-cancel').onclick = closeModal;
-document.getElementById('login-do').onclick = ()=>{
-const u = document.getElementById('login-username').value.trim();
-const p = document.getElementById('login-password').value;
-if(!u || !p){ alert('Zadejte uživatelské jméno a heslo.'); return; }
-
-const userCredentials = USERS[u];
-if(userCredentials && userCredentials.password === p){
-// Uložení uživatele se zadanou rolí (pouze v paměti)
-setCurrentUser({username: u, role: userCredentials.role}); 
-closeModal(); 
-renderProjects(); 
-}
-else { alert('Neplatné přihlašovací údaje (demo).'); }
-}
-}
-
-function showModalPin(project){
-showModal(`
-<h3>Zadejte PIN pro: ${escapeHtml(project.title)}</h3>
-<label>PIN</label>
-<input id="pin-input" type="password" maxlength="32" />
-<div style="margin-top:12px;display:flex;gap:8px">
-<button id="pin-submit">Odeslat</button>
-<button id="pin-cancel" class="ghost">Zrušit</button>
-</div>
-`);
-document.getElementById('pin-cancel').onclick = closeModal;
-document.getElementById('pin-submit').onclick = ()=>{
-const v = document.getElementById('pin-input').value;
-if(v===project.pin){ closeModal(); openProjectUrl(project); }
-else alert('Špatný PIN. Kontaktujte administrátora.');
-}
-}
-
-// ---------------------------
-// Admin: edit project
-// ---------------------------
-function openAdminEdit(projectId){
-if(currentUser()?.role !== 'admin') return; // Bezpečnostní kontrola
-const currentProjects = loadProjects();
-const p = currentProjects.find(x=>x.id===projectId);
-if(!p){ alert('Projekt nenalezen'); return; }
-showModal(`
-<h3>Admin: úprava projektu</h3>
-<label>Název</label>
-<input id="adm-title" type="text" value="${escapeHtml(p.title)}" />
-<label>Popis</label>
-<textarea id="adm-desc">${escapeHtml(p.desc)}</textarea>
-<label>Obrázek (URL)</label>
-<input id="adm-image" type="text" value="${escapeHtml(p.image || '')}" />
-
-<div class="row" style="margin-top:8px">
-<label style="flex:1">Veřejný?<br/><select id="adm-public"><option value="true">Ano</option><option value="false">Ne</option></select></label>
-<label style="flex:1">Vyžaduje přihlášení?<br/><select id="adm-login"><option value="true">Ano</option><option value="false">Ne</option></select></label>
-</div>
-<div class="row" style="margin-top:8px">
-<label style="flex:1">Vyžaduje PIN?<br/><select id="adm-pinreq"><option value="true">Ano</option><option value="false">Ne</option></select></label>
-<label style="flex:1">Skryto?<br/><select id="adm-hidden"><option value="false">Ne</option><option value="true">Ano</option></select></label>
-</div>
-<label>PIN (prázdné = žádný)</label>
-<input id="adm-pin" type="text" value="${escapeHtml(p.pin || '')}" />
-
-        <label>Časové omezení (Start HH:MM - např. 12:45)</label>
-<input id="adm-time-start" type="text" value="${escapeHtml(p.timeAccess?.startTime || '')}" />
-
-        <label>Časové omezení (Konec HH:MM - např. 13:00)</label>
-<input id="adm-time-end" type="text" value="${escapeHtml(p.timeAccess?.endTime || '')}" />
+    <div class="card">
+        <h2>🛠️ Správa stanovišť v terénu</h2>
+        <div class="info-text" id="current-gps-display">Moje poloha: Načítání...</div>
         
-<label>URL projektu</label>
-<input id="adm-url" type="text" value="${escapeHtml(p.url)}" />
-<div style="margin-top:12px;display:flex;gap:8px">
-<button id="adm-save">Uložit</button>
-<button id="adm-cancel" class="ghost">Zrušit</button>
-<button id="adm-delete" class="ghost">Smazat</button>
-</div>
-`);
+        <input type="text" id="new-name-input" placeholder="Název nového stanoviště">
+        <button class="secondary" onclick="saveCurrentLocation()">📍 Uložit moji polohu jako bod</button>
+        
+        <h3>Uložené body:</h3>
+        <ul id="points-list"></ul>
+        <button class="danger" onclick="clearAllCheckpoints()" style="margin-top: 15px;">🗑️ Smazat vše</button>
+    </div>
 
-// set select values
-document.getElementById('adm-public').value = String(!!p.public);
-document.getElementById('adm-login').value = String(!!p.requiresLogin);
-document.getElementById('adm-pinreq').value = String(!!p.requiresPin);
-document.getElementById('adm-hidden').value = String(!!p.hidden);
+    <script>
+        const defaultCheckpoints = [
+            { name: "1. Pražský hrad", lat: 50.0902, lon: 14.4005 },
+            { name: "2. Staroměstské náměstí", lat: 50.0875, lon: 14.4212 }
+        ];
 
-document.getElementById('adm-cancel').onclick = closeModal;
-document.getElementById('adm-delete').onclick = ()=>{
-if(!confirm('Opravdu smazat tento projekt?')) return;
-const arr = loadProjects().filter(x=>x.id!==projectId); saveProjects(arr); closeModal(); renderProjects();
-};
-document.getElementById('adm-save').onclick = ()=>{
-const arr = loadProjects();
-const idx = arr.findIndex(x=>x.id===projectId);
-if(idx===-1) return alert('Projekt neexistuje');
-arr[idx].title = document.getElementById('adm-title').value.trim() || arr[idx].title;
-arr[idx].desc = document.getElementById('adm-desc').value.trim();
-arr[idx].image = document.getElementById('adm-image').value.trim() || null; // <--- Uložení URL obrázku
-arr[idx].public = (document.getElementById('adm-public').value==='true');
-arr[idx].requiresLogin = (document.getElementById('adm-login').value==='true');
-arr[idx].requiresPin = (document.getElementById('adm-pinreq').value==='true');
-arr[idx].hidden = (document.getElementById('adm-hidden').value==='true');
-arr[idx].pin = document.getElementById('adm-pin').value || null;
-arr[idx].url = document.getElementById('adm-url').value || arr[idx].url;
+        let checkpoints = JSON.parse(localStorage.getItem('my_compass_points')) || defaultCheckpoints;
+        let currentIdx = 0;
+        let userLat = null;
+        let userLon = null;
+        let compassHeading = 0; 
+        let targetBearing = 0;  
 
-// Uložení časového omezení
-const startTime = document.getElementById('adm-time-start').value.trim();
-const endTime = document.getElementById('adm-time-end').value.trim();
-if (startTime && endTime) {
-arr[idx].timeAccess = { startTime: startTime, endTime: endTime };
-} else {
-delete arr[idx].timeAccess; // Zrušit časové omezení
-}
+        const compassEl = document.getElementById('compass');
+        const arrowEl = document.getElementById('target-arrow');
+        const nameEl = document.getElementById('checkpoint-name');
+        const distEl = document.getElementById('distance');
+        const statusEl = document.getElementById('gps-status');
+        const currentGpsEl = document.getElementById('current-gps-display');
+        const pointsListEl = document.getElementById('points-list');
+        const nameInputEl = document.getElementById('new-name-input');
 
-saveProjects(arr); closeModal(); renderProjects();
-};
-}
+        function updateCheckpointUI() {
+            if (checkpoints.length === 0) {
+                nameEl.textContent = "Žádné stanoviště";
+                distEl.textContent = "-";
+                return;
+            }
+            nameEl.textContent = checkpoints[currentIdx].name;
+            updateNavigation();
+        }
 
-// ---------------------------
-// Admin main panel
-// ---------------------------
-function showAdminPanel(){
-if(currentUser()?.role !== 'admin') return; // Bezpečnostní kontrola
-const arr = loadProjects();
-let rows = '';
-arr.forEach(p=>{
-rows += `<tr>
-<td>${escapeHtml(p.id)}</td>
-<td>${escapeHtml(p.title)}</td>
-<td class="small">${escapeHtml(p.desc)}</td>
-<td>${p.public? 'ano':'ne'}</td>
-<td>${p.requiresLogin? 'ano':'ne'}</td>
-<td>${p.requiresPin? (p.pin? 'ano':'ano (bez PIN)') : 'ne'}</td>
-<td>${p.hidden? 'ano':'ne'}</td>
-<td><button class="ghost" data-edit="${p.id}">Upravit</button></td>
-</tr>`
-});
+        function nextCheckpoint() {
+            if (checkpoints.length === 0) return;
+            currentIdx = (currentIdx + 1) % checkpoints.length;
+            updateCheckpointUI();
+        }
 
-showModal(`
-<h3>Administrace</h3>
-<div style="max-height:300px;overflow:auto;margin-bottom:8px">
-<table style="width:100%;border-collapse:collapse">
-<thead><tr><th>ID</th><th>Název</th><th>Popis</th><th>Public</th><th>Login</th><th>PIN</th><th>Skryto</th><th></th></tr></thead>
-<tbody>${rows}</tbody>
-</table>
-</div>
-<div style="display:flex;gap:8px">
-<button id="adm-new">Nový projekt</button>
-<button id="adm-close" class="ghost">Zavřít</button>
-</div>
-`);
+        function saveCurrentLocation() {
+            if (userLat === null || userLon === null) {
+                alert("Nelze uložit! GPS poloha ještě nebyla načtena.");
+                return;
+            }
 
-document.querySelectorAll('[data-edit]').forEach(b=>b.onclick = ()=> openAdminEdit(b.getAttribute('data-edit')));
-document.getElementById('adm-close').onclick = closeModal;
-document.getElementById('adm-new').onclick = ()=>{
-const id = 'p' + Math.random().toString(36).slice(2,8);
-const arr2 = loadProjects();
-arr2.push({id, title:'Nový projekt', desc:'Popis', public:true, requiresLogin:false, requiresPin:false, pin:null, url:'projects/new/index.html', hidden:false, image: null});
-saveProjects(arr2); renderProjects(); openAdminEdit(id);
-};
-}
+            let customName = nameInputEl.value.trim();
+            if (!customName) {
+                customName = `Stanoviště ${checkpoints.length + 1}`;
+            }
 
-// ---------------------------
-// Utilities
-// ---------------------------
-function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+            const newPoint = {
+                name: customName,
+                lat: userLat,
+                lon: userLon
+            };
 
-// ---------------------------
-// Events
-// ---------------------------
-btnLogin.addEventListener('click', ()=> showModalLogin());
-btnLogout.addEventListener('click', ()=>{ clearUser(); renderProjects(); });
-btnAdmin.addEventListener('click', ()=> showAdminPanel());
+            checkpoints.push(newPoint);
+            localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
+            
+            nameInputEl.value = "";
+            renderPointsList();
+            updateCheckpointUI();
+            alert(`Uloženo: ${customName}`);
+        }
 
-// initial render
-renderHeader(); 
-renderProjects();
+        function clearAllCheckpoints() {
+            if(confirm("Opravdu chcete smazat všechna stanoviště?")) {
+                checkpoints = [];
+                localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
+                renderPointsList();
+                updateCheckpointUI();
+            }
+        }
 
-// Spuštění časové kontroly každých 10 sekund (10000 ms)
-setInterval(checkTimeAccess, 10000); 
+        function renderPointsList() {
+            pointsListEl.innerHTML = "";
+            checkpoints.forEach((pt) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <strong>${pt.name}</strong><br>
+                        <span style="font-size:11px; color:#aaa;">${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)}</span>
+                    </div>
+                `;
+                pointsListEl.appendChild(li);
+            });
+        }
 
-// Expose to window for debugging in demo
-window._pf = {loadProjects, saveProjects, currentUser, setCurrentUser, clearUser, USERS};
-</script>
+        function startGPS() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(position => {
+                    userLat = position.coords.latitude;
+                    userLon = position.coords.longitude;
+                    statusEl.textContent = "GPS signál: OK";
+                    currentGpsEl.textContent = `Moje poloha: ${userLat.toFixed(5)}, ${userLon.toFixed(5)}`;
+                    updateNavigation();
+                }, error => {
+                    statusEl.textContent = "Chyba GPS: Zapněte polohu.";
+                }, { enableHighAccuracy: true });
+            } else {
+                statusEl.textContent = "GPS nepodporováno.";
+            }
+        }
+
+        function initSensors() {
+            startGPS();
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                        }
+                    }).catch(console.error);
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation, true);
+                window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+            }
+        }
+
+        document.body.addEventListener('click', initSensors, { once: true });
+
+        function handleOrientation(event) {
+            let heading = event.webkitCompassHeading || event.alpha;
+            if (heading !== null && heading !== undefined) {
+                if (event.webkitCompassHeading === undefined) heading = 360 - heading; 
+                compassHeading = heading;
+                compassEl.style.transform = `rotate(${-compassHeading}deg)`;
+                arrowEl.style.transform = `rotate(${targetBearing}deg)`;
+            }
+        }
+
+        function updateNavigation() {
+            if (userLat === null || userLon === null || checkpoints.length === 0) return;
+
+            const target = checkpoints[currentIdx];
+            const R = 6371e3; 
+            const phi1 = userLat * Math.PI / 180;
+            const phi2 = target.lat * Math.PI / 180;
+            const deltaPhi = (target.lat - userLat) * Math.PI / 180;
+            const deltaLambda = (target.lon - userLon) * Math.PI / 180;
+
+            const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distance = R * c; 
+
+            if (distance >= 1000) {
+                distEl.textContent = `${(distance / 1000).toFixed(2)} km`;
+            } else {
+                distEl.textContent = `${Math.round(distance)} m`;
+            }
+
+            const y = Math.sin(deltaLambda) * Math.cos(phi2);
+            const x = Math.cos(phi1) * Math.sin(phi2) -
+                      Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+            let theta = Math.atan2(y, x);
+            targetBearing = (theta * 180 / Math.PI + 360) % 360;
+
+            arrowEl.style.transform = `rotate(${targetBearing}deg)`;
+        }
+
+        renderPointsList();
+        updateCheckpointUI();
+    </script>
 </body>
 </html>
