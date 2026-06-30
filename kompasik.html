@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS Kompas s ukládáním bodů</title>
+    <title>GPS Kompas v reálném čase</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -46,13 +46,14 @@
             overflow: hidden;
         }
 
+        /* ODSTRANĚNA TRANSITION PRO OKAMŽITOU REAKCI V REÁLNÉM ČASE */
         .rose { 
             position: absolute; 
             width: 100%; 
             height: 100%; 
             top: 0; 
             left: 0;
-            transition: transform 0.1s ease-out;
+            will-change: transform; /* Optimalizace pro grafickou kartu mobilu */
         }
         .direction { position: absolute; font-weight: bold; font-size: 16px; }
         .north { top: 10px; left: 50%; transform: translateX(-50%); color: #ff3333; }
@@ -75,6 +76,7 @@
             transform: rotate(0deg);
             filter: drop-shadow(0 0 5px rgba(0,255,136,0.6));
             pointer-events: none;
+            will-change: transform;
         }
 
         button {
@@ -144,13 +146,8 @@
             border: 2px solid transparent;
             transition: background 0.2s;
         }
-        li:hover, li:active {
-            background: #444;
-        }
-        li.active-target {
-            border-color: #00ff88;
-            background: #253a30;
-        }
+        li:hover, li:active { background: #444; }
+        li.active-target { border-color: #00ff88; background: #253a30; }
     </style>
 </head>
 <body>
@@ -241,7 +238,7 @@
 
         function saveCurrentLocation() {
             if (userLat === null || userLon === null) {
-                alert("Nelze uložit! GPS poloha ještě nebyla načtena. Ujistěte se, že jste nejprve klikli na aktivační tlačítko a povolili přístup k poloze.");
+                alert("Nelze uložit! GPS poloha ještě nebyla načtena.");
                 return;
             }
 
@@ -250,12 +247,7 @@
                 customName = `Stanoviště ${checkpoints.length + 1}`;
             }
 
-            const newPoint = {
-                name: customName,
-                lat: userLat,
-                lon: userLon
-            };
-
+            const newPoint = { name: customName, lat: userLat, lon: userLon };
             checkpoints.push(newPoint);
             localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
             
@@ -302,7 +294,7 @@
                     currentGpsEl.textContent = `Moje poloha: ${userLat.toFixed(5)}, ${userLon.toFixed(5)}`;
                     updateNavigation();
                 }, error => {
-                    statusEl.textContent = "Chyba GPS: Povolte polohové služby.";
+                    statusEl.textContent = "Chyba GPS: Zkontrolujte oprávnění a HTTPS.";
                     console.error(error);
                 }, { 
                     enableHighAccuracy: true,
@@ -317,23 +309,23 @@
         function initSensors() {
             startGPS();
             
-            // Podpora pro iOS (Safari vyžaduje povolení)
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
                         if (permissionState === 'granted') {
                             window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                            requestAnimationFrame(renderLoop); // Spustí plynulou překreslovací smyčku
                         } else {
                             statusEl.textContent = "Přístup ke kompasu byl zamítnut.";
                         }
                     }).catch(console.error);
             } else {
-                // Pro Android a ostatní prohlížeče
                 window.addEventListener('deviceorientationabsolute', handleOrientation, true);
                 window.addEventListener('deviceorientation', handleOrientation, true);
+                requestAnimationFrame(renderLoop); // Spustí plynulou překreslovací smyčku
             }
             statusEl.textContent = "Senzory inicializovány.";
-            activateBtn.style.display = "none"; // Skryje tlačítko po aktivaci
+            activateBtn.style.display = "none";
         }
 
         function handleOrientation(event) {
@@ -343,18 +335,29 @@
                 if (event.webkitCompassHeading === undefined) {
                     heading = 360 - heading; 
                 }
+                // Pouze ukládáme aktuální azimut ze senzoru
                 compassHeading = heading;
-                compassEl.style.transform = `rotate(${-compassHeading}deg)`;
-                const arrowRotation = targetBearing - compassHeading;
-                arrowEl.style.transform = `rotate(${arrowRotation}deg)`;
             }
+        }
+
+        // REÁLNÝ ČAS: Smyčka synchronizovaná s obnovovací frekvencí displeje (např. 60Hz/120Hz)
+        function renderLoop() {
+            // Otočení růžice kompasu podle natočení telefonu
+            compassEl.style.transform = `rotate(${-compassHeading}deg)`;
+            
+            // Otočení šipky k cíli vůči kompasu
+            const arrowRotation = targetBearing - compassHeading;
+            arrowEl.style.transform = `rotate(${arrowRotation}deg)`;
+
+            // Opakování smyčky na dalším snímku obrazovky
+            requestAnimationFrame(renderLoop);
         }
 
         function updateNavigation() {
             if (userLat === null || userLon === null || checkpoints.length === 0) return;
 
             const target = checkpoints[currentIdx];
-            const R = 6371e3; // Poloměr Země v metrech
+            const R = 6371e3; 
             const phi1 = userLat * Math.PI / 180;
             const phi2 = target.lat * Math.PI / 180;
             const deltaPhi = (target.lat - userLat) * Math.PI / 180;
@@ -377,12 +380,8 @@
                       Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
             let theta = Math.atan2(y, x);
             targetBearing = (theta * 180 / Math.PI + 360) % 360;
-
-            const arrowRotation = targetBearing - compassHeading;
-            arrowEl.style.transform = `rotate(${arrowRotation}deg)`;
         }
 
-        // Úvodní vykreslení
         updateCheckpointUI();
     </script>
 </body>
