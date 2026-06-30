@@ -95,6 +95,17 @@
 
         button:active { opacity: 0.8; }
 
+        button.primary-action {
+            background-color: #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+        }
+
         button.secondary {
             background-color: #444;
             color: #fff;
@@ -148,8 +159,10 @@
     
     <div class="card">
         <div>Vzdálenost: <strong id="distance">-</strong></div>
-        <div class="info-text" id="gps-status">Klepněte kamkoliv pro aktivaci kompasu a GPS</div>
+        <div class="info-text" id="gps-status">Pro spuštění klikněte na aktivační tlačítko níže.</div>
     </div>
+
+    <button id="activate-btn" class="primary-action" onclick="initSensors()">🟢 AKTIVOVAT GPS A KOMPAS</button>
 
     <div class="compass-container">
         <div class="rose" id="compass">
@@ -167,7 +180,7 @@
 
     <div class="card">
         <h2>🛠️ Správa stanovišť v terénu</h2>
-        <div class="info-text" id="current-gps-display">Moje poloha: Načítání...</div>
+        <div class="info-text" id="current-gps-display">Moje poloha: Neaktivní</div>
         
         <input type="text" id="new-name-input" placeholder="Název nového stanoviště">
         <button class="secondary" onclick="saveCurrentLocation()">📍 Uložit moji polohu jako bod</button>
@@ -198,6 +211,7 @@
         const currentGpsEl = document.getElementById('current-gps-display');
         const pointsListEl = document.getElementById('points-list');
         const nameInputEl = document.getElementById('new-name-input');
+        const activateBtn = document.getElementById('activate-btn');
 
         function updateCheckpointUI() {
             if (checkpoints.length === 0) {
@@ -227,7 +241,7 @@
 
         function saveCurrentLocation() {
             if (userLat === null || userLon === null) {
-                alert("Nelze uložit! GPS poloha ještě nebyla načtena.");
+                alert("Nelze uložit! GPS poloha ještě nebyla načtena. Ujistěte se, že jste nejprve klikli na aktivační tlačítko a povolili přístup k poloze.");
                 return;
             }
 
@@ -246,7 +260,6 @@
             localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
             
             nameInputEl.value = "";
-            // Po uložení rovnou přepneme navigaci na tento nový bod
             currentIdx = checkpoints.length - 1;
             updateCheckpointUI();
         }
@@ -267,7 +280,6 @@
                 if (idx === currentIdx && checkpoints.length > 0) {
                     li.className = "active-target";
                 }
-                // Kliknutím na řádek se spustí navigace na tento bod
                 li.onclick = () => selectCheckpoint(idx);
                 
                 li.innerHTML = `
@@ -283,7 +295,6 @@
 
         function startGPS() {
             if (navigator.geolocation) {
-                // Přidáno highAccuracy a vypnutí cache pro okamžité reakce v terénu
                 navigator.geolocation.watchPosition(position => {
                     userLat = position.coords.latitude;
                     userLon = position.coords.longitude;
@@ -322,26 +333,18 @@
                 window.addEventListener('deviceorientation', handleOrientation, true);
             }
             statusEl.textContent = "Senzory inicializovány.";
+            activateBtn.style.display = "none"; // Skryje tlačítko po aktivaci
         }
 
-        // Spuštění po prvním kliknutí kamkoliv na displej (podmínka mobilních prohlížečů)
-        document.body.addEventListener('click', initSensors, { once: true });
-
         function handleOrientation(event) {
-            // Správné ošetření pro iOS (webkitCompassHeading) i Android (alpha)
             let heading = event.webkitCompassHeading || event.alpha;
             
             if (heading !== null && heading !== undefined) {
                 if (event.webkitCompassHeading === undefined) {
-                    // Android posílá hodnoty v opačném směru než iOS
                     heading = 360 - heading; 
                 }
                 compassHeading = heading;
-                
-                // Otáčíme růžicí kompasu proti směru chodu, aby sever (N) ukazoval na reálný sever
                 compassEl.style.transform = `rotate(${-compassHeading}deg)`;
-                
-                // Šipka cíle se musí otáčet vůči kompasu
                 const arrowRotation = targetBearing - compassHeading;
                 arrowEl.style.transform = `rotate(${arrowRotation}deg)`;
             }
@@ -357,7 +360,6 @@
             const deltaPhi = (target.lat - userLat) * Math.PI / 180;
             const deltaLambda = (target.lon - userLon) * Math.PI / 180;
 
-            // Haversine vzorec pro výpočet vzdálenosti
             const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
                       Math.cos(phi1) * Math.cos(phi2) *
                       Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
@@ -370,14 +372,12 @@
                 distEl.textContent = `${Math.round(distance)} m`;
             }
 
-            // Výpočet azimutu k cíli (bearing)
             const y = Math.sin(deltaLambda) * Math.cos(phi2);
             const x = Math.cos(phi1) * Math.sin(phi2) -
                       Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
             let theta = Math.atan2(y, x);
             targetBearing = (theta * 180 / Math.PI + 360) % 360;
 
-            // Aktualizace šipky na základě aktuálního natočení
             const arrowRotation = targetBearing - compassHeading;
             arrowEl.style.transform = `rotate(${arrowRotation}deg)`;
         }
