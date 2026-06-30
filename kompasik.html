@@ -2,391 +2,157 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS Tracker s Figurkou</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Magická Královská Stezka</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
+        /* Globální reset a nastavení box-sizingu pro mobilní layout */
+        * {
             box-sizing: border-box;
-            user-select: none;
         }
 
-        /* MAPA PŘES VEŠKERÝ DOSTUPNÝ PROSTOR */
-        #mapCanvas {
-            flex-grow: 1;
-            background: #151515;
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* OVLÁDACÍ PANEL DOLE OVERLAY */
-        .control-panel {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(30, 30, 30, 0.9);
-            padding: 15px;
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            box-shadow: 0 -5px 25px rgba(0,0,0,0.6);
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #0b132b, #1c2541);
+            color: #f4ebd0;
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 40%;
-            overflow-y: auto;
-            backdrop-filter: blur(10px);
-            z-index: 10;
-        }
-
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            color: #aaa;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-        }
-
-        .btn-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        button {
-            flex: 1;
-            background-color: #444;
-            color: #fff;
-            border: none;
-            padding: 12px;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            gap: 5px;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            /* Ochrana před výřezy a lištami moderních iPhonů */
+            padding: calc(20px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
         }
 
-        button.primary {
-            background-color: #00ff88;
-            color: #121212;
+        .karta {
+            background: rgba(28, 37, 65, 0.9); /* Mírně zvýšená opacita pro lepší čitelnost na slunci */
+            padding: 25px 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border: 2px solid #d4af37; /* Královská zlatá */
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px); /* Podpora pro Safari na iOS */
         }
 
-        button.recording {
-            background-color: #ff3333;
-            color: white;
-            animation: blink 1.5s infinite;
+        h1 {
+            color: #d4af37;
+            font-size: 1.8rem; /* Mírně zmenšeno pro užší displeje */
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
         }
 
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
+        p {
+            font-size: 1rem;
+            line-height: 1.4;
+            margin-bottom: 20px;
+        }
+
+        .vstup-sekce {
+            margin-bottom: 20px;
         }
 
         input {
-            background: #222;
-            border: 1px solid #444;
-            color: white;
-            padding: 10px;
+            padding: 12px;
+            font-size: 16px; /* iOS nezpůsobí auto-zoom při clicku */
+            border: 2px solid #d4af37;
             border-radius: 8px;
-            font-size: 14px;
-            width: 100%;
-            box-sizing: border-box;
+            background-color: #0b132b;
+            color: #f4ebd0;
+            width: 80%; /* Širší pole pro pohodlnější zadávání prstem */
+            text-align: center;
+            outline: none;
+            -webkit-appearance: none; /* Odstranění nativního stínu v iOS Safari */
         }
 
-        #activate-screen {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: #1a1a1a;
-            z-index: 100;
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #d4af37;
+            color: #0b132b;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            margin-top: 15px;
+            width: 80%; /* Stejná šířka jako input pro lepší mobilní UI */
+            -webkit-tap-highlight-color: transparent; /* Odstranění šedého záblesku při kliku na iOS */
+        }
+
+        /* Efekt při podržení/stisknutí prstu na iPhonu */
+        button:active {
+            background-color: #f4ebd0;
+            transform: scale(0.98);
+        }
+
+        .zprava-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(11, 19, 43, 0.8);
+            border-left: 4px solid #d4af37;
+            min-height: 60px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            font-size: 1rem;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
 
-    <div id="activate-screen">
-        <h1 style="color: #00ff88; text-align:center;">GPS Tracker & Mapa</h1>
-        <p style="color: #aaa; text-align:center; margin-bottom: 30px;">Aplikace vyžaduje HTTPS a povolení polohy + kompasu.</p>
-        <button class="primary" style="padding: 20px; font-size: 18px; max-width: 300px;" onclick="initSensors()">🟢 AKTIVIVAT MAPU</button>
+<div class="karta">
+    <h1>Královská Stezka</h1>
+    <p>Zadej kód stanoviště pro odhalení dalších instrukcí:</p>
+    
+    <div class="vstup-sekce">
+        <input type="text" id="kodStanoviste" inputmode="numeric" pattern="[0-9]*" placeholder="Zadej číslo kódu...">
+        <br>
+        <button onclick="odhalZpravu()">Odhalit tajemství</button>
     </div>
 
-    <canvas id="mapCanvas"></canvas>
-
-    <div class="control-panel">
-        <div class="status-bar">
-            <span id="gps-status">GPS: Spící</span>
-            <span id="target-info">Cíl: Žádný</span>
-        </div>
-
-        <div class="btn-row">
-            <button id="record-btn" class="primary" onclick="toggleRecording()">▶️ SPUSTIT ZÁZNAM TRASY</button>
-            <button onclick="nextCheckpoint()">🎯 Další cíl</button>
-        </div>
-
-        <div style="display: flex; gap: 5px; margin-top: 5px;">
-            <input type="text" id="new-name-input" placeholder="Název bodu k uložení...">
-            <button style="flex: 0 0 auto; width: 60px;" onclick="saveCurrentLocation()">📍 Ulož</button>
-        </div>
-        
-        <button class="secondary" style="background: #333; font-size: 11px; padding: 5px;" onclick="clearAllData()">🗑️ Smazat historii i body</button>
+    <div class="zprava-box" id="vystupZpravy">
+        Zde se objeví tvůj magický úkol...
     </div>
+</div>
 
-    <script>
-        let checkpoints = JSON.parse(localStorage.getItem('map_points')) || [];
-        let historyPath = []; 
-        let isRecording = false;
-        let currentIdx = 0;
-        
-        let userLat = null;
-        let userLon = null;
-        let compassHeading = 0; 
-        let targetBearing = 0;
+<script>
+    // Texty jednotlivých stanovišť uložené podle kódů
+    const stanoviste = {
+        "1": "<strong>Stanoviště 1: Průchod</strong><br><br>Právě jsi prošel průchodem. Vydej se doprava až ke schodům, kde na tebe čeká další stanoviště.",
+        "2": "<strong>Stanoviště 2: Schody a garáž</strong><br><br>Dorazil jsi ke schodům. Sejdi po nich dolů. Cestou tě bude někdo sledovat - neboj se, je to přítel. Sejdi ještě níž po následujících schodech až do garáže, kde tě tvůj pozorovatel navede dál.",
+        "3": "<strong>Stanoviště 3: Bazén</strong><br><br>Už jsi skoro u bazénu. Celý ho obejdi dokola a pak se vydej směrem k pavučině.",
+        "4": "<strong>Stanoviště 4: Pavučina</strong><br><br>Jakmile dorazíš k pavučině, prolez otvorem uprostřed a vydej se na zpáteční cestu na start."
+    };
 
-        const canvas = document.getElementById('mapCanvas');
-        const ctx = canvas.getContext('2d');
-        const gpsStatus = document.getElementById('gps-status');
-        const targetInfo = document.getElementById('target-info');
-        const recordBtn = document.getElementById('record-btn');
-        const nameInputEl = document.getElementById('new-name-input');
+    function odhalZpravu() {
+        const inputEl = document.getElementById("kodStanoviste");
+        const kod = inputEl.value.trim();
+        const vystup = document.getElementById("vystupZpravy");
 
-        // Automatické přizpůsobení velikosti okna telefonu
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        function toggleRecording() {
-            isRecording = !isRecording;
-            if (isRecording) {
-                recordBtn.textContent = "🛑 ZÁZNAM BĚŽÍ...";
-                recordBtn.className = "recording";
-                // Vloží hned první bod, pokud už polohu máme
-                if (userLat && userLon) historyPath.push({ lat: userLat, lon: userLon });
-            } else {
-                recordBtn.textContent = "▶️ SPUSTIT ZÁZNAM TRASY";
-                recordBtn.className = "primary";
-            }
+        if (stanoviste[kod]) {
+            vystup.innerHTML = stanoviste[kod];
+            vystup.style.borderColor = "#d4af37"; 
+        } else {
+            vystup.innerHTML = "<em>Tento kód neotvírá žádnou komnatu. Zkus to znovu!</em>";
+            vystup.style.borderColor = "#cc0000"; 
         }
 
-        function startGPS() {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(position => {
-                    userLat = position.coords.latitude;
-                    userLon = position.coords.longitude;
-                    
-                    gpsStatus.textContent = `GPS: Aktivní (±${Math.round(position.coords.accuracy)}m)`;
-                    
-                    // Nahrávání trasy co nejvíc to jde (když je zapnutý záznam)
-                    if (isRecording) {
-                        historyPath.push({ lat: userLat, lon: userLon });
-                    }
-                    
-                    updateNavigation();
-                }, error => {
-                    gpsStatus.textContent = "GPS: Chyba přístupu";
-                }, { 
-                    enableHighAccuracy: true, // Vynutí nejpřesnější GPS modul (vteřinové aktualizace)
-                    timeout: 2000,
-                    maximumAge: 0 
-                });
-            }
+        // Schová klávesnici na iPhonu po kliknutí na tlačítko, aby uživatel viděl výsledek
+        inputEl.blur();
+    }
+
+    document.getElementById("kodStanoviste").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            odhalZpravu();
         }
+    });
+</script>
 
-        function initSensors() {
-            document.getElementById('activate-screen').style.display = 'none';
-            startGPS();
-            
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(state => {
-                    if (state === 'granted') {
-                        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-                    }
-                });
-            } else {
-                window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-                window.addEventListener('deviceorientation', handleOrientation, true);
-            }
-            requestAnimationFrame(renderLoop);
-        }
-
-        function handleOrientation(event) {
-            let heading = event.webkitCompassHeading || event.alpha;
-            if (heading !== null && heading !== undefined) {
-                if (event.webkitCompassHeading === undefined) heading = 360 - heading; 
-                compassHeading = heading;
-            }
-        }
-
-        function renderLoop() {
-            drawMap();
-            requestAnimationFrame(renderLoop);
-        }
-
-        function saveCurrentLocation() {
-            if (!userLat || !userLon) return alert("Poloha neznámá.");
-            let name = nameInputEl.value.trim() || `Bod ${checkpoints.length + 1}`;
-            checkpoints.push({ name, lat: userLat, lon: userLon });
-            localStorage.setItem('map_points', JSON.stringify(checkpoints));
-            nameInputEl.value = "";
-            currentIdx = checkpoints.length - 1;
-            updateNavigation();
-        }
-
-        function nextCheckpoint() {
-            if (checkpoints.length === 0) return;
-            currentIdx = (currentIdx + 1) % checkpoints.length;
-            updateNavigation();
-        }
-
-        function clearAllData() {
-            if (confirm("Smazat vše?")) {
-                checkpoints = [];
-                historyPath = [];
-                localStorage.removeItem('map_points');
-                currentIdx = 0;
-                updateNavigation();
-            }
-        }
-
-        function updateNavigation() {
-            if (!userLat || checkpoints.length === 0) {
-                targetInfo.textContent = "Cíl: Žádný";
-                return;
-            }
-            const target = checkpoints[currentIdx];
-            const R = 6371e3; 
-            const phi1 = userLat * Math.PI / 180, phi2 = target.lat * Math.PI / 180;
-            const dPhi = (target.lat - userLat) * Math.PI / 180;
-            const dLam = (target.lon - userLon) * Math.PI / 180;
-
-            const a = Math.sin(dPhi/2)**2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam/2)**2;
-            const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            
-            const distTxt = distance >= 1000 ? `${(distance / 1000).toFixed(2)} km` : `${Math.round(distance)} m`;
-            targetInfo.textContent = `🎯 ${target.name} (${distTxt})`;
-
-            const y = Math.sin(dLam) * Math.cos(phi2);
-            const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLam);
-            targetBearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-        }
-
-        // KRESLENÍ MAPY A FIGURKY
-        function drawMap() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (!userLat || !userLon) {
-                ctx.fillStyle = "#666";
-                ctx.font = "16px Segoe UI";
-                ctx.textAlign = "center";
-                ctx.fillText("Čekám na GPS družice...", canvas.width / 2, canvas.height / 2);
-                return;
-            }
-
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            
-            // Velké přiblížení mapy, aby šlo vidět každý krok v metrech (scale 60000)
-            const scale = 60000; 
-
-            function toCanvas(lat, lon) {
-                return {
-                    x: centerX + (lon - userLon) * scale * Math.cos(userLat * Math.PI / 180),
-                    y: centerY - (lat - userLat) * scale
-                };
-            }
-
-            // 1. VYKRESLENÍ NAHRÁVANÉ TRASY (Hustá červená stopa)
-            if (historyPath.length > 1) {
-                ctx.beginPath();
-                ctx.strokeStyle = "#ff3333";
-                ctx.lineWidth = 4;
-                ctx.lineCap = "round";
-                ctx.lineJoin = "round";
-                for (let i = 0; i < historyPath.length; i++) {
-                    let pt = toCanvas(historyPath[i].lat, historyPath[i].lon);
-                    if (i === 0) ctx.moveTo(pt.x, pt.y);
-                    else ctx.lineTo(pt.x, pt.y);
-                }
-                ctx.stroke();
-            }
-
-            // 2. VYKRESLENÍ BODŮ NA MAPĚ
-            checkpoints.forEach((pt, idx) => {
-                let pos = toCanvas(pt.lat, pt.lon);
-                
-                // Vlaječka / Bod
-                ctx.beginPath();
-                ctx.arc(pos.x, pos.y, idx === currentIdx ? 7 : 5, 0, 2 * Math.PI);
-                ctx.fillStyle = idx === currentIdx ? "#00ff88" : "#3399ff";
-                ctx.fill();
-                
-                // Popisek u bodu
-                ctx.fillStyle = "white";
-                ctx.font = "12px Segoe UI";
-                ctx.textAlign = "left";
-                ctx.fillText(` ${pt.name}`, pos.x + 8, pos.y + 4);
-            });
-
-            // 3. VYKRESLENÍ CHODÍCÍ FIGURKY (Zástupce kompasu ve středu obrazovky)
-            ctx.save();
-            ctx.translate(centerX, centerY);
-            ctx.rotate((compassHeading * Math.PI) / 180); // Otočení podle pohledu
-
-            // Kreslení hlavy figurky
-            ctx.beginPath();
-            ctx.arc(0, -10, 5, 0, 2 * Math.PI);
-            ctx.fillStyle = "#ffff00";
-            ctx.fill();
-
-            // Kreslení těla a rozpažených rukou (pohled shora jako panáček)
-            ctx.beginPath();
-            ctx.moveTo(-10, 0); // Levá ruka
-            ctx.lineTo(10, 0);  // Pravá ruka
-            ctx.moveTo(0, -5);  // Krk
-            ctx.lineTo(0, 10);  // Tělo dolů
-            ctx.moveTo(0, 10);
-            ctx.lineTo(-6, 22); // Levá noha v kroku
-            ctx.moveTo(0, 10);
-            ctx.lineTo(6, 22);  // Pravá noha v kroku
-            
-            ctx.strokeStyle = "#ffff00";
-            ctx.lineWidth = 3;
-            ctx.lineCap = "round";
-            ctx.stroke();
-
-            // Směrový paprsek světla před figurku (kam se dívá)
-            ctx.beginPath();
-            ctx.moveTo(0, -15);
-            ctx.lineTo(-15, -45);
-            ctx.lineTo(15, -45);
-            ctx.closePath();
-            let gradient = ctx.createLinearGradient(0, -15, 0, -45);
-            gradient.addColorStop(0, "rgba(255,255,0,0.4)");
-            gradient.addColorStop(1, "rgba(255,255,0,0)");
-            ctx.fillStyle = gradient;
-            ctx.fill();
-
-            ctx.restore();
-        }
-    </script>
 </body>
 </html>
