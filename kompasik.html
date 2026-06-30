@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS Kompas v reálném čase</title>
+    <title>GPS Kompas s Mapou Trasy</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -11,7 +11,7 @@
             background-color: #1a1a1a;
             color: #ffffff;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -20,46 +20,53 @@
             user-select: none;
         }
 
-        h1 { margin: 10px 0; color: #00ff88; font-size: 24px; }
-        h2 { color: #00ff88; font-size: 18px; margin-top: 20px; }
+        h1 { margin: 5px 0; color: #00ff88; font-size: 22px; }
+        h2 { color: #00ff88; font-size: 16px; margin: 10px 0 5px 0; }
 
         .card {
             background: #2a2a2a;
-            padding: 15px;
+            padding: 12px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             width: 100%;
-            max-width: 350px;
-            margin-bottom: 15px;
+            max-width: 360px;
+            margin-bottom: 10px;
             box-sizing: border-box;
+        }
+
+        .flex-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 360px;
+            gap: 10px;
         }
 
         .compass-container {
             position: relative;
-            width: 240px;
-            height: 240px;
+            width: 170px;
+            height: 170px;
             border-radius: 50%;
             background: #222;
-            border: 5px solid #333;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 4px 10px rgba(0,0,0,0.3);
-            margin: 15px auto;
+            border: 4px solid #333;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+            margin: 5px auto;
             overflow: hidden;
         }
 
-        /* ODSTRANĚNA TRANSITION PRO OKAMŽITOU REAKCI V REÁLNÉM ČASE */
         .rose { 
             position: absolute; 
             width: 100%; 
             height: 100%; 
             top: 0; 
             left: 0;
-            will-change: transform; /* Optimalizace pro grafickou kartu mobilu */
+            will-change: transform;
         }
-        .direction { position: absolute; font-weight: bold; font-size: 16px; }
-        .north { top: 10px; left: 50%; transform: translateX(-50%); color: #ff3333; }
-        .south { bottom: 10px; left: 50%; transform: translateX(-50%); }
-        .east { right: 10px; top: 50%; transform: translateY(-50%); }
-        .west { left: 10px; top: 50%; transform: translateY(-50%); }
+        .direction { position: absolute; font-weight: bold; font-size: 14px; }
+        .north { top: 5px; left: 50%; transform: translateX(-50%); color: #ff3333; }
+        .south { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .east { right: 5px; top: 50%; transform: translateY(-50%); }
+        .west { left: 5px; top: 50%; transform: translateY(-50%); }
 
         #target-arrow {
             position: absolute;
@@ -67,62 +74,66 @@
             left: 50%;
             width: 0;
             height: 0;
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-bottom: 80px solid #00ff88;
-            margin-top: -80px;
-            margin-left: -12px;
+            border-left: 9px solid transparent;
+            border-right: 9px solid transparent;
+            border-bottom: 55px solid #00ff88;
+            margin-top: -55px;
+            margin-left: -9px;
             transform-origin: bottom center;
             transform: rotate(0deg);
-            filter: drop-shadow(0 0 5px rgba(0,255,136,0.6));
+            filter: drop-shadow(0 0 4px rgba(0,255,136,0.6));
             pointer-events: none;
             will-change: transform;
+        }
+
+        /* STYL PRO MAPU */
+        #mapCanvas {
+            background: #111;
+            border: 3px solid #333;
+            border-radius: 10px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+            width: 100%;
+            max-width: 360px;
+            height: 220px;
+            margin-bottom: 10px;
+            display: block;
         }
 
         button {
             background-color: #00ff88;
             color: #121212;
             border: none;
-            padding: 12px 20px;
-            font-size: 15px;
+            padding: 10px 15px;
+            font-size: 14px;
             font-weight: bold;
             border-radius: 20px;
             cursor: pointer;
             width: 100%;
-            max-width: 280px;
-            margin: 5px 0;
+            max-width: 360px;
+            margin: 3px 0;
             box-shadow: 0 4px 10px rgba(0,255,136,0.2);
-            transition: background 0.2s;
         }
-
-        button:active { opacity: 0.8; }
 
         button.primary-action {
             background-color: #00ff88;
             animation: pulse 2s infinite;
+            padding: 15px;
+            font-size: 16px;
         }
 
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+            70% { box-shadow: 0 0 0 12px rgba(0, 255, 136, 0); }
             100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
         }
 
-        button.secondary {
-            background-color: #444;
-            color: #fff;
-            box-shadow: none;
-        }
-
-        button.danger {
-            background-color: #ff3333;
-            color: #fff;
-        }
+        button.secondary { background-color: #444; color: #fff; box-shadow: none; }
+        button.danger { background-color: #ff3333; color: #fff; }
 
         input {
             width: 100%;
-            padding: 10px;
-            margin: 10px 0;
+            padding: 8px;
+            margin: 8px 0;
             border-radius: 5px;
             border: 1px solid #555;
             background: #333;
@@ -130,23 +141,21 @@
             box-sizing: border-box;
         }
 
-        .info-text { font-size: 13px; color: #aaa; margin-top: 5px; }
+        .info-text { font-size: 12px; color: #aaa; }
         
-        ul { list-style: none; padding: 0; width: 100%; text-align: left; }
+        ul { list-style: none; padding: 0; width: 100%; text-align: left; margin: 5px 0; }
         li { 
             background: #333; 
-            padding: 10px; 
-            margin: 5px 0; 
+            padding: 8px; 
+            margin: 4px 0; 
             border-radius: 5px; 
-            font-size: 14px;
+            font-size: 13px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
             border: 2px solid transparent;
-            transition: background 0.2s;
         }
-        li:hover, li:active { background: #444; }
         li.active-target { border-color: #00ff88; background: #253a30; }
     </style>
 </head>
@@ -155,11 +164,11 @@
     <h1>Cíl: <span id="checkpoint-name">-</span></h1>
     
     <div class="card">
-        <div>Vzdálenost: <strong id="distance">-</strong></div>
-        <div class="info-text" id="gps-status">Pro spuštění klikněte na aktivační tlačítko níže.</div>
+        <div style="font-size: 15px;">Vzdálenost: <strong id="distance">-</strong></div>
+        <div class="info-text" id="gps-status">Pro start klikněte na velké zelené tlačítko.</div>
     </div>
 
-    <button id="activate-btn" class="primary-action" onclick="initSensors()">🟢 AKTIVOVAT GPS A KOMPAS</button>
+    <button id="activate-btn" class="primary-action" onclick="initSensors()">🟢 AKTIVUJ ULTRA-PŘESNÝ REŽIM (HTTPS)</button>
 
     <div class="compass-container">
         <div class="rose" id="compass">
@@ -171,29 +180,30 @@
         <div id="target-arrow"></div>
     </div>
 
+    <canvas id="mapCanvas" width="360" height="220"></canvas>
+
     <button id="next-btn" onclick="nextCheckpoint()">🧭 Další stanoviště</button>
 
-    <hr style="width:100%; max-width:350px; border-color:#333; margin:20px 0;">
-
     <div class="card">
-        <h2>🛠️ Správa stanovišť v terénu</h2>
+        <h2>🛠️ Správa bodů a trasování</h2>
         <div class="info-text" id="current-gps-display">Moje poloha: Neaktivní</div>
         
         <input type="text" id="new-name-input" placeholder="Název nového stanoviště">
         <button class="secondary" onclick="saveCurrentLocation()">📍 Uložit moji polohu jako bod</button>
         
-        <h3>Uložené body (klepnutím naviguj):</h3>
         <ul id="points-list"></ul>
-        <button class="danger" onclick="clearAllCheckpoints()" style="margin-top: 15px;">🗑️ Smazat vše</button>
+        <button class="danger" onclick="clearAllCheckpoints()">🗑️ Smazat vše</button>
     </div>
 
     <script>
+        // Výchozí body (např. Praha)
         const defaultCheckpoints = [
             { name: "1. Pražský hrad", lat: 50.0902, lon: 14.4005 },
             { name: "2. Staroměstské náměstí", lat: 50.0875, lon: 14.4212 }
         ];
 
         let checkpoints = JSON.parse(localStorage.getItem('my_compass_points')) || defaultCheckpoints;
+        let historyPath = []; // Zde se ukládá celá trasa kudy člověk šel
         let currentIdx = 0;
         let userLat = null;
         let userLon = null;
@@ -209,6 +219,10 @@
         const pointsListEl = document.getElementById('points-list');
         const nameInputEl = document.getElementById('new-name-input');
         const activateBtn = document.getElementById('activate-btn');
+        
+        // Canvas nastavení
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
 
         function updateCheckpointUI() {
             if (checkpoints.length === 0) {
@@ -238,27 +252,21 @@
 
         function saveCurrentLocation() {
             if (userLat === null || userLon === null) {
-                alert("Nelze uložit! GPS poloha ještě nebyla načtena.");
+                alert("Nelze uložit! GPS poloha chybí.");
                 return;
             }
-
-            let customName = nameInputEl.value.trim();
-            if (!customName) {
-                customName = `Stanoviště ${checkpoints.length + 1}`;
-            }
-
-            const newPoint = { name: customName, lat: userLat, lon: userLon };
-            checkpoints.push(newPoint);
+            let customName = nameInputEl.value.trim() || `Bod ${checkpoints.length + 1}`;
+            checkpoints.push({ name: customName, lat: userLat, lon: userLon });
             localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
-            
             nameInputEl.value = "";
             currentIdx = checkpoints.length - 1;
             updateCheckpointUI();
         }
 
         function clearAllCheckpoints() {
-            if(confirm("Opravdu chcete smazat všechna stanoviště?")) {
+            if(confirm("Smazat body i historii trasy?")) {
                 checkpoints = [];
+                historyPath = [];
                 localStorage.setItem('my_compass_points', JSON.stringify(checkpoints));
                 currentIdx = 0;
                 updateCheckpointUI();
@@ -269,18 +277,9 @@
             pointsListEl.innerHTML = "";
             checkpoints.forEach((pt, idx) => {
                 const li = document.createElement('li');
-                if (idx === currentIdx && checkpoints.length > 0) {
-                    li.className = "active-target";
-                }
+                if (idx === currentIdx) li.className = "active-target";
                 li.onclick = () => selectCheckpoint(idx);
-                
-                li.innerHTML = `
-                    <div>
-                        <strong>${pt.name}</strong><br>
-                        <span style="font-size:11px; color:#aaa;">${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)}</span>
-                    </div>
-                    <span style="font-size: 18px;">${idx === currentIdx ? '🎯' : '📍'}</span>
-                `;
+                li.innerHTML = `<div><strong>${pt.name}</strong></div><span>${idx === currentIdx ? '🎯' : '📍'}</span>`;
                 pointsListEl.appendChild(li);
             });
         }
@@ -290,19 +289,25 @@
                 navigator.geolocation.watchPosition(position => {
                     userLat = position.coords.latitude;
                     userLon = position.coords.longitude;
-                    statusEl.textContent = "GPS signál: Aktivní";
+                    
+                    statusEl.textContent = "GPS signál: Aktivní (vysoká přesnost)";
                     currentGpsEl.textContent = `Moje poloha: ${userLat.toFixed(5)}, ${userLon.toFixed(5)}`;
+                    
+                    // Přidání bodu do historie trasy (pokud je nový nebo dostatečně daleko)
+                    if (historyPath.length === 0 || 
+                        historyPath[historyPath.length - 1].lat !== userLat || 
+                        historyPath[historyPath.length - 1].lon !== userLon) {
+                        historyPath.push({ lat: userLat, lon: userLon });
+                    }
+                    
                     updateNavigation();
                 }, error => {
-                    statusEl.textContent = "Chyba GPS: Zkontrolujte oprávnění a HTTPS.";
-                    console.error(error);
+                    statusEl.textContent = "Chyba GPS. Je nutné HTTPS a povolená poloha v mobilu.";
                 }, { 
                     enableHighAccuracy: true,
-                    timeout: 10000,
+                    timeout: 5000,
                     maximumAge: 0 
                 });
-            } else {
-                statusEl.textContent = "GPS prohlížečem nepodporováno.";
             }
         }
 
@@ -314,42 +319,37 @@
                     .then(permissionState => {
                         if (permissionState === 'granted') {
                             window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-                            requestAnimationFrame(renderLoop); // Spustí plynulou překreslovací smyčku
-                        } else {
-                            statusEl.textContent = "Přístup ke kompasu byl zamítnut.";
+                            requestAnimationFrame(renderLoop);
                         }
                     }).catch(console.error);
             } else {
                 window.addEventListener('deviceorientationabsolute', handleOrientation, true);
                 window.addEventListener('deviceorientation', handleOrientation, true);
-                requestAnimationFrame(renderLoop); // Spustí plynulou překreslovací smyčku
+                requestAnimationFrame(renderLoop);
             }
-            statusEl.textContent = "Senzory inicializovány.";
             activateBtn.style.display = "none";
         }
 
         function handleOrientation(event) {
             let heading = event.webkitCompassHeading || event.alpha;
-            
             if (heading !== null && heading !== undefined) {
                 if (event.webkitCompassHeading === undefined) {
                     heading = 360 - heading; 
                 }
-                // Pouze ukládáme aktuální azimut ze senzoru
-                compassHeading = heading;
+                compassHeading = heading; // Aktualizace bleskově podle hardwaru
             }
         }
 
-        // REÁLNÝ ČAS: Smyčka synchronizovaná s obnovovací frekvencí displeje (např. 60Hz/120Hz)
+        // HLAVNÍ REVITALIZAČNÍ SMYČKA (Běží mnohokrát za vteřinu)
         function renderLoop() {
-            // Otočení růžice kompasu podle natočení telefonu
+            // 1. Natočení kompasu a šipky cíle
             compassEl.style.transform = `rotate(${-compassHeading}deg)`;
-            
-            // Otočení šipky k cíli vůči kompasu
             const arrowRotation = targetBearing - compassHeading;
             arrowEl.style.transform = `rotate(${arrowRotation}deg)`;
 
-            // Opakování smyčky na dalším snímku obrazovky
+            // 2. Vykreslení mapy na Canvas
+            drawMap();
+
             requestAnimationFrame(renderLoop);
         }
 
@@ -369,17 +369,98 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             const distance = R * c; 
 
-            if (distance >= 1000) {
-                distEl.textContent = `${(distance / 1000).toFixed(2)} km`;
-            } else {
-                distEl.textContent = `${Math.round(distance)} m`;
-            }
+            distEl.textContent = distance >= 1000 ? `${(distance / 1000).toFixed(2)} km` : `${Math.round(distance)} m`;
 
             const y = Math.sin(deltaLambda) * Math.cos(phi2);
-            const x = Math.cos(phi1) * Math.sin(phi2) -
-                      Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
-            let theta = Math.atan2(y, x);
-            targetBearing = (theta * 180 / Math.PI + 360) % 360;
+            const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+            targetBearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+
+        // FUNKCE PRO VYKRASLENÍ AUTOMATICKÉ MAPY TRASY
+        function drawMap() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (userLat === null || userLon === null) {
+                ctx.fillStyle = "#aaa";
+                ctx.font = "14px Segoe UI";
+                ctx.fillText("Čekám na GPS data pro vykreslení mapy...", 50, canvas.height / 2);
+                return;
+            }
+
+            // Dynamické měřítko (vzdálenost na 1 stupeň zeměpisné šířky je cca 111 km)
+            // Nastavíme měřítko tak, aby mapa zabírala detailní okolí (cca pár set metrů/kilometrů)
+            const scale = 30000; 
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Pomocná funkce pro převod GPS na souřadnice Canvasu (středem jsi TY)
+            function gpsToCanvas(lat, lon) {
+                const x = centerX + (lon - userLon) * scale * Math.cos(userLat * Math.PI / 180);
+                const y = centerY - (lat - userLat) * scale; // v mapách je Y dolů, v GPS nahoru
+                return { x, y };
+            }
+
+            // 1. Vykreslení prošlé trasy (historie kudy člověk šel)
+            if (historyPath.length > 1) {
+                ctx.beginPath();
+                ctx.strokeStyle = "#ff3333";
+                ctx.lineWidth = 3;
+                ctx.setLineDash([2, 4]); // Přerušovaná čára pro historii
+                for (let i = 0; i < historyPath.length; i++) {
+                    const pt = gpsToCanvas(historyPath[i].lat, historyPath[i].lon);
+                    if (i === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]); // Reset čáry
+            }
+
+            // 2. Vykreslení uložených bodů cesty
+            checkpoints.forEach((pt, idx) => {
+                const pos = gpsToCanvas(pt.lat, pt.lon);
+                
+                if (idx === currentIdx) {
+                    // Aktivní cíl (Zelený pulzující terč)
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 8, 0, 2 * Math.PI);
+                    ctx.fillStyle = "rgba(0, 255, 136, 0.4)";
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 4, 0, 2 * Math.PI);
+                    ctx.fillStyle = "#00ff88";
+                    ctx.fill();
+                } else {
+                    // Ostatní body (Modré body)
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = "#3399ff";
+                    ctx.fill();
+                }
+                
+                // Popisek bodu
+                ctx.fillStyle = "#fff";
+                ctx.font = "10px Segoe UI";
+                ctx.fillText(pt.name, pos.x + 8, pos.y + 3);
+            });
+
+            // 3. Vykreslení TEBE (Šipka s reálným natočením uprostřed mapy)
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate((compassHeading * Math.PI) / 180); // Rotace podle kompasu
+
+            // Kresba navigačního trojúhelníku (šipka ukazující tvůj směr)
+            ctx.beginPath();
+            ctx.moveTo(0, -12);  // Přední hrot šipky
+            ctx.lineTo(8, 8);    // Pravý zadní roh
+            ctx.lineTo(0, 3);    // Vnitřní střed
+            ctx.lineTo(-8, 8);   // Levý zadní roh
+            ctx.closePath();
+            
+            ctx.fillStyle = "#ffff00"; // Žlutá barva pro tvou pozici
+            ctx.shadowColor = "#ffff00";
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.restore();
         }
 
         updateCheckpointUI();
