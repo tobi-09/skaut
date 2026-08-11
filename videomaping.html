@@ -978,29 +978,126 @@ function exportOutlinePNG(){
 </body>
 </html>
 
-  <!-- Overlay s novými funkcemi -->
+ <!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Nové funkce v projektu</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    /* Celoplošné překrytí */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    /* Box s obsahem */
+    #overlay-content {
+      background: #111;
+      color: #f5f5f5;
+      padding: 24px 28px;
+      max-width: 520px;
+      width: 90%;
+      border-radius: 10px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      border: 1px solid #2a2a30;
+    }
+
+    #overlay-content h1 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      margin-bottom: 0.75rem;
+      color: #fff;
+    }
+
+    #overlay-content ul {
+      padding-left: 1.2rem;
+      margin: 0 0 1.5rem 0;
+    }
+
+    #overlay-content li {
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+      color: #ccc;
+    }
+
+    /* Tlačítka v dojezdu */
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-try {
+      display: inline-block;
+      background-color: #10b981;
+      color: #fff;
+      padding: 10px 18px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background-color 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-try:hover {
+      background-color: #059669;
+    }
+
+    .btn-old-version {
+      background: transparent;
+      color: #aaa;
+      border: 1px solid #444;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-old-version:hover {
+      background: #222;
+      color: #fff;
+      border-color: #666;
+    }
+  </style>
+</head>
+<body>
+
   <div id="overlay">
     <div id="overlay-content">
-      <h1>Nové funkce v projektu</h1>
-      <ul>
-        <li>Média jako výplň polygonu (texture mapping) s vlastností <code>tex</code>.</li>
-        <li>UI ovládání textur: nahrání obrázku/videa, scale, posun X/Y.</li>
-        <li>Globální přepínač <code>showHandles</code> pro zobrazení editačních bodů.</li>
-        <li>Kalibrační mřížka s možností zapnutí/vypnutí v menu.</li>
-        <li>Zachované HiDPI škálování canvasu a všechny částicové efekty.</li>
-        <li>Při kreslení nového tvaru zůstává viditelná pomocná čára k myši.</li>
-      </ul>
-      <button id="overlay-ok">OK</button>
+      <h1>Co je nového?</h1>
+     <ul>
+  <li><strong>Správa projektů (JSON):</strong> Možnost ukládat a načítat kompletní scénu ze souboru JSON.</li>
+  <li><strong>Projekční okno:</strong> Přidáno samostatné window pro výstup na projektor oddělený od UI.</li>
+  <li><strong>Režimy editoru:</strong> Rozdělení nástrojů na explicitní režim <code>Kreslení</code> a režim <code>Výběr & Úprava</code>.</li>
+  <li><strong>Správa vrstev / polygonů:</strong> Nové UI pro seznam tvarů s možností výběru, duplikace a mazání.</li>
+  <li><strong>Rozšířené výplně a styly:</strong> Podpora pro radiální přechod (radial gradient), cyklování barev (Color Cycle) a nastavení krytí (opacity).</li>
+  <li><strong>Pokročilá kontrola efektů:</strong> Možnost nastavit intenzitu vizuálních/částicových efektů pro každý polygon zvlášť.</li>
+  <li><strong>Úprava geometrie:</strong> Zobrazení a přímá kontrola nad souřadnicemi jednotlivých bodů tvaru.</li>
+</ul>
+      
+      <div class="btn-group">
+        <a href="https://tobi-09.github.io/skaut/videomapping.html" target="_blank" class="btn-try">
+          Vyzkoušet novou verzi &rarr;
+        </a>
+        <button type="button" class="btn-old-version" onclick="document.getElementById('overlay').style.display='none';">
+          Pokračovat ve staré verzi
+        </button>
+      </div>
     </div>
   </div>
 
-  <script>
-    const overlay = document.getElementById('overlay');
-    const okButton = document.getElementById('overlay-ok');
-
-    okButton.addEventListener('click', () => {
-      overlay.style.display = 'none';
-    });
-  </script>
 </body>
 </html>
