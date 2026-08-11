@@ -1,0 +1,2279 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Video Mapping Studio Pro</title>
+  
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --bg-dark: #121215;
+      --bg-panel: #1a1a1e;
+      --bg-panel-light: #222228;
+      --bg-input: #16161a;
+      --border-color: #2a2a30;
+      --border-hover: #383842;
+      --text-main: #e1e1e6;
+      --text-muted: #8a8a98;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --danger-bg: #2c1517;
+      --danger-hover: #3d1a1d;
+      --danger-text: #f87171;
+      --danger-border: #4a1f22;
+      --radius-panel: 6px;
+      --radius-btn: 4px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout Structure */
+    #app-container {
+      display: grid;
+      grid-template-rows: 46px 1fr;
+      grid-template-columns: 260px 1fr 330px;
+      grid-template-areas:
+        "topbar topbar topbar"
+        "sidebar-left canvas-area sidebar-right";
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Topbar Header */
+    #topbar {
+      grid-area: topbar;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      color: #fff;
+      letter-spacing: -0.2px;
+    }
+    .brand-tag {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .topbar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Tool Switcher */
+    .tool-switcher {
+      display: flex;
+      background: var(--bg-input);
+      padding: 3px;
+      border-radius: var(--radius-btn);
+      border: 1px solid var(--border-color);
+    }
+    .tool-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.12s ease;
+    }
+    .tool-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .tool-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Buttons */
+    .btn {
+      background: #24242a;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px 10px;
+      border-radius: var(--radius-btn);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.12s ease;
+      height: 28px;
+    }
+    .btn:hover {
+      background: #2e2e36;
+      border-color: var(--border-hover);
+    }
+    .btn-accent {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-accent:hover {
+      background: var(--accent-hover);
+    }
+    .btn-danger {
+      background: var(--danger-bg);
+      border-color: var(--danger-border);
+      color: var(--danger-text);
+    }
+    .btn-danger:hover {
+      background: var(--danger-hover);
+      color: #fff;
+    }
+    .btn-active-state {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Left Sidebar */
+    #sidebar-left {
+      grid-area: sidebar-left;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #18181c;
+    }
+    .panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+    }
+
+    #layer-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .layer-item {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-btn);
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .layer-item:hover {
+      border-color: var(--border-hover);
+      background: #16161b;
+    }
+    .layer-item.active {
+      border-color: var(--accent);
+      background: rgba(16, 185, 129, 0.1);
+    }
+    .layer-color-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .layer-name-input {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-main);
+      font-size: 11px;
+      font-weight: 500;
+      width: 100%;
+      outline: none;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+    .layer-name-input:focus {
+      background: var(--bg-input);
+      border-color: var(--accent);
+    }
+    .layer-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 4px;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+    }
+    .icon-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .icon-btn.active-state {
+      color: var(--accent);
+    }
+
+    /* Stage / Canvas Area */
+    #canvas-area {
+      grid-area: canvas-area;
+      position: relative;
+      background: #0a0a0c;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #video-container {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    #video-container video, #video-container img, #video-container .media {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      z-index: 0;
+    }
+    #grid-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background-image: linear-gradient(0deg, transparent 49px, rgba(255,255,255,0.05) 49px, rgba(255,255,255,0.05) 50px),
+                        linear-gradient(90deg, transparent 49px, rgba(255,255,255,0.05) 49px, rgba(255,255,255,0.05) 50px);
+      background-size: 50px 50px;
+      display: none;
+    }
+    #main-canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      cursor: crosshair;
+    }
+    .stage-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #16161a;
+      border: 1px solid var(--border-color);
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Right Sidebar - Inspector Accordions */
+    #sidebar-right {
+      grid-area: sidebar-right;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .accordion-item {
+      border-bottom: 1px solid var(--border-color);
+    }
+    .accordion-header {
+      padding: 10px 14px;
+      background: #18181c;
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+      transition: background 0.12s ease;
+    }
+    .accordion-header:hover {
+      background: #202026;
+    }
+    .accordion-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-main);
+    }
+    .accordion-content {
+      padding: 12px 14px;
+      background: #141417;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .accordion-item:not(.open) .accordion-content {
+      display: none;
+    }
+    .chevron {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.2s ease;
+      color: var(--text-muted);
+    }
+    .accordion-item.open .chevron {
+      transform: rotate(180deg);
+    }
+
+    /* Form Controls */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .input-text, .input-select {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 4px 8px;
+      border-radius: var(--radius-btn);
+      font-size: 11px;
+      font-family: inherit;
+      outline: none;
+      width: 100%;
+      height: 26px;
+    }
+    .input-text:focus, .input-select:focus {
+      border-color: var(--accent);
+    }
+    .color-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+    .input-color {
+      -webkit-appearance: none;
+      border: 1px solid var(--border-color);
+      width: 26px;
+      height: 26px;
+      border-radius: var(--radius-btn);
+      cursor: pointer;
+      background: none;
+      padding: 0;
+    }
+    .input-color::-webkit-color-swatch-wrapper { padding: 0; }
+    .input-color::-webkit-color-swatch { border: none; border-radius: 3px; }
+
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .input-range {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+      height: 4px;
+    }
+    .range-val {
+      font-size: 10px;
+      font-family: monospace;
+      color: var(--text-muted);
+      min-width: 30px;
+      text-align: right;
+    }
+
+    /* Effect Category Labels & Grid */
+    .effect-cat-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+      padding-bottom: 2px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .effect-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .effect-card {
+      background: #18181c;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-btn);
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .effect-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .effect-name {
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    /* Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 28px;
+      height: 15px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--bg-input);
+      transition: .2s;
+      border-radius: 15px;
+      border: 1px solid var(--border-color);
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 9px;
+      width: 9px;
+      left: 2px;
+      bottom: 2px;
+      background-color: var(--text-muted);
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent); border-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(13px); background-color: #fff; }
+
+    /* Points List */
+    .points-list {
+      max-height: 120px;
+      overflow-y: auto;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-btn);
+      padding: 4px;
+      font-family: monospace;
+      font-size: 10px;
+    }
+    .point-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 16px 8px;
+    }
+
+    /* Lucide Icon sizing helper */
+    i[data-lucide] {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+
+  <!-- HORNÍ LIŠTA -->
+  <header id="topbar">
+    <div class="brand">
+      <i data-lucide="clapperboard"></i> VideoMapping <span class="brand-tag">PRO</span>
+    </div>
+
+    <!-- Režimy Nástrojů -->
+    <div class="tool-switcher">
+      <button id="toolDraw" class="tool-btn active">
+        <i data-lucide="pen-tool"></i> Kreslení
+      </button>
+      <button id="toolSelect" class="tool-btn">
+        <i data-lucide="mouse-pointer"></i> Výběr & Úprava
+      </button>
+    </div>
+
+    <!-- Projekční režim a Ovládání -->
+    <div class="topbar-group">
+      <button id="btnPlay" class="btn btn-active-state">
+        <i data-lucide="pause"></i> Pause <span style="font-size:9px; opacity:0.6;">(K)</span>
+      </button>
+      <button id="btnFullscreen" class="btn">
+        <i data-lucide="maximize-2"></i> Fullscreen <span style="font-size:9px; opacity:0.6;">(F)</span>
+      </button>
+      <button id="btnGrid" class="btn">
+        <i data-lucide="grid"></i> Mřížka
+      </button>
+      <button id="btnHandles" class="btn btn-accent">
+        <i data-lucide="circle-dot"></i> Body
+      </button>
+      
+      <div style="width:1px; height:18px; background:var(--border-color); margin:0 2px;"></div>
+
+      <button id="btnProjection" class="btn btn-accent" title="Otevře samostatné projekční okno">
+        <i data-lucide="monitor"></i> Projekční okno
+      </button>
+      
+      <div style="width:1px; height:18px; background:var(--border-color); margin:0 2px;"></div>
+
+      <button id="btnSaveJson" class="btn" title="Uložit projekt do JSON">
+        <i data-lucide="download"></i> Uložit JSON
+      </button>
+      <button id="btnLoadJson" class="btn" title="Načíst projekt z JSON">
+        <i data-lucide="upload"></i> Načíst JSON
+      </button>
+      <input type="file" id="fileInputJson" accept=".json" style="display:none;"/>
+
+      <button id="btnClearAll" class="btn btn-danger" title="Vymazat všechny tvary">
+        <i data-lucide="trash-2"></i> Vymazat vše
+      </button>
+    </div>
+  </header>
+
+  <!-- LEVÝ PANEL - SPRÁVCE VRSTEV -->
+  <aside id="sidebar-left">
+    <div class="panel-header">
+      <h2 class="panel-title">Vrstvy / Polygony</h2>
+      <button id="btnAddPolygon" class="btn btn-accent" style="padding:2px 8px; height:24px; font-size:10px;">
+        <i data-lucide="plus"></i> Nový
+      </button>
+    </div>
+    <div id="layer-list">
+      <!-- Vrstvy -->
+    </div>
+  </aside>
+
+  <!-- STŘED - CANVAS A SCÉNA -->
+  <main id="canvas-area">
+    <div id="video-container">
+      <div id="grid-overlay"></div>
+      <canvas id="main-canvas"></canvas>
+    </div>
+    <div id="stage-hint" class="stage-hint">
+      <i data-lucide="pen-tool"></i> Režim Kreslení: Klikáním vytváříte body. Dvojklik dokončí polygon.
+    </div>
+  </main>
+
+  <!-- PRAVÝ PANEL - INSPEKTOR A HARMONIKY -->
+  <aside id="sidebar-right">
+
+    <!-- HARMONIKA 1: VZHLED & MÉDIUM -->
+    <div class="accordion-item open">
+      <div class="accordion-header">
+        <span class="accordion-header-title">
+          <i data-lucide="palette"></i> 1. Vzhled & Médium
+        </span>
+        <i data-lucide="chevron-down" class="chevron"></i>
+      </div>
+      <div class="accordion-content">
+        <div id="inspector-no-selection" class="empty-state" style="display:none;">
+          Vyberte polygon v levém panelu pro úpravu vlastností.
+        </div>
+        <div id="inspector-form">
+          <div class="form-group">
+            <label class="form-label">Barva obrysu</label>
+            <div class="color-picker-wrap">
+              <input type="color" id="propColor" class="input-color" value="#ff0044"/>
+              <label class="form-row" style="font-size:11px; cursor:pointer;">
+                <input type="checkbox" id="propColorCycle"/> Color Cycle
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:4px;">
+            <div class="form-row" style="justify-space-between;">
+              <label class="form-label" style="flex:1;">Výplň tvaru</label>
+              <label class="switch">
+                <input type="checkbox" id="propFillToggle"/>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="form-row" style="margin-top:4px;">
+              <input type="color" id="propFillColor" class="input-color" value="#000000"/>
+              <select id="propFillType" class="input-select" style="flex:1;">
+                <option value="solid">Jednolitá barva</option>
+                <option value="gradient">Radiální přechod</option>
+              </select>
+            </div>
+            <div class="range-wrap" style="margin-top:4px;">
+              <span class="form-label" style="min-width:50px;">Krytí:</span>
+              <input type="range" id="propFillOpacity" class="input-range" min="0" max="1" step="0.05" value="0.35"/>
+              <span id="valFillOpacity" class="range-val">0.35</span>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:6px; border-top:1px solid var(--border-color); padding-top:8px;">
+            <label class="form-label">Textura / Video v polygonu</label>
+            <input type="file" id="propTextureFile" accept="image/*,video/*" class="input-text" style="padding:2px; height:auto;"/>
+            
+            <div class="range-wrap" style="margin-top:4px;">
+              <span class="form-label" style="min-width:50px;">Měřítko:</span>
+              <input type="range" id="propTexScale" class="input-range" min="0.1" max="5" step="0.1" value="1"/>
+              <span id="valTexScale" class="range-val">1.0</span>
+            </div>
+            <div class="range-wrap">
+              <span class="form-label" style="min-width:50px;">Posun X:</span>
+              <input type="range" id="propTexOffsetX" class="input-range" min="-300" max="300" step="2" value="0"/>
+              <span id="valTexOffsetX" class="range-val">0</span>
+            </div>
+            <div class="range-wrap">
+              <span class="form-label" style="min-width:50px;">Posun Y:</span>
+              <input type="range" id="propTexOffsetY" class="input-range" min="-300" max="300" step="2" value="0"/>
+              <span id="valTexOffsetY" class="range-val">0</span>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:6px; border-top:1px solid var(--border-color); padding-top:8px;">
+            <label class="form-label">Pozadí scény (Obrázek/Video)</label>
+            <input type="file" id="propBgMediaFile" accept="image/*,video/*" class="input-text" style="padding:2px; height:auto;"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HARMONIKA 2: EFEKTY -->
+    <div class="accordion-item open">
+      <div class="accordion-header">
+        <span class="accordion-header-title">
+          <i data-lucide="sparkles"></i> 2. Částicové & Vizuální Efekty
+        </span>
+        <i data-lucide="chevron-down" class="chevron"></i>
+      </div>
+      <div class="accordion-content">
+        <div class="form-group">
+          <label class="form-label">Globální intenzita efektů</label>
+          <div class="range-wrap">
+            <input type="range" id="propGlobalIntensity" class="input-range" min="0.5" max="4" step="0.1" value="1.8"/>
+            <span id="valGlobalIntensity" class="range-val">1.8</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Intenzita vybraného polygonu</label>
+          <div class="range-wrap">
+            <input type="range" id="propPolygonIntensity" class="input-range" min="0.3" max="3" step="0.1" value="1.0"/>
+            <span id="valPolygonIntensity" class="range-val">1.0</span>
+          </div>
+        </div>
+
+        <div id="effects-list-container" class="effect-grid">
+          <!-- Efekty -->
+        </div>
+      </div>
+    </div>
+
+    <!-- HARMONIKA 3: GEOMETRIE & AKCE -->
+    <div class="accordion-item open">
+      <div class="accordion-header">
+        <span class="accordion-header-title">
+          <i data-lucide="box"></i> 3. Geometrie & Akce
+        </span>
+        <i data-lucide="chevron-down" class="chevron"></i>
+      </div>
+      <div class="accordion-content">
+        <div class="form-group">
+          <label class="form-label">Souřadnice bodů tvaru</label>
+          <div id="points-geometry-list" class="points-list">
+            <!-- Souřadnice -->
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top:6px;">
+          <button id="btnDuplicateShape" class="btn btn-accent" style="flex:1;">
+            <i data-lucide="copy"></i> Duplikovat tvar
+          </button>
+          <button id="btnDeleteShape" class="btn btn-danger" style="flex:1;">
+            <i data-lucide="trash-2"></i> Smazat tvar
+          </button>
+        </div>
+        <button id="btnExportPNG" class="btn" style="width:100%; margin-top:4px;">
+          <i data-lucide="image"></i> Exportovat obrysy (PNG)
+        </button>
+      </div>
+    </div>
+
+  </aside>
+
+</div>
+
+<script>
+/* ==========================================================================
+   VIDEO MAPPING PRO STUDIO - JAVASCRIPT CORE
+   ========================================================================== */
+
+/* ---------- Helper to re-initialize Lucide Icons on DOM update ---------- */
+function updateLucideIcons() {
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+/* ---------- Core Canvas & Canvas Resizing ---------- */
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+const gridOverlay = document.getElementById('grid-overlay');
+const videoContainer = document.getElementById('video-container');
+
+let DPR = Math.max(1, window.devicePixelRatio || 1);
+
+function resizeCanvas() {
+  DPR = Math.max(1, window.devicePixelRatio || 1);
+  const w = canvas.parentElement.clientWidth;
+  const h = canvas.parentElement.clientHeight;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  canvas.width = Math.round(w * DPR);
+  canvas.height = Math.round(h * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  if (projectionWindow && !projectionWindow.closed) {
+    resizeProjectionCanvas();
+  }
+}
+window.addEventListener('resize', () => setTimeout(resizeCanvas, 30));
+document.addEventListener('fullscreenchange', () => setTimeout(resizeCanvas, 60));
+
+/* ---------- State Management ---------- */
+const AppState = {
+  tool: 'draw', // 'draw' | 'select'
+  isPlaying: true,
+  showHandles: true,
+  showGrid: false,
+  globalIntensity: 1.8,
+  polygons: [],
+  currentPolygon: null,
+  selectedIndex: -1,
+  dragTarget: null,
+  bgMediaLayer: null,
+  bgMediaURL: null
+};
+
+window.EXAGGERATION = AppState.globalIntensity;
+
+/* ---------- Projection Mode Window ---------- */
+let projectionWindow = null;
+let projCanvas = null;
+let projCtx = null;
+
+function openProjectionWindow() {
+  if (projectionWindow && !projectionWindow.closed) {
+    projectionWindow.focus();
+    return;
+  }
+  projectionWindow = window.open('', 'ProjectionWindow', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
+  if (!projectionWindow) {
+    alert('Nepodařilo se otevřít projekční okno. Povolte prosím vyskakovací okna (pop-ups).');
+    return;
+  }
+  projectionWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="cs">
+    <head>
+      <meta charset="utf-8"/>
+      <title>Projekční Výstup (Clean Output)</title>
+      <style>
+        html, body { margin: 0; padding: 0; background: #000; overflow: hidden; width: 100%; height: 100%; }
+        canvas { width: 100%; height: 100%; display: block; }
+      </style>
+    </head>
+    <body>
+      <canvas id="projCanvas"></canvas>
+    </body>
+    </html>
+  `);
+  projectionWindow.document.close();
+
+  projectionWindow.addEventListener('resize', () => setTimeout(resizeProjectionCanvas, 30));
+  setTimeout(resizeProjectionCanvas, 100);
+}
+
+function resizeProjectionCanvas() {
+  if (!projectionWindow || projectionWindow.closed) return;
+  projCanvas = projectionWindow.document.getElementById('projCanvas');
+  if (!projCanvas) return;
+  projCtx = projCanvas.getContext('2d');
+  const w = projectionWindow.innerWidth;
+  const h = projectionWindow.innerHeight;
+  const pDPR = Math.max(1, projectionWindow.devicePixelRatio || 1);
+  projCanvas.style.width = w + 'px';
+  projCanvas.style.height = h + 'px';
+  projCanvas.width = Math.round(w * pDPR);
+  projCanvas.height = Math.round(h * pDPR);
+  projCtx.setTransform(pDPR, 0, 0, pDPR, 0, 0);
+}
+
+/* ---------- Math & Polygon Helpers ---------- */
+function getMousePos(evt) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: (evt.clientX - rect.left), y: (evt.clientY - rect.top) };
+}
+
+function polygonCentroid(points) {
+  let x = 0, y = 0;
+  if (!points || points.length === 0) return { x: 0, y: 0 };
+  for (const p of points) { x += p.x; y += p.y; }
+  return { x: x / points.length, y: y / points.length };
+}
+
+function polygonBBox(points) {
+  let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+  if (!points || points.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 };
+  for (const p of points) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+}
+
+function isPointInPolygon(point, vs) {
+  let x = point.x, y = point.y;
+  let inside = false;
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    let xi = vs[i].x, yi = vs[i].y;
+    let xj = vs[j].x, yj = vs[j].y;
+    let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function computeEdges(points) {
+  const edges = [];
+  let total = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i], b = points[(i + 1) % points.length];
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+    edges.push({ a, b, len, dx, dy });
+    total += len;
+  }
+  return { edges, total };
+}
+
+function pointAtDistance(pointsData, dist) {
+  const { edges, total } = pointsData;
+  if (!edges || edges.length === 0) return { x: 0, y: 0 };
+  if (total === 0) return edges[0].a;
+  let d = (dist % total + total) % total;
+  for (const e of edges) {
+    if (d <= e.len) {
+      const t = e.len === 0 ? 0 : d / e.len;
+      return { x: e.a.x + e.dx * t, y: e.a.y + e.dy * t };
+    }
+    d -= e.len;
+  }
+  const last = edges[edges.length - 1];
+  return { x: last.b.x, y: last.b.y };
+}
+
+function hexToHSL(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h = h * 60;
+  }
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+/* ---------- Polygon Factory & Data Model ---------- */
+const ALL_EFFECT_KEYS = [
+  { key: 'movingEdge', cat: 'Hrany', label: 'Pohyblivá hrana' },
+  { key: 'edgeRunner', cat: 'Hrany', label: 'Běžec po hraně' },
+  { key: 'marquee', cat: 'Hrany', label: 'Čárkovaný obrys' },
+  { key: 'wave', cat: 'Hrany', label: 'Vlnění obrysu' },
+  { key: 'lightningEdge', cat: 'Hrany', label: 'Blesky na hranách' },
+  { key: 'glowPulse', cat: 'Hrany', label: 'Neonová záře' },
+  
+  { key: 'particles', cat: 'Částice & Jiskry', label: 'Částice u bodů' },
+  { key: 'sparks', cat: 'Částice & Jiskry', label: 'Jiskry' },
+  { key: 'rgbSmoke', cat: 'Částice & Jiskry', label: 'Barevný kouř' },
+  { key: 'fire', cat: 'Částice & Jiskry', label: 'Oheň' },
+  { key: 'fireworks', cat: 'Částice & Jiskry', label: 'Ohňostroj' },
+  { key: 'fallingParticles', cat: 'Částice & Jiskry', label: 'Padající hvězdy' },
+
+  { key: 'whiteFog', cat: 'Atmosféra', label: 'Bílá mlha' },
+  { key: 'driftingCloud', cat: 'Atmosféra', label: 'Plující mraky' },
+  { key: 'centerBurst', cat: 'Atmosféra', label: 'Středový výbuch' },
+
+  { key: 'centerRings', cat: 'Střed & Vlny', label: 'Kruhy ze středu' },
+  { key: 'shockwave', cat: 'Střed & Vlny', label: 'Tlakové vlny' },
+  { key: 'zoomRings', cat: 'Střed & Vlny', label: 'Zvětšovací prstence' },
+  { key: 'rotatingDots', cat: 'Střed & Vlny', label: 'Rotující body' },
+  { key: 'spiralInside', cat: 'Střed & Vlny', label: 'Spirála' },
+
+  { key: 'gradient', cat: 'Styl & Deformace', label: 'Barevný přechod obrysu' },
+  { key: 'noiseDistort', cat: 'Styl & Deformace', label: 'Šumová deformace' },
+  { key: 'glitchLines', cat: 'Styl & Deformace', label: 'Glitch efekty' },
+  { key: 'morphPolygon', cat: 'Styl & Deformace', label: 'Morphing tvaru' }
+];
+
+function createEmptyPolygon(color, name) {
+  const hsl = hexToHSL(color || '#ff0044');
+  const poly = {
+    id: 'poly_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+    name: name || `Polygon #${AppState.polygons.length + 1}`,
+    visible: true,
+    locked: false,
+    points: [],
+    color: color || '#ff0044',
+    colorHue: hsl.h || 0,
+    animOffset: 0,
+    intensity: 1.0,
+    anim: { fill: false, colorCycle: false },
+    fillColor: '#000000',
+    fillOpacity: 0.35,
+    fillType: 'solid',
+    tex: { el: null, src: null, scale: 1, offsetX: 0, offsetY: 0 },
+    particles: [], sparks: [], smoke: [], fog: [], rings: [], shockwaves: [], fireworks: [], falling: [], rotatingDots: [], spiral: [], zoomRings: [], lightning: [], glitchParts: [],
+    _edgeData: null,
+    _morphState: { t: 0, dir: 1, seed: Math.random() }
+  };
+
+  ALL_EFFECT_KEYS.forEach(eff => {
+    poly.anim[eff.key] = false;
+    poly[eff.key + '_power'] = 1.0;
+  });
+
+  return poly;
+}
+
+/* ---------- Effects Logic ---------- */
+function spawnParticles(arr, x, y, count, speed, lifeBase, sizeBase, colorFn) {
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const sp = speed * (0.5 + Math.random() * 0.8);
+    arr.push({
+      x: x + (Math.random() - 0.5) * 8,
+      y: y + (Math.random() - 0.5) * 8,
+      vx: Math.cos(ang) * sp,
+      vy: Math.sin(ang) * sp,
+      life: lifeBase + Math.random() * lifeBase,
+      size: sizeBase * (0.6 + Math.random() * 1.4),
+      color: colorFn ? colorFn() : 'rgba(255,255,255,1)'
+    });
+  }
+}
+
+function spawnFirework(polygon) {
+  if (polygon.fireworks.length > 12) return;
+  const c = polygonCentroid(polygon.points);
+  const x = c.x + (Math.random() - 0.5) * polygon.bbox.width * 0.6;
+  const y = c.y + (Math.random() - 0.5) * polygon.bbox.height * 0.4;
+  const hue = Math.floor(Math.random() * 360);
+  const fw = { x, y, particles: [], hue, life: 60 + Math.random() * 40 };
+  polygon.fireworks.push(fw);
+  spawnParticles(fw.particles, x, y, 20, 6, 40, 3, () => `hsla(${hue},90%,60%,1)`);
+}
+
+function spawnFalling(polygon) {
+  if (polygon.falling.length > 80) return;
+  const b = polygon.bbox || polygonBBox(polygon.points);
+  for (let i = 0; i < 2; i++) {
+    polygon.falling.push({
+      x: b.minX + Math.random() * b.width,
+      y: b.minY - Math.random() * 20,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: 0.6 + Math.random() * 1.4,
+      life: 200,
+      size: 1.2 + Math.random() * 3,
+      color: 'rgba(255,255,255,0.85)'
+    });
+  }
+}
+
+function maybeSpawnLightning(polygon) {
+  if (Math.random() < 0.01 * (polygon.lightningEdge_power || 1)) {
+    const data = polygon._edgeData || (polygon._edgeData = computeEdges(polygon.points));
+    const total = data.total || 0;
+    const pos = Math.random() * total;
+    const a = pointAtDistance(data, pos);
+    const len = 20 + Math.random() * 40;
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.9;
+    const points = [];
+    let curx = a.x, cury = a.y;
+    for (let i = 0; i < 4; i++) {
+      const jitter = (Math.random() - 0.5) * 10;
+      curx += Math.cos(ang + i * 0.12) * len * 0.18 + jitter;
+      cury += Math.sin(ang + i * 0.12) * len * 0.18 + jitter;
+      points.push({ x: curx, y: cury });
+    }
+    polygon.lightning.push({ points, life: 6 + Math.random() * 6 });
+  }
+}
+
+function morphStep(polygon, t) {
+  const ms = polygon._morphState;
+  if (!polygon.anim.morphPolygon) return;
+  ms.t += 0.02 * (polygon.morphPolygon_power || 1) * (polygon.intensity || 1);
+  for (let i = 0; i < polygon.points.length; i++) {
+    const p = polygon.points[i];
+    const ang = (i / polygon.points.length) * Math.PI * 2 + ms.t;
+    p._orig = p._orig || { x: p.x, y: p.y };
+    p.x = p._orig.x + Math.sin(ang * 1.3 + ms.seed * 10) * 6 * (polygon.morphPolygon_power || 1);
+    p.y = p._orig.y + Math.cos(ang * 1.1 + ms.seed * 20) * 6 * (polygon.morphPolygon_power || 1);
+  }
+}
+
+function maybeSpawnGlitch(polygon) {
+  if (Math.random() < 0.004 * (polygon.glitchLines_power || 1)) {
+    const b = polygon.bbox || polygonBBox(polygon.points);
+    const count = 2 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < count; i++) {
+      const x = b.minX + Math.random() * b.width;
+      const y = b.minY + Math.random() * b.height;
+      polygon.glitchParts.push({
+        x, y, w: 20 + Math.random() * b.width * 0.4, h: 2 + Math.random() * 8, life: 12 + Math.random() * 12, color: `hsla(${Math.floor(Math.random() * 360)},80%,60%,0.8)`
+      });
+    }
+  }
+}
+
+function updateAndDrawEffects(targetCtx, polygon, t) {
+  const I = (polygon.intensity || 1) * window.EXAGGERATION;
+
+  if (polygon.anim.sparks) {
+    if (Math.random() < 0.18 * I) {
+      const p0 = polygon.points[Math.floor(Math.random() * polygon.points.length)];
+      if (p0) polygon.sparks.push({ x: p0.x, y: p0.y, vx: (Math.random() - 0.5) * 6 * I, vy: (Math.random() - 0.5) * 6 * I, life: 6 + Math.random() * 8 });
+    }
+    for (let i = polygon.sparks.length - 1; i >= 0; i--) {
+      const s = polygon.sparks[i];
+      targetCtx.beginPath();
+      targetCtx.moveTo(s.x, s.y);
+      targetCtx.lineTo(s.x - s.vx * 0.4, s.y - s.vy * 0.4);
+      targetCtx.strokeStyle = `rgba(255,230,180,${Math.max(0, s.life / 10)})`;
+      targetCtx.lineWidth = 1.2 * I * (polygon.sparks_power || 1);
+      targetCtx.stroke();
+      s.x += s.vx; s.y += s.vy; s.vy += 0.25 * I; s.vx *= 0.98; s.life--;
+      if (s.life <= 0) polygon.sparks.splice(i, 1);
+    }
+  }
+
+  if (polygon.anim.rgbSmoke) {
+    if (Math.random() < 0.35 * I) {
+      const b = polygon.bbox || polygonBBox(polygon.points);
+      const x = b.minX + Math.random() * b.width; const y = b.maxY + Math.random() * 8;
+      polygon.smoke.push({ x, y, vx: (Math.random() - 0.5) * 0.8 * I, vy: -0.2 * I - Math.random() * 0.9 * I, life: 100 * I + Math.random() * 40 * I, size: 8 * I + Math.random() * 14 * I, hue: Math.floor(Math.random() * 360) });
+    }
+    for (let i = polygon.smoke.length - 1; i >= 0; i--) {
+      const p = polygon.smoke[i];
+      const a = Math.max(0, p.life / (100 * I));
+      targetCtx.beginPath();
+      targetCtx.fillStyle = `hsla(${(p.hue + t / 30) % 360},85%,60%,${0.14 * a})`;
+      targetCtx.ellipse(p.x, p.y, p.size * 1.2, p.size * 0.9, 0, 0, Math.PI * 2);
+      targetCtx.fill();
+      p.x += p.vx; p.y += p.vy; p.vy -= 0.002 * I; p.life--;
+      if (p.life <= 0) polygon.smoke.splice(i, 1);
+    }
+  }
+
+  if (polygon.anim.whiteFog) {
+    if (Math.random() < 0.6 * I) {
+      const b = polygon.bbox || polygonBBox(polygon.points);
+      const x = b.minX + Math.random() * b.width; const y = b.maxY + Math.random() * 12;
+      polygon.fog.push({ x, y, vx: (Math.random() - 0.5) * 0.6 * I, vy: -0.2 * I - Math.random() * 0.6 * I, life: 90 * I + Math.random() * 40 * I, size: 10 * I + Math.random() * 22 * I, a: 0.06 + Math.random() * 0.18 });
+    }
+    for (let i = polygon.fog.length - 1; i >= 0; i--) {
+      const p = polygon.fog[i];
+      const alpha = Math.max(0, (p.life / (90 * I)) * p.a);
+      targetCtx.beginPath();
+      targetCtx.globalCompositeOperation = 'lighter';
+      targetCtx.fillStyle = `rgba(255,255,255,${alpha})`;
+      targetCtx.ellipse(p.x, p.y, p.size * 1.2, p.size * 0.8, 0, 0, Math.PI * 2);
+      targetCtx.fill();
+      targetCtx.globalCompositeOperation = 'source-over';
+      p.x += p.vx; p.y += p.vy; p.life--; p.size *= 1.001;
+      if (p.life <= 0) polygon.fog.splice(i, 1);
+    }
+  }
+
+  if (polygon.anim.centerRings) {
+    polygon._ringTimer = polygon._ringTimer || 0;
+    polygon._ringTimer -= 1;
+    if (polygon._ringTimer <= 0) {
+      const c = polygonCentroid(polygon.points);
+      const max = Math.max(polygon.bbox.width, polygon.bbox.height) * 1.6;
+      polygon.rings.push({ x: c.x, y: c.y, r: 0, life: 40, max });
+      polygon._ringTimer = 20 + Math.floor(Math.random() * 40) / Math.max(1, (polygon.centerRings_power || 1));
+    }
+    for (let i = polygon.rings.length - 1; i >= 0; i--) {
+      const r = polygon.rings[i];
+      r.r += r.max / 35 * (polygon.centerRings_power || 1) * I;
+      r.life--;
+      const a = Math.max(0, r.life / 40);
+      targetCtx.beginPath();
+      targetCtx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+      targetCtx.strokeStyle = `hsla(${(t / 8) % 360},90%,60%,${0.5 * a})`;
+      targetCtx.lineWidth = 2.5 * a * I;
+      targetCtx.stroke();
+      if (r.life <= 0) polygon.rings.splice(i, 1);
+    }
+  }
+
+  if (polygon.anim.shockwave) {
+    if (Math.random() < 0.02 * (polygon.shockwave_power || 1) * I) {
+      const c = polygonCentroid(polygon.points);
+      const max = Math.max(polygon.bbox.width, polygon.bbox.height) * 1.8;
+      polygon.shockwaves.push({ x: c.x, y: c.y, r: 0, life: 40, max });
+    }
+    for (let i = polygon.shockwaves.length - 1; i >= 0; i--) {
+      const s = polygon.shockwaves[i];
+      s.r += s.max / 28 * (polygon.shockwave_power || 1) * I;
+      s.life--;
+      const alpha = Math.max(0, s.life / 40);
+      targetCtx.beginPath();
+      targetCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      targetCtx.strokeStyle = `rgba(255,255,255,${0.12 * alpha})`;
+      targetCtx.lineWidth = 6 * alpha * I;
+      targetCtx.stroke();
+      if (s.life <= 0) polygon.shockwaves.splice(i, 1);
+    }
+  }
+
+  if (polygon.anim.zoomRings) {
+    if (Math.random() < 0.02 * (polygon.zoomRings_power || 1) * I) {
+      const c = polygonCentroid(polygon.points);
+      polygon.zoomRings.push({ x: c.x, y: c.y, r: 4, life: 28 + Math.random() * 20, max: Math.max(polygon.bbox.width, polygon.bbox.height) * (1.2 + Math.random() * 0.8) });
+    }
+    for (let i = polygon.zoomRings.length - 1; i >= 0; i--) {
+      const z = polygon.zoomRings[i];
+      z.r += z.max / z.life * (polygon.zoomRings_power || 1) * I;
+      z.life--;
+      const a = Math.max(0, z.life / 60);
+      targetCtx.beginPath();
+      targetCtx.arc(z.x, z.y, z.r, 0, Math.PI * 2);
+      targetCtx.fillStyle = `rgba(255,255,255,${0.06 * a})`;
+      targetCtx.fill();
+      if (z.life <= 0) polygon.zoomRings.splice(i, 1);
+    }
+  }
+
+  if (polygon.anim.rotatingDots) {
+    polygon._rotAngle = (polygon._rotAngle || 0) + 0.06 * (polygon.rotatingDots_power || 1) * I;
+    const c = polygonCentroid(polygon.points);
+    const R = Math.max(polygon.bbox.width, polygon.bbox.height) * 0.45;
+    const count = Math.min(20, 6 + Math.floor(6 * (polygon.rotatingDots_power || 1)));
+    for (let i = 0; i < count; i++) {
+      const ang = polygon._rotAngle + (i / count) * Math.PI * 2;
+      const x = c.x + Math.cos(ang) * R;
+      const y = c.y + Math.sin(ang) * R;
+      targetCtx.beginPath();
+      targetCtx.fillStyle = `hsla(${(t / 10 + i * 30) % 360},80%,65%,0.9)`;
+      targetCtx.arc(x, y, 3 * I, 0, Math.PI * 2);
+      targetCtx.fill();
+    }
+  }
+
+  if (polygon.anim.spiralInside) {
+    polygon._spiro = polygon._spiro || 0;
+    polygon._spiro += 0.06 * (polygon.spiralInside_power || 1) * I;
+    const c = polygonCentroid(polygon.points);
+    const arms = 2 + Math.floor((polygon.spiralInside_power || 1) * 2);
+    for (let i = 0; i < 50; i++) {
+      const ang = i * 0.35 + polygon._spiro;
+      const r = (i / 50) * Math.max(1, polygon.bbox.width * 0.45);
+      const x = c.x + Math.cos(ang * arms) * r;
+      const y = c.y + Math.sin(ang * arms) * r;
+      targetCtx.beginPath();
+      targetCtx.fillStyle = `hsla(${(t / 8 + i * 6) % 360},90%,60%,${0.5 - i / 120})`;
+      targetCtx.arc(x, y, 2 * I, 0, Math.PI * 2);
+      targetCtx.fill();
+    }
+  }
+
+  if (polygon.anim.fireworks) {
+    if (Math.random() < 0.02 * I) spawnFirework(polygon);
+    for (let i = polygon.fireworks.length - 1; i >= 0; i--) {
+      const fw = polygon.fireworks[i];
+      for (let j = fw.particles.length - 1; j >= 0; j--) {
+        const p = fw.particles[j];
+        targetCtx.beginPath();
+        targetCtx.fillStyle = p.color;
+        targetCtx.globalAlpha = Math.max(0, p.life / 40);
+        targetCtx.arc(p.x, p.y, Math.max(1, p.size), 0, Math.PI * 2);
+        targetCtx.fill();
+        p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.life--;
+        if (p.life <= 0) fw.particles.splice(j, 1);
+      }
+      fw.life--;
+      if (fw.particles.length === 0 || fw.life <= 0) polygon.fireworks.splice(i, 1);
+    }
+    targetCtx.globalAlpha = 1;
+  }
+
+  if (polygon.anim.fallingParticles) {
+    spawnFalling(polygon);
+    for (let i = polygon.falling.length - 1; i >= 0; i--) {
+      const f = polygon.falling[i];
+      targetCtx.beginPath();
+      targetCtx.fillStyle = f.color;
+      targetCtx.globalAlpha = Math.min(1, f.life / 200);
+      targetCtx.arc(f.x, f.y, f.size * I, 0, Math.PI * 2);
+      targetCtx.fill();
+      f.x += f.vx; f.y += f.vy; f.vy += 0.02 * (polygon.fallingParticles_power || 1) * I; f.life--;
+      if (f.y > polygon.bbox.maxY + 40 || f.life <= 0) polygon.falling.splice(i, 1);
+    }
+    targetCtx.globalAlpha = 1;
+  }
+
+  if (polygon.anim.lightningEdge) {
+    maybeSpawnLightning(polygon);
+    for (let i = polygon.lightning.length - 1; i >= 0; i--) {
+      const L = polygon.lightning[i];
+      targetCtx.beginPath();
+      targetCtx.moveTo(L.points[0].x, L.points[0].y);
+      for (let k = 1; k < L.points.length; k++) targetCtx.lineTo(L.points[k].x, L.points[k].y);
+      targetCtx.strokeStyle = `rgba(220,240,255,${0.9 * (L.life / 8)})`;
+      targetCtx.lineWidth = 2.5 * (polygon.lightningEdge_power || 1) * I;
+      targetCtx.stroke();
+      L.life--;
+      if (L.life <= 0) polygon.lightning.splice(i, 1);
+    }
+  }
+
+  if (polygon.anim.glitchLines) {
+    maybeSpawnGlitch(polygon);
+    for (let i = polygon.glitchParts.length - 1; i >= 0; i--) {
+      const g = polygon.glitchParts[i];
+      targetCtx.beginPath();
+      targetCtx.fillStyle = g.color;
+      targetCtx.globalAlpha = Math.max(0, g.life / 20);
+      targetCtx.fillRect(g.x, g.y, g.w, g.h);
+      g.life--;
+      if (g.life <= 0) polygon.glitchParts.splice(i, 1);
+    }
+    targetCtx.globalAlpha = 1;
+  }
+
+  if (polygon.anim.morphPolygon) morphStep(polygon, t);
+}
+
+/* ---------- Drawing Polygon Function ---------- */
+function drawSinglePolygon(targetCtx, polygon, isFinal, isSelected, showHandlesFlag, t) {
+  if (!polygon || !polygon.points || polygon.points.length < 1 || !polygon.visible) return;
+
+  targetCtx.save();
+  polygon.bbox = polygon.bbox || polygonBBox(polygon.points);
+  const I = (polygon.intensity || 1) * window.EXAGGERATION;
+
+  let strokeColor = polygon.color;
+  if (polygon.anim.colorCycle) {
+    const hue = ((polygon.colorHue || 0) + (t / 20)) % 360;
+    strokeColor = `hsl(${Math.round(hue)},85%,60%)`;
+  }
+
+  let pts = polygon.points;
+  if (polygon.anim.noiseDistort) {
+    pts = polygon.points.map(p => ({ x: p.x + (Math.random() - 0.5) * 1.2 * I, y: p.y + (Math.random() - 0.5) * 1.2 * I }));
+  }
+
+  targetCtx.beginPath();
+  targetCtx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) targetCtx.lineTo(pts[i].x, pts[i].y);
+  if (isFinal && pts.length > 2) targetCtx.closePath();
+
+  // Texture Mapping
+  if (polygon.tex && polygon.tex.el && isFinal && pts.length > 2) {
+    try {
+      targetCtx.save();
+      targetCtx.clip();
+      const texEl = polygon.tex.el;
+      const scale = polygon.tex.scale || 1;
+      const offsetX = polygon.tex.offsetX || 0;
+      const offsetY = polygon.tex.offsetY || 0;
+
+      let mediaWidth = 100, mediaHeight = 100;
+      if (texEl.tagName === 'VIDEO') {
+        mediaWidth = texEl.videoWidth || 100;
+        mediaHeight = texEl.videoHeight || 100;
+      } else {
+        mediaWidth = texEl.naturalWidth || texEl.width || 100;
+        mediaHeight = texEl.naturalHeight || texEl.height || 100;
+      }
+
+      const b = polygon.bbox;
+      const scaledWidth = mediaWidth * scale;
+      const scaledHeight = mediaHeight * scale;
+      const drawX = b.minX + (b.width - scaledWidth) / 2 + offsetX;
+      const drawY = b.minY + (b.height - scaledHeight) / 2 + offsetY;
+
+      targetCtx.drawImage(texEl, drawX, drawY, scaledWidth, scaledHeight);
+      targetCtx.restore();
+    } catch (e) { }
+  }
+
+  // Fill
+  if (polygon.anim.fill && isFinal && pts.length > 2) {
+    targetCtx.save();
+    const alpha = Math.max(0, (polygon.fillOpacity || 0.35) * Math.min(1, I * 0.9));
+    if (polygon.fillType === 'solid') {
+      targetCtx.globalAlpha = alpha;
+      targetCtx.fillStyle = polygon.fillColor || polygon.color;
+      targetCtx.fill();
+      targetCtx.globalAlpha = 1;
+    } else {
+      const c = polygonCentroid(polygon.points);
+      const rad = Math.max(polygon.bbox.width, polygon.bbox.height) * 0.9;
+      const g = targetCtx.createRadialGradient(c.x, c.y, 2, c.x, c.y, rad);
+      let baseHue = polygon.colorHue || 0;
+      if (polygon.anim.colorCycle) baseHue = (baseHue + t / 20) % 360;
+      g.addColorStop(0, `hsla(${Math.round(baseHue)},90%,60%,${alpha})`);
+      g.addColorStop(1, `hsla(${Math.round((baseHue + 60) % 360)},80%,40%,0.03)`);
+      targetCtx.fillStyle = g;
+      targetCtx.fill();
+    }
+    targetCtx.restore();
+  }
+
+  // Stroke & Glow
+  targetCtx.save();
+  targetCtx.lineWidth = (polygon.anim.pulse ? (2 + Math.abs(Math.sin(t / 200)) * 2) : 2) * Math.max(1, I * 0.7) * (polygon.stroke_power || 1);
+  targetCtx.lineJoin = 'round';
+  targetCtx.lineCap = 'round';
+  targetCtx.strokeStyle = (polygon.anim.gradient ? (function () {
+    const g = targetCtx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    const tt = ((t % 4000) / 4000);
+    g.addColorStop(0, `hsl(${tt * 360},100%,60%)`);
+    g.addColorStop(1, strokeColor);
+    return g;
+  })() : strokeColor);
+
+  if (polygon.anim.glowPulse || polygon.anim.neon) {
+    targetCtx.shadowBlur = 18 * I * (polygon.glowPulse_power || 1);
+    targetCtx.shadowColor = strokeColor;
+  } else {
+    targetCtx.shadowBlur = 0;
+  }
+  targetCtx.stroke();
+  targetCtx.restore();
+
+  // Highlight active selected polygon in editor
+  if (isSelected && showHandlesFlag) {
+    targetCtx.save();
+    targetCtx.lineWidth = 1;
+    targetCtx.setLineDash([4, 4]);
+    targetCtx.strokeStyle = '#10b981';
+    targetCtx.stroke();
+    targetCtx.restore();
+  }
+
+  // Edge Animations
+  if (polygon.anim.marquee) {
+    targetCtx.save();
+    targetCtx.beginPath();
+    targetCtx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) targetCtx.lineTo(pts[i].x, pts[i].y);
+    polygon.animOffset = (polygon.animOffset || 0) + 6 * I * (polygon.marquee_power || 1);
+    targetCtx.setLineDash([18 * I, 12 * I]);
+    targetCtx.lineDashOffset = -polygon.animOffset;
+    targetCtx.lineWidth = 6 * I * (polygon.marquee_power || 1);
+    targetCtx.strokeStyle = strokeColor;
+    targetCtx.globalAlpha = 0.75;
+    targetCtx.stroke();
+    targetCtx.restore();
+  }
+
+  if (polygon.anim.movingEdge) {
+    targetCtx.save();
+    targetCtx.beginPath();
+    targetCtx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) targetCtx.lineTo(pts[i].x, pts[i].y);
+    polygon.animOffset = (polygon.animOffset || 0) + 3 * I * (polygon.movingEdge_power || 1);
+    targetCtx.setLineDash([12 * I, 8 * I]);
+    targetCtx.lineDashOffset = -polygon.animOffset;
+    targetCtx.lineWidth = 3 * I;
+    targetCtx.strokeStyle = strokeColor;
+    targetCtx.stroke();
+    targetCtx.restore();
+  }
+
+  if (polygon.anim.edgeRunner) {
+    if (!polygon._edgeData || polygon._edgeData.pointsHash !== polygon.points.length) {
+      polygon._edgeData = computeEdges(polygon.points);
+      polygon._edgeData.pointsHash = polygon.points.length;
+    }
+    const data = polygon._edgeData;
+    const total = data.total || 0;
+    const speed = Math.max(1, total / 120) * (polygon.edgeRunner_power || 1) * I;
+    polygon.animOffset = (polygon.animOffset || 0) + speed;
+    const start = polygon.animOffset;
+    const len = (polygon.edgeRunnerLength || 30) * (polygon.edgeRunner_power || 1) * I;
+    const samples = Math.max(6, Math.floor(len / 3));
+    targetCtx.beginPath();
+    for (let s = 0; s <= samples; s++) {
+      const d = start + (s / samples) * len;
+      const pt = pointAtDistance(data, d);
+      if (s === 0) targetCtx.moveTo(pt.x, pt.y); else targetCtx.lineTo(pt.x, pt.y);
+    }
+    targetCtx.lineWidth = 4 * I;
+    targetCtx.lineCap = 'round';
+    targetCtx.strokeStyle = strokeColor;
+    targetCtx.stroke();
+  }
+
+  if (polygon.anim.wave) {
+    targetCtx.save();
+    targetCtx.beginPath();
+    targetCtx.moveTo(pts[0].x, pts[0].y + Math.sin(t / 300) * 6 * (polygon.wave_power || 1));
+    for (let i = 1; i < pts.length; i++) targetCtx.lineTo(pts[i].x, pts[i].y + Math.sin(t / 300 + i * 0.6) * 6 * (polygon.wave_power || 1));
+    targetCtx.lineWidth = 2 * I;
+    targetCtx.strokeStyle = strokeColor;
+    targetCtx.stroke();
+    targetCtx.restore();
+  }
+
+  // Draw handles if enabled
+  if (showHandlesFlag) {
+    for (let i = 0; i < polygon.points.length; i++) {
+      const pt = polygon.points[i];
+      targetCtx.beginPath();
+      targetCtx.fillStyle = isSelected ? '#10b981' : '#ffffff';
+      targetCtx.arc(pt.x, pt.y, 4 * Math.min(1.5, I), 0, Math.PI * 2);
+      targetCtx.fill();
+      targetCtx.strokeStyle = '#000';
+      targetCtx.lineWidth = 1;
+      targetCtx.stroke();
+    }
+  }
+
+  updateAndDrawEffects(targetCtx, polygon, t);
+
+  targetCtx.restore();
+}
+
+/* ---------- Main Render Loop ---------- */
+let perfNow = performance.now();
+let mousePos = null;
+
+function renderLoop(now) {
+  perfNow = now;
+
+  // Clear Main Control Canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Render Polygons on Main Canvas
+  for (let i = 0; i < AppState.polygons.length; i++) {
+    const p = AppState.polygons[i];
+    p.bbox = p.bbox || polygonBBox(p.points);
+    const isSel = (i === AppState.selectedIndex);
+    drawSinglePolygon(ctx, p, true, isSel, AppState.showHandles, perfNow);
+  }
+
+  // Render Current Drawing Polygon
+  if (AppState.currentPolygon) {
+    AppState.currentPolygon.bbox = polygonBBox(AppState.currentPolygon.points || []);
+    drawSinglePolygon(ctx, AppState.currentPolygon, false, false, AppState.showHandles, perfNow);
+
+    if (mousePos && AppState.currentPolygon.points.length > 0 && AppState.showHandles) {
+      const last = AppState.currentPolygon.points[AppState.currentPolygon.points.length - 1];
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(mousePos.x, mousePos.y);
+      ctx.strokeStyle = AppState.currentPolygon.color;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // Render to Projection Window if open
+  if (projectionWindow && !projectionWindow.closed && projCtx) {
+    projCtx.clearRect(0, 0, projCanvas.width, projCanvas.height);
+    for (let i = 0; i < AppState.polygons.length; i++) {
+      const p = AppState.polygons[i];
+      if (p.visible) {
+        drawSinglePolygon(projCtx, p, true, false, false, perfNow);
+      }
+    }
+  }
+
+  requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);
+
+/* ---------- Layer Manager & UI Synchronization ---------- */
+const layerListEl = document.getElementById('layer-list');
+
+function renderLayerList() {
+  layerListEl.innerHTML = '';
+  if (AppState.polygons.length === 0) {
+    layerListEl.innerHTML = '<div class="empty-state">Zatím nebyly vytvořeny žádné polygony. Klikněte na Nový nebo použijte nástroj Kreslení.</div>';
+    return;
+  }
+
+  for (let i = AppState.polygons.length - 1; i >= 0; i--) {
+    const p = AppState.polygons[i];
+    const item = document.createElement('div');
+    item.className = `layer-item ${i === AppState.selectedIndex ? 'active' : ''}`;
+
+    item.innerHTML = `
+      <div class="layer-color-indicator" style="background:${p.color};"></div>
+      <input type="text" class="layer-name-input" value="${escapeHtml(p.name)}" data-index="${i}"/>
+      <div class="layer-actions">
+        <button class="icon-btn ${p.visible ? 'active-state' : ''}" title="Skrýt / Zobrazit" data-action="toggle-vis" data-index="${i}">
+          <i data-lucide="${p.visible ? 'eye' : 'eye-off'}"></i>
+        </button>
+        <button class="icon-btn ${p.locked ? 'active-state' : ''}" title="Zamknout / Odemknout" data-action="toggle-lock" data-index="${i}">
+          <i data-lucide="${p.locked ? 'lock' : 'unlock'}"></i>
+        </button>
+        <button class="icon-btn" title="Posunout nahoru" data-action="move-up" data-index="${i}">
+          <i data-lucide="chevron-up"></i>
+        </button>
+        <button class="icon-btn" title="Posunout dolů" data-action="move-down" data-index="${i}">
+          <i data-lucide="chevron-down"></i>
+        </button>
+      </div>
+    `;
+
+    item.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.closest('.layer-actions')) return;
+      selectPolygon(i);
+    });
+
+    layerListEl.appendChild(item);
+  }
+
+  layerListEl.querySelectorAll('.layer-name-input').forEach(inp => {
+    inp.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      if (AppState.polygons[idx]) AppState.polygons[idx].name = e.target.value;
+    });
+  });
+
+  layerListEl.querySelectorAll('.icon-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const action = btn.dataset.action;
+      const idx = parseInt(btn.dataset.index);
+      if (action === 'toggle-vis') {
+        AppState.polygons[idx].visible = !AppState.polygons[idx].visible;
+        renderLayerList();
+      } else if (action === 'toggle-lock') {
+        AppState.polygons[idx].locked = !AppState.polygons[idx].locked;
+        renderLayerList();
+      } else if (action === 'move-up') {
+        if (idx < AppState.polygons.length - 1) {
+          const temp = AppState.polygons[idx];
+          AppState.polygons[idx] = AppState.polygons[idx + 1];
+          AppState.polygons[idx + 1] = temp;
+          selectPolygon(idx + 1);
+        }
+      } else if (action === 'move-down') {
+        if (idx > 0) {
+          const temp = AppState.polygons[idx];
+          AppState.polygons[idx] = AppState.polygons[idx - 1];
+          AppState.polygons[idx - 1] = temp;
+          selectPolygon(idx - 1);
+        }
+      }
+    });
+  });
+
+  updateLucideIcons();
+}
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+  });
+}
+
+function selectPolygon(index) {
+  AppState.selectedIndex = index;
+  renderLayerList();
+  syncInspector();
+}
+
+/* ---------- Inspector Controls Sync ---------- */
+const propForm = document.getElementById('inspector-form');
+const propNoSel = document.getElementById('inspector-no-selection');
+
+const propColor = document.getElementById('propColor');
+const propColorCycle = document.getElementById('propColorCycle');
+const propFillToggle = document.getElementById('propFillToggle');
+const propFillColor = document.getElementById('propFillColor');
+const propFillType = document.getElementById('propFillType');
+const propFillOpacity = document.getElementById('propFillOpacity');
+const valFillOpacity = document.getElementById('valFillOpacity');
+
+const propTexFile = document.getElementById('propTextureFile');
+const propTexScale = document.getElementById('propTexScale');
+const valTexScale = document.getElementById('valTexScale');
+const propTexOffsetX = document.getElementById('propTexOffsetX');
+const valTexOffsetX = document.getElementById('valTexOffsetX');
+const propTexOffsetY = document.getElementById('propTexOffsetY');
+const valTexOffsetY = document.getElementById('valTexOffsetY');
+
+const propGlobalIntensity = document.getElementById('propGlobalIntensity');
+const valGlobalIntensity = document.getElementById('valGlobalIntensity');
+const propPolygonIntensity = document.getElementById('propPolygonIntensity');
+const valPolygonIntensity = document.getElementById('valPolygonIntensity');
+
+const effectsContainer = document.getElementById('effects-list-container');
+const pointsGeoList = document.getElementById('points-geometry-list');
+
+// Generate Effect Inspector Grid
+function buildEffectInspectorControls() {
+  effectsContainer.innerHTML = '';
+  let currentCat = '';
+
+  ALL_EFFECT_KEYS.forEach(eff => {
+    if (eff.cat !== currentCat) {
+      currentCat = eff.cat;
+      const catTitle = document.createElement('div');
+      catTitle.className = 'effect-cat-title';
+      catTitle.innerText = currentCat;
+      effectsContainer.appendChild(catTitle);
+    }
+
+    const card = document.createElement('div');
+    card.className = 'effect-card';
+    card.innerHTML = `
+      <div class="effect-card-header">
+        <span class="effect-name">${eff.label}</span>
+        <label class="switch">
+          <input type="checkbox" id="eff_chk_${eff.key}" data-key="${eff.key}"/>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="range-wrap">
+        <input type="range" id="eff_rng_${eff.key}" class="input-range" min="0.2" max="4" step="0.1" value="1.0" data-key="${eff.key}"/>
+        <span id="eff_val_${eff.key}" class="range-val">1.0</span>
+      </div>
+    `;
+    effectsContainer.appendChild(card);
+
+    card.querySelector(`#eff_chk_${eff.key}`).addEventListener('change', (e) => {
+      const selPoly = AppState.polygons[AppState.selectedIndex];
+      if (selPoly) selPoly.anim[eff.key] = e.target.checked;
+    });
+    card.querySelector(`#eff_rng_${eff.key}`).addEventListener('input', (e) => {
+      const selPoly = AppState.polygons[AppState.selectedIndex];
+      const val = parseFloat(e.target.value);
+      card.querySelector(`#eff_val_${eff.key}`).innerText = val.toFixed(1);
+      if (selPoly) selPoly[eff.key + '_power'] = val;
+    });
+  });
+}
+buildEffectInspectorControls();
+
+function syncInspector() {
+  const p = AppState.polygons[AppState.selectedIndex];
+  if (!p) {
+    propForm.style.display = 'none';
+    propNoSel.style.display = 'block';
+    pointsGeoList.innerHTML = '<div style="color:var(--text-muted);">Žádný vybraný polygon.</div>';
+    return;
+  }
+  propForm.style.display = 'block';
+  propNoSel.style.display = 'none';
+
+  propColor.value = p.color;
+  propColorCycle.checked = !!p.anim.colorCycle;
+  propFillToggle.checked = !!p.anim.fill;
+  propFillColor.value = p.fillColor || p.color;
+  propFillType.value = p.fillType || 'solid';
+  propFillOpacity.value = p.fillOpacity !== undefined ? p.fillOpacity : 0.35;
+  valFillOpacity.innerText = parseFloat(propFillOpacity.value).toFixed(2);
+
+  propTexScale.value = p.tex.scale || 1.0;
+  valTexScale.innerText = parseFloat(propTexScale.value).toFixed(1);
+  propTexOffsetX.value = p.tex.offsetX || 0;
+  valTexOffsetX.innerText = p.tex.offsetX || 0;
+  propTexOffsetY.value = p.tex.offsetY || 0;
+  valTexOffsetY.innerText = p.tex.offsetY || 0;
+
+  propPolygonIntensity.value = p.intensity || 1.0;
+  valPolygonIntensity.innerText = parseFloat(propPolygonIntensity.value).toFixed(1);
+
+  ALL_EFFECT_KEYS.forEach(eff => {
+    const chk = document.getElementById(`eff_chk_${eff.key}`);
+    const rng = document.getElementById(`eff_rng_${eff.key}`);
+    const valSpan = document.getElementById(`eff_val_${eff.key}`);
+    if (chk) chk.checked = !!p.anim[eff.key];
+    if (rng) {
+      const pow = p[eff.key + '_power'] !== undefined ? p[eff.key + '_power'] : 1.0;
+      rng.value = pow;
+      if (valSpan) valSpan.innerText = parseFloat(pow).toFixed(1);
+    }
+  });
+
+  pointsGeoList.innerHTML = '';
+  p.points.forEach((pt, i) => {
+    const row = document.createElement('div');
+    row.className = 'point-row';
+    row.innerHTML = `<span>Bod #${i + 1}</span><span>X: ${Math.round(pt.x)}, Y: ${Math.round(pt.y)}</span>`;
+    pointsGeoList.appendChild(row);
+  });
+}
+
+propColor.addEventListener('input', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  if (p) {
+    p.color = e.target.value;
+    const hsl = hexToHSL(p.color);
+    p.colorHue = hsl.h;
+    renderLayerList();
+  }
+});
+propColorCycle.addEventListener('change', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  if (p) p.anim.colorCycle = e.target.checked;
+});
+propFillToggle.addEventListener('change', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  if (p) p.anim.fill = e.target.checked;
+});
+propFillColor.addEventListener('input', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  if (p) p.fillColor = e.target.value;
+});
+propFillType.addEventListener('change', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  if (p) p.fillType = e.target.value;
+});
+propFillOpacity.addEventListener('input', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  const val = parseFloat(e.target.value);
+  valFillOpacity.innerText = val.toFixed(2);
+  if (p) p.fillOpacity = val;
+});
+
+propTexScale.addEventListener('input', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  const val = parseFloat(e.target.value);
+  valTexScale.innerText = val.toFixed(1);
+  if (p) p.tex.scale = val;
+});
+propTexOffsetX.addEventListener('input', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  const val = parseInt(e.target.value);
+  valTexOffsetX.innerText = val;
+  if (p) p.tex.offsetX = val;
+});
+propTexOffsetY.addEventListener('input', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  const val = parseInt(e.target.value);
+  valTexOffsetY.innerText = val;
+  if (p) p.tex.offsetY = val;
+});
+
+propGlobalIntensity.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value);
+  valGlobalIntensity.innerText = val.toFixed(1);
+  AppState.globalIntensity = val;
+  window.EXAGGERATION = val;
+});
+propPolygonIntensity.addEventListener('input', (e) => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  const val = parseFloat(e.target.value);
+  valPolygonIntensity.innerText = val.toFixed(1);
+  if (p) p.intensity = val;
+});
+
+// Texture Upload
+propTexFile.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  const p = AppState.polygons[AppState.selectedIndex];
+  if (!file || !p) return;
+  const url = URL.createObjectURL(file);
+  p.tex.src = url;
+  if (file.type.startsWith('video')) {
+    const el = document.createElement('video');
+    el.src = url; el.autoplay = false; el.loop = true; el.muted = true; el.playsInline = true; el.crossOrigin = 'anonymous';
+    el.addEventListener('loadedmetadata', () => { if (AppState.isPlaying) el.play().catch(err => {}); });
+    p.tex.el = el;
+  } else {
+    const el = document.createElement('img');
+    el.src = url; el.crossOrigin = 'anonymous';
+    p.tex.el = el;
+  }
+});
+
+// Background Media Upload
+document.getElementById('propBgMediaFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  if (AppState.bgMediaURL) URL.revokeObjectURL(AppState.bgMediaURL);
+  AppState.bgMediaURL = url;
+  if (AppState.bgMediaLayer) AppState.bgMediaLayer.remove();
+
+  if (file.type.startsWith('video')) {
+    const v = document.createElement('video');
+    v.className = 'media'; v.src = url; v.autoplay = false; v.loop = true; v.muted = true; v.playsInline = true;
+    v.crossOrigin = 'anonymous';
+    v.addEventListener('canplay', () => { if (AppState.isPlaying) v.play().catch(e => {}); });
+    videoContainer.appendChild(v);
+    AppState.bgMediaLayer = v;
+  } else {
+    const img = document.createElement('img');
+    img.className = 'media'; img.src = url; img.crossOrigin = 'anonymous';
+    videoContainer.appendChild(img);
+    AppState.bgMediaLayer = img;
+  }
+});
+
+/* ---------- Accordion Header Collapse Logic ---------- */
+document.querySelectorAll('.accordion-header').forEach(hdr => {
+  hdr.addEventListener('click', () => {
+    hdr.parentElement.classList.toggle('open');
+  });
+});
+
+/* ---------- Canvas Mouse Interaction & Tool Modes ---------- */
+function finishPolygonDrawing() {
+  if (AppState.currentPolygon && AppState.currentPolygon.points.length > 2) {
+    AppState.currentPolygon.bbox = polygonBBox(AppState.currentPolygon.points);
+    AppState.polygons.push(AppState.currentPolygon);
+    AppState.selectedIndex = AppState.polygons.length - 1;
+    AppState.currentPolygon = null;
+    renderLayerList();
+    syncInspector();
+  } else if (AppState.currentPolygon) {
+    alert('Polygon musí mít alespoň 3 body.');
+  }
+}
+
+canvas.addEventListener('click', (e) => {
+  if (AppState.dragTarget) return;
+  const pos = getMousePos(e);
+
+  if (AppState.tool === 'draw') {
+    if (!AppState.currentPolygon) {
+      AppState.currentPolygon = createEmptyPolygon('#ff0044');
+    }
+    AppState.currentPolygon.points.push(pos);
+    AppState.currentPolygon.bbox = polygonBBox(AppState.currentPolygon.points);
+  } else if (AppState.tool === 'select') {
+    let foundIndex = -1;
+    for (let i = AppState.polygons.length - 1; i >= 0; i--) {
+      const poly = AppState.polygons[i];
+      if (!poly.visible) continue;
+      for (const pt of poly.points) {
+        if (Math.hypot(pt.x - pos.x, pt.y - pos.y) <= 8) {
+          foundIndex = i; break;
+        }
+      }
+      if (foundIndex !== -1) break;
+      if (poly.points.length > 2 && isPointInPolygon(pos, poly.points)) {
+        foundIndex = i; break;
+      }
+    }
+    if (foundIndex !== -1) {
+      selectPolygon(foundIndex);
+    }
+  }
+});
+
+canvas.addEventListener('dblclick', (e) => {
+  e.preventDefault();
+  if (AppState.tool === 'draw') {
+    finishPolygonDrawing();
+  }
+});
+
+canvas.addEventListener('mousedown', (e) => {
+  const pos = getMousePos(e);
+
+  if (AppState.tool === 'select') {
+    for (let i = AppState.polygons.length - 1; i >= 0; i--) {
+      const poly = AppState.polygons[i];
+      if (!poly.visible || poly.locked) continue;
+      for (let ptIdx = 0; ptIdx < poly.points.length; ptIdx++) {
+        const pt = poly.points[ptIdx];
+        if (Math.hypot(pt.x - pos.x, pt.y - pos.y) <= 8) {
+          selectPolygon(i);
+          AppState.dragTarget = { poly, pointIndex: ptIdx, isEntirePoly: false };
+          return;
+        }
+      }
+    }
+
+    for (let i = AppState.polygons.length - 1; i >= 0; i--) {
+      const poly = AppState.polygons[i];
+      if (!poly.visible || poly.locked) continue;
+      if (poly.points.length > 2 && isPointInPolygon(pos, poly.points)) {
+        selectPolygon(i);
+        AppState.dragTarget = {
+          poly,
+          isEntirePoly: true,
+          startMousePos: pos,
+          initialPoints: poly.points.map(p => ({ x: p.x, y: p.y }))
+        };
+        return;
+      }
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  mousePos = getMousePos(e);
+
+  if (AppState.dragTarget) {
+    const dt = AppState.dragTarget;
+    if (dt.isEntirePoly) {
+      const dx = mousePos.x - dt.startMousePos.x;
+      const dy = mousePos.y - dt.startMousePos.y;
+      for (let i = 0; i < dt.poly.points.length; i++) {
+        dt.poly.points[i].x = dt.initialPoints[i].x + dx;
+        dt.poly.points[i].y = dt.initialPoints[i].y + dy;
+      }
+      dt.poly.bbox = polygonBBox(dt.poly.points);
+    } else {
+      dt.poly.points[dt.pointIndex].x = mousePos.x;
+      dt.poly.points[dt.pointIndex].y = mousePos.y;
+      dt.poly.bbox = polygonBBox(dt.poly.points);
+    }
+    syncInspector();
+  }
+});
+
+canvas.addEventListener('mouseup', () => { AppState.dragTarget = null; });
+canvas.addEventListener('mouseleave', () => { AppState.dragTarget = null; mousePos = null; });
+
+/* ---------- Topbar Buttons Wires ---------- */
+const btnToolDraw = document.getElementById('toolDraw');
+const btnToolSelect = document.getElementById('toolSelect');
+const stageHint = document.getElementById('stage-hint');
+
+btnToolDraw.addEventListener('click', () => {
+  AppState.tool = 'draw';
+  btnToolDraw.classList.add('active');
+  btnToolSelect.classList.remove('active');
+  stageHint.innerHTML = '<i data-lucide="pen-tool"></i> Režim Kreslení: Klikáním vytváříte body. Dvojklik dokončí polygon.';
+  updateLucideIcons();
+});
+
+btnToolSelect.addEventListener('click', () => {
+  if (AppState.currentPolygon) finishPolygonDrawing();
+  AppState.tool = 'select';
+  btnToolSelect.classList.add('active');
+  btnToolDraw.classList.remove('active');
+  stageHint.innerHTML = '<i data-lucide="mouse-pointer"></i> Režim Výběr & Úprava: Klikněte na tvar pro výběr. Tažením posouváte body nebo celý polygon.';
+  updateLucideIcons();
+});
+
+document.getElementById('btnAddPolygon').addEventListener('click', () => {
+  btnToolDraw.click();
+  AppState.currentPolygon = createEmptyPolygon('#ff0044');
+});
+
+// Play / Pause Toggle
+const btnPlay = document.getElementById('btnPlay');
+function togglePlayScene() {
+  AppState.isPlaying = !AppState.isPlaying;
+  btnPlay.classList.toggle('btn-active-state', AppState.isPlaying);
+  btnPlay.innerHTML = AppState.isPlaying ?
+    '<i data-lucide="pause"></i> Pause <span style="font-size:9px; opacity:0.6;">(K)</span>' :
+    '<i data-lucide="play"></i> Play <span style="font-size:9px; opacity:0.6;">(K)</span>';
+
+  if (AppState.bgMediaLayer && AppState.bgMediaLayer.tagName === 'VIDEO') {
+    if (AppState.isPlaying) AppState.bgMediaLayer.play().catch(e => {});
+    else AppState.bgMediaLayer.pause();
+  }
+
+  for (const poly of AppState.polygons) {
+    if (poly.tex && poly.tex.el && poly.tex.el.tagName === 'VIDEO') {
+      if (AppState.isPlaying) poly.tex.el.play().catch(e => {});
+      else poly.tex.el.pause();
+    }
+  }
+  updateLucideIcons();
+}
+btnPlay.addEventListener('click', togglePlayScene);
+
+// Fullscreen
+document.getElementById('btnFullscreen').addEventListener('click', async () => {
+  try {
+    if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+    else await document.exitFullscreen();
+  } catch (e) { }
+});
+
+// Grid & Handles Toggles
+const btnGrid = document.getElementById('btnGrid');
+btnGrid.addEventListener('click', () => {
+  AppState.showGrid = !AppState.showGrid;
+  btnGrid.classList.toggle('btn-active-state', AppState.showGrid);
+  gridOverlay.style.display = AppState.showGrid ? 'block' : 'none';
+});
+
+const btnHandles = document.getElementById('btnHandles');
+btnHandles.addEventListener('click', () => {
+  AppState.showHandles = !AppState.showHandles;
+  btnHandles.classList.toggle('btn-accent', AppState.showHandles);
+});
+
+// Open Projection Window
+document.getElementById('btnProjection').addEventListener('click', openProjectionWindow);
+
+// Duplicate & Delete Shape Buttons
+document.getElementById('btnDuplicateShape').addEventListener('click', () => {
+  const p = AppState.polygons[AppState.selectedIndex];
+  if (!p) return;
+  const dup = JSON.parse(JSON.stringify(p));
+  dup.id = 'poly_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  dup.name = p.name + ' (kopie)';
+  dup.points = dup.points.map(pt => ({ x: pt.x + 20, y: pt.y + 20 }));
+  dup.tex = { el: null, src: p.tex.src, scale: p.tex.scale, offsetX: p.tex.offsetX, offsetY: p.tex.offsetY };
+  AppState.polygons.push(dup);
+  selectPolygon(AppState.polygons.length - 1);
+});
+
+document.getElementById('btnDeleteShape').addEventListener('click', () => {
+  if (AppState.selectedIndex >= 0 && AppState.selectedIndex < AppState.polygons.length) {
+    AppState.polygons.splice(AppState.selectedIndex, 1);
+    AppState.selectedIndex = AppState.polygons.length - 1;
+    renderLayerList();
+    syncInspector();
+  }
+});
+
+// Clear All with Confirmation Dialog
+document.getElementById('btnClearAll').addEventListener('click', () => {
+  if (confirm('Opravdu chcete vymazat všechny polygony a resetovat scénu? Tato akce je nevratná.')) {
+    AppState.polygons = [];
+    AppState.currentPolygon = null;
+    AppState.selectedIndex = -1;
+    renderLayerList();
+    syncInspector();
+  }
+});
+
+/* ---------- JSON Export & Import ---------- */
+document.getElementById('btnSaveJson').addEventListener('click', () => {
+  const exportData = {
+    version: '2.0',
+    globalIntensity: AppState.globalIntensity,
+    polygons: AppState.polygons.map(p => ({
+      name: p.name,
+      visible: p.visible,
+      locked: p.locked,
+      color: p.color,
+      colorHue: p.colorHue,
+      intensity: p.intensity,
+      points: p.points,
+      anim: p.anim,
+      fillColor: p.fillColor,
+      fillOpacity: p.fillOpacity,
+      fillType: p.fillType,
+      tex: { src: p.tex.src, scale: p.tex.scale, offsetX: p.tex.offsetX, offsetY: p.tex.offsetY },
+      ...ALL_EFFECT_KEYS.reduce((acc, eff) => {
+        acc[eff.key + '_power'] = p[eff.key + '_power'];
+        return acc;
+      }, {})
+    }))
+  };
+
+  const jsonStr = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `videomapping_project_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
+
+const fileInputJson = document.getElementById('fileInputJson');
+document.getElementById('btnLoadJson').addEventListener('click', () => fileInputJson.click());
+
+fileInputJson.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const data = JSON.parse(event.target.result);
+      if (data.globalIntensity) {
+        AppState.globalIntensity = data.globalIntensity;
+        propGlobalIntensity.value = data.globalIntensity;
+        valGlobalIntensity.innerText = data.globalIntensity.toFixed(1);
+        window.EXAGGERATION = data.globalIntensity;
+      }
+      if (Array.isArray(data.polygons)) {
+        AppState.polygons = data.polygons.map(raw => {
+          const poly = createEmptyPolygon(raw.color, raw.name);
+          poly.visible = raw.visible !== undefined ? raw.visible : true;
+          poly.locked = raw.locked !== undefined ? raw.locked : false;
+          poly.points = raw.points || [];
+          poly.anim = raw.anim || poly.anim;
+          poly.fillColor = raw.fillColor || poly.fillColor;
+          poly.fillOpacity = raw.fillOpacity !== undefined ? raw.fillOpacity : poly.fillOpacity;
+          poly.fillType = raw.fillType || poly.fillType;
+          if (raw.tex) poly.tex = { ...poly.tex, ...raw.tex };
+          ALL_EFFECT_KEYS.forEach(eff => {
+            if (raw[eff.key + '_power'] !== undefined) poly[eff.key + '_power'] = raw[eff.key + '_power'];
+          });
+          poly.bbox = polygonBBox(poly.points);
+          return poly;
+        });
+        AppState.selectedIndex = AppState.polygons.length > 0 ? 0 : -1;
+        renderLayerList();
+        syncInspector();
+        alert('Projekt byl úspěšně načten!');
+      }
+    } catch (err) {
+      alert('Chyba při načítání JSON souboru: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  fileInputJson.value = '';
+});
+
+/* ---------- Export PNG Outlines ---------- */
+document.getElementById('btnExportPNG').addEventListener('click', () => {
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  const ectx = exportCanvas.getContext('2d');
+  ectx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  ectx.fillStyle = '#000';
+  ectx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ectx.strokeStyle = '#fff';
+  ectx.lineWidth = 2;
+  ectx.lineJoin = 'round';
+  ectx.lineCap = 'round';
+
+  for (const polygon of AppState.polygons) {
+    if (!polygon || !polygon.points || polygon.points.length < 2 || !polygon.visible) continue;
+    ectx.beginPath();
+    ectx.moveTo(polygon.points[0].x, polygon.points[0].y);
+    for (let i = 1; i < polygon.points.length; i++) ectx.lineTo(polygon.points[i].x, polygon.points[i].y);
+    if (polygon.points.length > 2) ectx.closePath();
+    ectx.stroke();
+  }
+
+  exportCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'polygons_outline.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }, 'image/png');
+});
+
+/* ---------- Keyboard Shortcuts ---------- */
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    togglePlayScene();
+  }
+  if (e.key.toLowerCase() === 'f') {
+    e.preventDefault();
+    document.getElementById('btnFullscreen').click();
+  }
+});
+
+// Initial Setup
+resizeCanvas();
+renderLayerList();
+syncInspector();
+updateLucideIcons();
+
+</script>
+</body>
+</html>
