@@ -106,8 +106,32 @@
 
         .btn-secondary { background: var(--sage); font-size: 14px; padding: 10px; }
 
+        @keyframes storyFadeIn {
+            from { opacity: 0; transform: translateY(18px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes gentlePulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+            50% { transform: scale(1.01); box-shadow: 0 8px 22px rgba(45, 90, 39, 0.12); }
+        }
+
         .screen { display: none; opacity: 0; transform: scale(0.95); transition: var(--transition); }
-        .screen.active { display: block; opacity: 1; transform: scale(1); }
+        .screen.active { display: block; opacity: 1; transform: scale(1); animation: storyFadeIn 0.45s ease both; }
+
+        .paper-sheet, .story-line {
+            animation: storyFadeIn 0.55s ease both;
+        }
+
+        #wait-counter {
+            animation: gentlePulse 1.8s ease-in-out infinite;
+        }
+
+        #btn-continue {
+            width: auto;
+            margin-top: 16px;
+            animation: gentlePulse 2s ease-in-out infinite;
+        }
 
         .paper-sheet {
             background: var(--paper);
@@ -139,6 +163,16 @@
             display: none;
             z-index: 100;
         }
+
+        .copy-btn {
+            margin-top: 10px;
+            width: auto;
+            padding: 8px 12px;
+            font-size: 0.95rem;
+            background: var(--sage);
+        }
+
+        .copy-btn:hover { background: #7b987b; }
 
         .hidden { display: none !important; }
         .input-main { margin-bottom:15px; padding:15px; border-radius:15px; border:1px solid #ddd; width:100%; box-sizing:border-box; font-family: 'Quicksand'; font-size: 1rem; }
@@ -191,10 +225,13 @@
         <div id="wait-counter" style="background: #e8f0e8; padding: 10px; border-radius: 15px; color: var(--forest); font-weight: bold; margin-top: 20px;">
             Odevzdalo: 0 / 0
         </div>
+        <button id="btn-continue" class="hidden" onclick="advanceRound()">Pokračovat dál</button>
+        <p id="wait-hint" style="color: #7d917d; font-size: 0.95rem; margin-top: 10px;">Host si může pokračovat sám, když chce.</p>
     </div>
 
     <div id="screen-results" class="screen">
         <h2>Příběhy jsou dopsány</h2>
+        <button id="btn-copy-all" onclick="copyAllStories()" class="copy-btn">📋 Kopírovat všechny příběhy</button>
         <div id="final-stories"></div>
         <button onclick="location.reload()" style="background: none; color: var(--forest); text-decoration: underline; border: none;">Hrát znovu</button>
     </div>
@@ -236,6 +273,8 @@
         ]
     };
 
+    let autoAdvanceTimer = null;
+
     window.addEventListener('load', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const roomCode = urlParams.get('room');
@@ -261,10 +300,30 @@
     window.copyInviteLink = () => {
         const url = window.location.origin + window.location.pathname + "?room=" + state.roomId;
         navigator.clipboard.writeText(url).then(() => {
-            const toast = document.getElementById('toast');
-            toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 2500);
+            showToast('Odkaz zkopírován! 🌿');
         });
+    };
+
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.style.display = 'block';
+        clearTimeout(showToast.timeout);
+        showToast.timeout = setTimeout(() => toast.style.display = 'none', 2500);
+    }
+
+    window.copyAllStories = async () => {
+        const stories = Array.from(document.querySelectorAll('.story-copy-text')).map(el => el.textContent.trim()).filter(Boolean);
+        if (!stories.length) return;
+        await navigator.clipboard.writeText(stories.join('\n\n'));
+        showToast('Všechny příběhy zkopírovány! ✨');
+    };
+
+    window.copyStory = async (index) => {
+        const storyEl = document.querySelector(`[data-story-index="${index}"]`);
+        if (!storyEl) return;
+        await navigator.clipboard.writeText(storyEl.textContent.trim());
+        showToast('Příběh zkopírován! ✨');
     };
 
     function createParticles() {
@@ -285,6 +344,49 @@
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
+
+    function updateWaitScreen(data) {
+        const submitted = data.answers && data.answers[data.round] ? Object.keys(data.answers[data.round]).length : 0;
+        const total = Math.max(1, state.players.length);
+        document.getElementById('wait-counter').innerText = `Odevzdalo: ${submitted} / ${total}`;
+
+        const continueBtn = document.getElementById('btn-continue');
+        const waitHint = document.getElementById('wait-hint');
+        if (state.isAdmin) {
+            continueBtn.classList.remove('hidden');
+            if (submitted >= total) {
+                continueBtn.textContent = 'Pokračovat dál';
+                waitHint.innerText = 'Všichni odevzdali — pokračujeme automaticky.';
+            } else {
+                continueBtn.textContent = 'Pokračovat dál i bez všech';
+                waitHint.innerText = 'Jsi host, můžeš pokračovat hned, když chceš.';
+            }
+        } else {
+            continueBtn.classList.add('hidden');
+            waitHint.innerText = 'Počkej, až někdo zvedne další krok.';
+        }
+    }
+
+    function scheduleAutoAdvance(data) {
+        clearTimeout(autoAdvanceTimer);
+        if (!state.isAdmin || data.status !== 'playing' || !data.answers || !data.answers[data.round]) return;
+
+        const submitted = Object.keys(data.answers[data.round]).length;
+        const total = Math.max(1, state.players.length);
+        if (submitted >= total) {
+            autoAdvanceTimer = setTimeout(() => {
+                advanceRound();
+            }, 1400);
+        }
+    }
+
+    window.advanceRound = () => {
+        if (!state.roomId) return;
+        clearTimeout(autoAdvanceTimer);
+        const nextRound = (state.round || 0) + 1;
+        if (nextRound <= state.questions.length) update(ref(db, 'rooms/' + state.roomId), { round: nextRound });
+        else update(ref(db, 'rooms/' + state.roomId), { status: 'results' });
+    };
 
     window.createRoom = async () => {
         const name = document.getElementById('input-name').value;
@@ -317,35 +419,23 @@
             if (!data) return;
             state.players = Object.keys(data.players || {});
             document.getElementById('player-list').innerHTML = Object.values(data.players).map(n => `<span class="player-chip">${n}</span>`).join('');
-            
-            // Logika počítadla odevzdaných odpovědí
-            if (data.status === 'playing' && data.answers && data.answers[data.round]) {
-                const submitted = Object.keys(data.answers[data.round]).length;
-                const total = state.players.length;
-                document.getElementById('wait-counter').innerText = `Odevzdalo: ${submitted} / ${total}`;
-            }
 
             if (data.status === 'playing' && data.round !== state.round) {
                 state.round = data.round;
-                const q = state.questions[state.round-1];
+                const q = state.questions[state.round - 1];
                 document.getElementById('current-question').innerText = q.q;
                 document.getElementById('prefix-text').innerText = q.pre;
                 document.getElementById('suffix-text').innerText = q.suf;
                 document.getElementById('answer-input').value = "";
-                document.getElementById('wait-counter').innerText = `Odevzdalo: 0 / ${state.players.length}`;
                 showScreen('screen-game');
             }
-            if (data.status === 'results') showResults(data.answers);
 
-            if (state.isAdmin && data.status === 'playing' && data.answers && data.answers[data.round]) {
-                if (Object.keys(data.answers[data.round]).length >= state.players.length) {
-                    setTimeout(() => {
-                        const nextRound = data.round + 1;
-                        if (nextRound <= state.questions.length) update(ref(db, 'rooms/' + state.roomId), { round: nextRound });
-                        else update(ref(db, 'rooms/' + state.roomId), { status: 'results' });
-                    }, 1000);
-                }
+            if (data.status === 'playing') {
+                updateWaitScreen(data);
+                scheduleAutoAdvance(data);
             }
+
+            if (data.status === 'results') showResults(data.answers);
         });
     }
 
@@ -372,14 +462,11 @@
             }
             const wrap = (txt, auth) => `<span class="handwritten author-${auth%5}">${txt || '...'}</span>`;
             
+            const storyText = `${wrap(p[1], a[1])} <span class="connector">s</span> ${wrap(p[2], a[2])} <span class="connector">byli v</span> ${wrap(p[3], a[3])} ${wrap(p[4], a[4])}. <span class="connector">Zrovna tam</span> ${wrap(p[5], a[5])}, <span class="connector">protože</span> ${wrap(p[6], a[6])}. <span class="connector">Najednou přišel</span> ${wrap(p[7], a[7])} <span class="connector">a</span> ${wrap(p[8], a[8])}. <span class="connector">Reakce</span> ${wrap(p[1], a[1])} <span class="connector">a</span> ${wrap(p[2], a[2])} <span class="connector">byla,</span> ${wrap(p[9], a[9])}. <span class="connector">Nakonec z toho vzniklo:</span> ${wrap(p[10], a[10])}.`;
             const html = `
                 <div class="result-card" style="background:white; padding:20px; border-radius:20px; margin-bottom:20px; text-align:left; line-height:1.8; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                ${wrap(p[1], a[1])} <span class="connector">s</span> ${wrap(p[2], a[2])} 
-                <span class="connector">byli v</span> ${wrap(p[3], a[3])} ${wrap(p[4], a[4])}. 
-                <span class="connector">Zrovna tam</span> ${wrap(p[5], a[5])}, <span class="connector">protože</span> ${wrap(p[6], a[6])}. 
-                <span class="connector">Najednou přišel</span> ${wrap(p[7], a[7])} <span class="connector">a</span> ${wrap(p[8], a[8])}. 
-                <span class="connector">Reakce</span> ${wrap(p[1], a[1])} <span class="connector">a</span> ${wrap(p[2], a[2])} <span class="connector">byla,</span> ${wrap(p[9], a[9])}. 
-                <span class="connector">Nakonec z toho vzniklo:</span> ${wrap(p[10], a[10])}.
+                    <div class="story-copy-text" data-story-index="${s}" style="margin-bottom: 10px;">${storyText}</div>
+                    <button class="copy-btn" onclick="copyStory(${s})">📋 Kopírovat tento příběh</button>
                 </div>`;
             container.innerHTML += html;
         }
@@ -387,3 +474,4 @@
 </script>
 </body>
 </html>
+
