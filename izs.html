@@ -484,7 +484,7 @@
     <div class="form-grid">
       <div class="form-card">
         <form id="callForm" autocomplete="off">
-      <label>Typ případu</label>
+      <label for="typPripadu">Typ případu</label>
       <select id="typPripadu" required>
         <option value="">-- Vyberte typ --</option>
         <option value="Dopravní nehoda">Dopravní nehoda</option>
@@ -500,24 +500,24 @@
         <option value="test">test</option>
       </select>
 
-      <label>Popis</label>
+      <label for="popisPripadu">Popis</label>
       <textarea id="popisPripadu" rows="4" required></textarea>
 
       <div style="display:flex; flex-direction:column; gap:10px;">
         <div style="min-width:200px;">
-          <label>Adresa</label>
+          <label for="adresaPripadu">Adresa</label>
           <input type="text" id="adresaPripadu" placeholder="Ulice, č.p., město..." required/>
           <div id="autocomplete-list"></div>
         </div>
 
         <div style="min-width:200px;">
-          <label>Bod záchrany</label>
+          <label for="rescueInput">Bod záchrany</label>
           <input type="text" id="rescueInput" placeholder="Kód nebo název (AA 001)" />
           <div id="rescue-autocomplete-list"></div>
         </div>
       </div>
 
-      <label>Závažnost</label>
+      <label for="zavaznostPripadu">Závažnost</label>
       <select id="zavaznostPripadu" required>
         <option value="">-- Vyberte závažnost --</option>
         <option value="Nízká">Nízká</option>
@@ -525,7 +525,7 @@
         <option value="Vysoká">Vysoká</option>
       </select>
 
-      <label>Vyjezdové jednotky (vyberte více):</label>
+      <label for="jednotkyPripadu">Vyjezdové jednotky (vyberte více):</label>
       <select id="jednotkyPripadu" multiple size="15" required>
         <optgroup label="🚑 Zdravotnická záchranná služba">
           <!-- doplň vlastní jednotky -->
@@ -2205,4 +2205,3 @@ if (document.readyState === 'loading') {
   });
 })();
 </script>
-
