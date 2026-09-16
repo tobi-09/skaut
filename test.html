@@ -516,8 +516,9 @@
 
         <div style="min-width:200px;">
           <label>Bod záchrany</label>
-          <input type="text" id="rescueInput" placeholder="Kód nebo název (AA 001)" />
+          <input type="text" id="rescueInput" placeholder="Kód, název nebo adresa (AA 001 / P1024)" />
           <div id="rescue-autocomplete-list"></div>
+          <div id="rescue-selected-details" style="display:none; margin-top:6px; padding:8px; border-left:4px solid #1976d2; background:#f5f9ff; font-size:12px;"></div>
         </div>
       </div>
 
@@ -583,6 +584,10 @@
         </form>
       </div>
       <div class="map-card">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+          <button id="setLocationBtn" class="btn btn-ghost">🔘 Nastavit lokaci (klik na mapu)</button>
+          <div id="setLocationStatus" style="font-size:13px;color:#666;">Režim vypnutý</div>
+        </div>
         <div id="map" style="height:420px; width:100%; border-radius:8px; overflow:hidden;"></div>
       </div>
     </div>
@@ -591,6 +596,9 @@
   <!-- Panel: Seznam zásahů -->
   <div id="panel-zasahy" class="panel">
     <h2>Seznam zásahů</h2>
+    <div style="margin-bottom:12px;">
+      <div id="mapZ" style="height:240px; width:100%; border:1px solid #ccc; border-radius:8px; overflow:hidden;"></div>
+    </div>
     <div id="incidentList">Žádné záznamy.</div>
   </div>
 
@@ -1243,9 +1251,10 @@
 
     // Při přepnutí na novy panel znovu nastavit velikost mapy
     if(id === "novy" && map) {
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 200);
+      setTimeout(() => { map.invalidateSize(); }, 200);
+    }
+    if(id === "zasahy" && typeof mapZ !== 'undefined' && mapZ) {
+      setTimeout(() => { mapZ.invalidateSize(); }, 200);
     }
   }
 
@@ -1256,7 +1265,158 @@
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
+  // Map for active incidents list
+  let mapZ = null;
+  try {
+    mapZ = L.map('mapZ').setView([49.8, 15.5], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(mapZ);
+    // after mapZ exists, build markers from any existing incident DOM elements
+    try { refreshActiveMarkersFromDOM(); } catch(e) {}
+  } catch(e) {
+    console.warn('mapZ init failed (mapZ element may not exist yet)', e);
+  }
+
+  // Active incident markers map (keyed by firebaseId or localTempId)
+  const activeIncMarkers = new Map();
+
+  function getSeverityColor(elem) {
+    try {
+      if (elem.classList.contains('high')) return '#d9534f';
+      if (elem.classList.contains('medium')) return '#f0ad4e';
+    } catch(e) {}
+    return '#5cb85c';
+  }
+
+  function addActiveIncidentMarker(elem) {
+    try {
+      if (!mapZ) return;
+      const pos = JSON.parse(elem.getAttribute('data-position') || 'null');
+      if (!pos || !pos.lat || !pos.lon) return;
+      const key = elem.getAttribute('data-firebase-id') || elem.getAttribute('data-local-temp-id');
+      if (!key) return;
+      // If existing marker, update position
+      if (activeIncMarkers.has(key)) {
+        const existing = activeIncMarkers.get(key);
+        existing.setLatLng([pos.lat, pos.lon]);
+        return;
+      }
+      const color = getSeverityColor(elem);
+      const marker = L.circleMarker([pos.lat, pos.lon], { radius: 10, weight: 1, color: '#222', fillColor: color, fillOpacity: 0.95 }).addTo(mapZ);
+      const title = (elem.querySelector('strong')?.textContent) || '';
+      const ad = (elem.querySelector('div[style*="position: relative"]')?.textContent || '').replace(/\n/g,' ').trim();
+      marker.bindPopup(`<strong>${title}</strong><br>${ad}`);
+      activeIncMarkers.set(key, marker);
+    } catch(e) { console.error('addActiveIncidentMarker error', e); }
+  }
+
+  function refreshActiveMarkersFromDOM() {
+    try {
+      if (!mapZ) return;
+      // clean existing markers first
+      try { activeIncMarkers.forEach(m => { try { mapZ.removeLayer(m); } catch(e){} }); activeIncMarkers.clear(); } catch(e) {}
+      const list = document.getElementById('incidentList');
+      if (!list) return;
+      [...list.querySelectorAll('.incident-item')].forEach(elem => {
+        try {
+          // only add if not archived
+          const parentPanel = elem.closest('#panel-archiv');
+          if (parentPanel) return;
+          addActiveIncidentMarker(elem);
+        } catch(e) {}
+      });
+    } catch(e) { console.error('refreshActiveMarkersFromDOM error', e); }
+  }
+
+  function removeActiveIncidentMarker(elem) {
+    try {
+      if (!mapZ) return;
+      const key = elem.getAttribute('data-firebase-id') || elem.getAttribute('data-local-temp-id');
+      if (!key) return;
+      const m = activeIncMarkers.get(key);
+      if (m) {
+        try { mapZ.removeLayer(m); } catch(e) {}
+        activeIncMarkers.delete(key);
+      }
+    } catch(e) {}
+  }
+
   let marker = null;
+  let setLocationMode = false;
+  const setLocationBtn = document.getElementById('setLocationBtn');
+  const setLocationStatus = document.getElementById('setLocationStatus');
+
+  function attachMarkerDrag(markerInstance) {
+    try {
+      markerInstance.on('dragend', async function(e) {
+        const p = e.target.getLatLng();
+        selectedCoords = { lat: p.lat, lon: p.lng };
+        const addrEl = document.getElementById('adresaPripadu');
+        if (addrEl) {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${p.lat}&lon=${p.lng}`);
+            const j = await res.json();
+            addrEl.value = j.display_name || `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`;
+          } catch (e) {
+            addrEl.value = `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`;
+          }
+        }
+      });
+    } catch (e) {}
+  }
+
+  async function onMapClick(e) {
+    if (!setLocationMode) return;
+    const lat = e.latlng.lat;
+    const lon = e.latlng.lng;
+    // try reverse geocoding for human-readable address
+    let display = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const j = await res.json();
+      if (j && j.display_name) display = j.display_name;
+    } catch (err) {
+      // leave coords as fallback
+    }
+    selectedCoords = { lat, lon };
+    const addrEl = document.getElementById('adresaPripadu');
+    if (addrEl) addrEl.value = display;
+    if (suggestionsContainer) suggestionsContainer.innerHTML = '';
+    if (marker) {
+      marker.setLatLng([lat, lon]);
+    } else {
+      marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+      attachMarkerDrag(marker);
+    }
+    map.setView([lat, lon], map.getZoom());
+    // turn off mode after placement
+    toggleSetLocationMode(false);
+  }
+
+  function toggleSetLocationMode(force) {
+    setLocationMode = (typeof force === 'boolean') ? force : !setLocationMode;
+    if (setLocationMode) {
+      setLocationBtn.classList.add('active');
+      setLocationBtn.textContent = '🔘 Klikněte na mapu pro umístění';
+      setLocationStatus.textContent = 'Režim: vyberte místo kliknutím na mapu';
+      map.getContainer().style.cursor = 'crosshair';
+    } else {
+      setLocationBtn.classList.remove('active');
+      setLocationBtn.textContent = '🔘 Nastavit lokaci (klik na mapu)';
+      setLocationStatus.textContent = 'Režim vypnutý';
+      map.getContainer().style.cursor = '';
+    }
+  }
+
+  // Attach button listener
+  if (setLocationBtn) {
+    setLocationBtn.addEventListener('click', function() { toggleSetLocationMode(); });
+  }
+
+  // Attach map click handler
+  map.on('click', onMapClick);
 
   // Autocomplete adresy
   const input = document.getElementById('adresaPripadu');
@@ -1313,13 +1473,132 @@
 
   let rescuePoints = loadRescuePoints();
 
+  const railwayCrossingsCsvUrl = 'https://tobi-09.github.io/skaut/Seznam%20z%CC%8Celeznic%CC%8Cni%CC%81ch%20pr%CC%8Cejezdu%CC%8A%20na%20si%CC%81ti%20Spra%CC%81vy%20z%CC%8Celeznic%20(k%209.%205.%202024).csv';
+  const rescueDetails = document.getElementById('rescue-selected-details');
+
+  function normalizeRescueSearch(value) {
+    return (value || '').toString().trim().toLocaleLowerCase('cs-CZ');
+  }
+
+  function parseCsvRows(csvText) {
+    const rows = [];
+    let row = [];
+    let value = '';
+    let quoted = false;
+    for (let index = 0; index < csvText.length; index++) {
+      const character = csvText[index];
+      if (character === '"') {
+        if (quoted && csvText[index + 1] === '"') {
+          value += '"';
+          index++;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (!quoted && (character === ';' || character === ',')) {
+        row.push(value.trim());
+        value = '';
+      } else if (!quoted && (character === '\n' || character === '\r')) {
+        if (character === '\r' && csvText[index + 1] === '\n') index++;
+        row.push(value.trim());
+        if (row.some(cell => cell)) rows.push(row);
+        row = [];
+        value = '';
+      } else {
+        value += character;
+      }
+    }
+    row.push(value.trim());
+    if (row.some(cell => cell)) rows.push(row);
+    return rows;
+  }
+
+  function parseCoordinate(value) {
+    const text = (value || '').toString().trim().replace(',', '.');
+    if (/^-?\d+(\.\d+)?$/.test(text)) return Number(text);
+    const match = text.match(/(\d+)\s*[°\s]\s*(\d+)\s*['\s]\s*([\d.]+)\s*["'\s]*([NSEW])?/i);
+    if (!match) return null;
+    let coordinate = Number(match[1]) + Number(match[2]) / 60 + Number(match[3]) / 3600;
+    if (/^[SW]$/i.test(match[4] || '')) coordinate *= -1;
+    return coordinate;
+  }
+
+  function getCsvValue(row, headers, names) {
+    const normalizedNames = names.map(name => normalizeRescueSearch(name).normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+    const headerIndex = headers.findIndex(header => {
+      const normalizedHeader = normalizeRescueSearch(header).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return normalizedNames.some(name => normalizedHeader.includes(name));
+    });
+    return headerIndex >= 0 ? (row[headerIndex] || '').trim() : '';
+  }
+
+  function crossingToRescuePoint(row, headers) {
+    const code = getCsvValue(row, headers, ['identifikace přejezdu', 'identifikace prejezdu', 'číslo přejezdu', 'cislo prejezdu', 'označení', 'oznaceni', 'číslo']);
+    if (!code) return null;
+    const name = getCsvValue(row, headers, ['tú přejezdu', 'tu prejezdu', 'název', 'nazev', 'komunikace', 'popis']) || 'Bez názvu';
+    const line = getCsvValue(row, headers, ['trať', 'trat', 'název trati']) || 'Neuvedeno';
+    const km = getCsvValue(row, headers, ['km', 'staničení', 'staniceni', 'poloha']) || 'Neuvedeno';
+    const safety = getCsvValue(row, headers, ['zabezpečení', 'zabezpeceni', 'typ']) || 'Neuvedeno';
+    const latitudeValue = getCsvValue(row, headers, ['gps n', 'lat', 'zeměpisná šířka', 'šířka', 'n']);
+    const longitudeValue = getCsvValue(row, headers, ['gps e', 'lng', 'lon', 'zeměpisná délka', 'délka', 'e']);
+    const singleGps = getCsvValue(row, headers, ['gps', 'souřadnice', 'souradnice']);
+    let lat = parseCoordinate(latitudeValue);
+    let lon = parseCoordinate(longitudeValue);
+    if ((lat === null || lon === null) && singleGps) {
+      const parts = singleGps.split(/[,;\s]+/);
+      lat = parseCoordinate(parts[0]);
+      lon = parseCoordinate(parts[1]);
+    }
+    const details = { typ: 'Železniční přejezd' };
+    headers.forEach((header, index) => {
+      const label = (header || '').trim();
+      if (label) details[label] = row[index] || 'Neuvedeno';
+    });
+    details.kód = code;
+    details.název = name;
+    details.trať = line;
+    details.kilometráž = km;
+    details.zabezpečení = safety;
+    const address = `🚆 ${code} — ${name}`;
+    return { code: code.toUpperCase(), name, address, lat, lon, isRailwayCrossing: true, details };
+  }
+
+  function renderRescueDetails(point) {
+    if (!rescueDetails) return;
+    if (!point || !point.details) {
+      rescueDetails.style.display = 'none';
+      rescueDetails.innerHTML = '';
+      return;
+    }
+    rescueDetails.innerHTML = `<strong>🚆 Železniční přejezd ${point.code}</strong><br>${Object.entries(point.details).map(([key, value]) => `<span><strong>${key}:</strong> ${value || 'Neuvedeno'}</span>`).join('<br>')}`;
+    rescueDetails.style.display = 'block';
+  }
+
+  async function loadRailwayCrossings() {
+    try {
+      const response = await fetch(railwayCrossingsCsvUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const rows = parseCsvRows(await response.text());
+      if (rows.length < 2) throw new Error('CSV neobsahuje data');
+      const headers = rows.shift();
+      const crossings = rows.map(row => crossingToRescuePoint(row, headers)).filter(Boolean);
+      rescuePoints = rescuePoints.concat(crossings.filter(crossing => !rescuePoints.some(point => point.code === crossing.code)));
+      console.log(`Načteno železničních přejezdů: ${crossings.length}`);
+    } catch (error) {
+      console.warn('Databázi železničních přejezdů se nepodařilo načíst:', error);
+    }
+  }
+
+  loadRailwayCrossings();
+
   input.addEventListener('input', () => {
     const query = input.value.trim();
+    // user changed address text -> clear previously selected exact coords
+    selectedCoords = null;
     suggestionsContainer.innerHTML = '';
 
-    if (query.length < 3) return;
+    if (query.length < 2) return; // show suggestions earlier
 
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&limit=5`)
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&limit=6`)
       .then(res => res.json())
       .then(results => {
         suggestionsContainer.innerHTML = '';
@@ -1355,24 +1634,29 @@
   updateAddressRequirement();
 
   rescueInput.addEventListener('input', () => {
+    // editing rescue input invalidates previously chosen coords
+    selectedCoords = null;
     const q = (rescueInput.value || '').trim().toLowerCase();
     rescueContainer.innerHTML = '';
     // update address required state
     updateAddressRequirement();
     if (!q) return;
     const matches = rescuePoints.filter(r =>
-      (r.code && r.code.toLowerCase().includes(q)) ||
-      (r.name && r.name.toLowerCase().includes(q)) ||
-      (r.address && r.address.toLowerCase().includes(q))
+      normalizeRescueSearch(r.code).includes(q) ||
+      normalizeRescueSearch(r.name).includes(q) ||
+      normalizeRescueSearch(r.address).includes(q) ||
+      (r.details && Object.values(r.details).some(value => normalizeRescueSearch(value).includes(q)))
     ).slice(0, 10);
 
     matches.forEach(r => {
       const div = document.createElement('div');
       div.classList.add('autocomplete-suggestion', 'rescue-suggestion');
-      div.textContent = `${r.code} — ${r.name} — ${r.address}`;
+      div.textContent = `${r.isRailwayCrossing ? '🚆 ' : ''}${r.code} — ${r.name} — ${r.address}`;
       div.dataset.lat = r.lat;
       div.dataset.lon = r.lon;
       div.dataset.code = r.code;
+      div.dataset.railway = r.isRailwayCrossing ? 'true' : 'false';
+      div._rescuePoint = r;
       rescueContainer.appendChild(div);
     });
   });
@@ -1383,14 +1667,23 @@
       const lat = parseFloat(e.target.dataset.lat);
       const lon = parseFloat(e.target.dataset.lon);
       const code = e.target.dataset.code || '';
+      const selectedPoint = e.target._rescuePoint || rescuePoints.find(point => point.code === code);
       rescueInput.value = code;
-      selectedCoords = { lat, lon };
+      selectedCoords = (Number.isFinite(lat) && Number.isFinite(lon)) ? { lat, lon } : null;
       rescueContainer.innerHTML = '';
+      renderRescueDetails(selectedPoint);
       // when a rescue is chosen, we no longer require address
       document.getElementById('adresaPripadu').value = `${code} — ${e.target.textContent.split('—').slice(-1)[0].trim()}`;
       updateAddressRequirement();
-      map.setView([lat, lon], 15);
-      if (marker) marker.setLatLng([lat, lon]); else marker = L.marker([lat, lon]).addTo(map);
+      if (selectedCoords) {
+        map.setView([lat, lon], 15);
+        if (marker) {
+          marker.setLatLng([lat, lon]);
+        } else {
+          marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+          attachMarkerDrag(marker);
+        }
+      }
     }
   });
 
@@ -1407,7 +1700,8 @@
       if(marker) {
         marker.setLatLng([selectedCoords.lat, selectedCoords.lon]);
       } else {
-        marker = L.marker([selectedCoords.lat, selectedCoords.lon]).addTo(map);
+        marker = L.marker([selectedCoords.lat, selectedCoords.lon], { draggable: true }).addTo(map);
+        attachMarkerDrag(marker);
       }
     }
   });
@@ -1475,11 +1769,12 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
         const norm = s => (s || '').toString().toLowerCase();
         const normCode = s => norm(s).replace(/\s+/g, '');
         const qNorm = normCode(rescueVal);
-        const rp = rescuePoints.find(r => normCode(r.code) === qNorm || norm(r.name) === norm(rescueVal) || norm(r.address).includes(norm(rescueVal)) );
+        const rp = rescuePoints.find(r => normCode(r.code) === qNorm || norm(r.name) === norm(rescueVal) || norm(r.address).includes(norm(rescueVal)) || (r.details && Object.values(r.details).some(value => norm(value).includes(norm(rescueVal)))) );
         if (rp) {
-          selectedCoords = { lat: rp.lat, lon: rp.lon };
-          adresa = `${rp.code} — ${rp.address}`;
+          selectedCoords = Number.isFinite(rp.lat) && Number.isFinite(rp.lon) ? { lat: rp.lat, lon: rp.lon } : null;
+          adresa = `${rp.isRailwayCrossing ? '🚆 ' : ''}${rp.code} — ${rp.address}`;
           document.getElementById('adresaPripadu').value = adresa;
+          renderRescueDetails(rp);
         } else {
           alert('Neplatný bod záchrany. Zadejte platný kód nebo vyberte adresu.');
           return;
@@ -1649,6 +1944,7 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
     `;
 
     incidentList.prepend(div);
+    try { addActiveIncidentMarker(div); } catch(e) {}
     
     // Inicializuj data-actions pro sledování akcí
     div.setAttribute('data-actions', JSON.stringify([]));
@@ -1971,6 +2267,8 @@ function presunDoArchivuOkamzite(button) {
   } else {
     doFirebaseUpdate();
   }
+
+  try { removeActiveIncidentMarker(incidentDiv); } catch(e) {}
   
   // Vytvoř archivní element bez tlačítek
   const archivDiv = document.createElement('div');
@@ -2016,6 +2314,7 @@ function presunDoArchivuOkamzite(button) {
   }
   
   // Odeber z aktivních
+  try { removeActiveIncidentMarker(incidentDiv); } catch(e) {}
   incidentDiv.remove();
 }
 
@@ -2740,6 +3039,7 @@ if (document.readyState === 'loading') {
       incidentList.prepend(div);
       // Ensure countdown is running for active incident
       try { ensureStopkyRunning(div, remainingSeconds); } catch(e) {}
+      try { addActiveIncidentMarker(div); } catch(e) {}
     }
   }
 
@@ -2807,6 +3107,7 @@ if (document.readyState === 'loading') {
         if (archivList && element.parentNode !== archivList) {
           if (element.parentNode) element.parentNode.removeChild(element);
           archivList.prepend(element);
+          try { removeActiveIncidentMarker(element); } catch(e) {}
         }
       } else {
         if (incidentList && element.parentNode !== incidentList) {
@@ -2816,6 +3117,7 @@ if (document.readyState === 'loading') {
           const stopkyElem = element.querySelector('.cas-prijezdu');
           const stavEl = element.querySelector('.stav-pripadu');
           try { ensureStopkyRunning(element, Number(element.getAttribute('data-remaining-seconds')) || 0); } catch(e) {}
+          try { addActiveIncidentMarker(element); } catch(e) {}
         }
       }
     } catch(e) {}
