@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vyhledávač železničních přejezdů ČR</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Leaflet CSS & JS pro interaktivní mapu -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Font Awesome pro ikony -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-family-awesome/6.4.0/css/all.min.css"/>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- PapaParse pro spolehlivé parsování CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #map {
+            height: 450px;
+            width: 100%;
+            z-index: 10;
+        }
+        .rail-pattern {
+            background-color: #0f172a;
+            background-image: radial-gradient(#1e293b 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        /* Custom scrollbar pro seznam našeptávače */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Záhlaví aplikace -->
+    <header class="bg-slate-900 text-white shadow-md border-b-4 border-amber-500">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-500 p-2.5 rounded-lg text-slate-900 font-bold text-xl shadow-inner">
+                    <i class="fa-solid fa-train"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">Železniční přejezdy ČR</h1>
+                    <p class="text-xs text-slate-400">Vyhledávání v evidenci Správy železnic</p>
+                </div>
+            </div>
+            <div id="status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                <span>Načítání databáze...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hlavní obsah -->
+    <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Levý panel: Vyhledávání a Informace -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Vyhledávací karta -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <label for="search-input" class="block text-sm font-semibold text-slate-700 mb-2">
+                    <i class="fa-solid fa-magnifying-glass mr-1 text-amber-500"></i> Zadejte číslo přejezdu (označení)
+                </label>
+                
+                <div class="relative">
+                    <div class="flex gap-2">
+                        <div class="relative flex-grow">
+                            <input type="text" id="search-input" placeholder="např. P1, P1024, P7245..." 
+                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-semibold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-lg uppercase transition uppercase"
+                                autocomplete="off">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-hashtag"></i>
+                            </div>
+                        </div>
+                        <button id="search-btn" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white font-medium px-5 py-3 rounded-lg transition shadow flex items-center gap-2">
+                            <span>Hledat</span>
+                        </button>
+                    </div>
+
+                    <!-- Našeptávač výsledků -->
+                    <div id="autocomplete-list" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-500 mt-2">
+                    Tip: Zadejte kód začínající na <strong>P</strong> následovaný číslem. Můžete vybrat z našepkávaného seznamu.
+                </p>
+            </div>
+
+            <!-- Detail Přejezdu -->
+            <div id="detail-card" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hidden transition-all">
+                <div class="bg-slate-800 text-white p-4 border-b border-slate-700 flex justify-between items-center">
+                    <div>
+                        <span class="text-xs text-amber-400 uppercase font-bold tracking-wider">Detail přejezdu</span>
+                        <h2 id="detail-code" class="text-2xl font-black text-white">P1024</h2>
+                    </div>
+                    <span id="detail-type-badge" class="px-2.5 py-1 rounded text-xs font-bold bg-slate-700 text-slate-200 border border-slate-600">
+                        Zabezpečení
+                    </span>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    <!-- Informační mřížka -->
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <span class="text-xs font-semibold text-slate-400 block uppercase">Název / Název komunikace</span>
+                            <span id="detail-name" class="text-slate-800 font-semibold text-base">---</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <span class="text-xs font-semibold text-slate-400 block uppercase">Trať</span>
+                                <span id="detail-line" class="text-slate-800 font-medium">---</span>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <span class="text-xs font-semibold text-slate-400 block uppercase">Km poloha</span>
+                                <span id="detail-km" class="text-slate-800 font-medium">---</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <span class="text-xs font-semibold text-slate-400 block uppercase">Typ zabezpečovacího zařízení</span>
+                            <span id="detail-safety" class="text-slate-800 font-medium">---</span>
+                        </div>
+
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <span class="text-xs font-semibold text-slate-400 block uppercase">GPS Souřadnice</span>
+                            <span id="detail-gps" class="text-slate-800 font-mono text-sm">---</span>
+                        </div>
+                    </div>
+
+                    <!-- Tlačítka pro externí mapy -->
+                    <div class="pt-2 flex flex-col sm:flex-row gap-2">
+                        <a id="btn-mapy-cz" href="#" target="_blank" rel="noopener noreferrer" 
+                           class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-3 rounded-lg text-center text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <span>Otevřít v Mapy.cz</span>
+                        </a>
+                        <a id="btn-google-maps" href="#" target="_blank" rel="noopener noreferrer" 
+                           class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-3 rounded-lg text-center text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-brands fa-google"></i>
+                            <span>Google Maps</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nápověda / Výchozí stav -->
+            <div id="empty-state" class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center text-slate-500">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-route text-2xl"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-700 mb-1">Zatím nebylo nic vybráno</h3>
+                <p class="text-xs text-slate-500 max-w-xs mx-auto">Zadejte číslo železničního přejezdu do vyhledávacího pole výše pro zobrazení detailů a polohy na mapě.</p>
+            </div>
+
+        </div>
+
+        <!-- Pravý panel: Mapa a přehled -->
+        <div class="lg:col-span-7 flex flex-col space-y-6">
+            <!-- Interaktivní mapa -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-grow">
+                <div class="bg-slate-50 px-5 py-3 border-b border-slate-200 flex justify-between items-center">
+                    <span class="font-semibold text-slate-700 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-earth-europe text-amber-500"></i> Poloha na interaktivní mapě
+                    </span>
+                    <span id="map-coords-label" class="text-xs text-slate-500 font-mono">
+                        ČR (Přehledová mapa)
+                    </span>
+                </div>
+                <div class="relative flex-grow min-h-[400px]">
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <!-- Statistika databáze -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div class="p-2 border-r border-slate-100 last:border-none">
+                    <div id="stat-total" class="text-xl font-bold text-slate-800">0</div>
+                    <div class="text-xs text-slate-500">Celkem přejezdů</div>
+                </div>
+                <div class="p-2 border-r border-slate-100 last:border-none">
+                    <div id="stat-p-count" class="text-xl font-bold text-amber-600">0</div>
+                    <div class="text-xs text-slate-500">S označením "P"</div>
+                </div>
+                <div class="p-2 border-r border-slate-100 last:border-none">
+                    <div id="stat-valid-gps" class="text-xl font-bold text-emerald-600">0</div>
+                    <div class="text-xs text-slate-500">S platnými GPS</div>
+                </div>
+                <div class="p-2">
+                    <div class="text-xs font-semibold text-slate-400 mt-1">Zdroj dat</div>
+                    <div class="text-xs font-bold text-slate-700">Správa železnic</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Zápatí -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-4 border-t border-slate-800 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center sm:flex sm:justify-between sm:text-left">
+            <p>Aplikace pro vyhledávání železničních přejezdů podle evidovaných kódů.</p>
+            <p class="mt-1 sm:mt-0">Data: Správa železnic (aktualizace k 9. 5. 2024)</p>
+        </div>
+    </footer>
+
+    <script>
+        // Konfigurace a stav aplikace
+        const PRIMARY_CSV_URL = "https://tobi-09.github.io/skaut/Seznam%20z%CC%8Celeznic%CC%8Cni%CC%81ch%20pr%CC%8Cejezdu%CC%8A%20na%20si%CC%81ti%20Spra%CC%81vy%20z%CC%8Celeznic%20(k%209.%205.%202024).csv";
+        
+        // CORS Proxy v případě blokace přímého přístupu
+        const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+
+        let crossingsData = [];
+        let crossingsMap = new Map(); // Rychlé vyhledávání podle kódů
+        let map = null;
+        let currentMarker = null;
+
+        // DOM Elementy
+        const statusBadge = document.getElementById('status-badge');
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const autocompleteList = document.getElementById('autocomplete-list');
+        const detailCard = document.getElementById('detail-card');
+        const emptyState = document.getElementById('empty-state');
+
+        // Detail elementy
+        const detailCode = document.getElementById('detail-code');
+        const detailName = document.getElementById('detail-name');
+        const detailLine = document.getElementById('detail-line');
+        const detailKm = document.getElementById('detail-km');
+        const detailSafety = document.getElementById('detail-safety');
+        const detailGps = document.getElementById('detail-gps');
+        const detailTypeBadge = document.getElementById('detail-type-badge');
+        const btnMapyCz = document.getElementById('btn-mapy-cz');
+        const btnGoogleMaps = document.getElementById('btn-google-maps');
+        const mapCoordsLabel = document.getElementById('map-coords-label');
+
+        // Stat prvky
+        const statTotal = document.getElementById('stat-total');
+        const statPCount = document.getElementById('stat-p-count');
+        const statValidGps = document.getElementById('stat-valid-gps');
+
+        // Inicializace aplikace po načtení okna
+        window.onload = function() {
+            initMap();
+            loadCSVData();
+            setupEventListeners();
+        };
+
+        function initMap() {
+            // Výchozí pohled na Českou republiku
+            map = L.map('map').setView([49.8175, 15.4730], 7);
+
+            // Přidání dlaždic OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> prispevatele'
+            }).addTo(map);
+        }
+
+        async function loadCSVData() {
+            updateStatus('loading', 'Načítání CSV databáze...');
+
+            try {
+                // Pokus o přímé načtení z URL
+                let response = await fetch(PRIMARY_CSV_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP chyba ${response.status}`);
+                }
+                let csvText = await response.text();
+                processCSV(csvText);
+            } catch (err) {
+                console.warn("Přímé načtení selhalo (možné CORS restriction), zkouším CORS proxy...", err);
+                try {
+                    let proxyUrl = CORS_PROXY + encodeURIComponent(PRIMARY_CSV_URL);
+                    let proxyResp = await fetch(proxyUrl);
+                    if (!proxyResp.ok) throw new Error("CORS proxy selhalo");
+                    let csvText = await proxyResp.text();
+                    processCSV(csvText);
+                } catch (proxyErr) {
+                    console.error("Načtení CSV selhalo:", proxyErr);
+                    updateStatus('error', 'Chyba při načítání dat!');
+                }
+            }
+        }
+
+        // Zpracování CSV textu pomocí PapaParse
+        function processCSV(csvContent) {
+            Papa.parse(csvContent, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: false,
+                complete: function(results) {
+                    if (results.data && results.data.length > 0) {
+                        parseAndIndexCrossings(results.data);
+                        updateStatus('success', 'Databáze načtena');
+                    } else {
+                        updateStatus('error', 'Chyba: Prázdná data');
+                    }
+                },
+                error: function(error) {
+                    console.error("Chyba parsování CSV:", error);
+                    updateStatus('error', 'Chyba při parsování CSV');
+                }
+            });
+        }
+
+        function parseAndIndexCrossings(rawData) {
+            crossingsData = [];
+            crossingsMap.clear();
+
+            let validGpsCount = 0;
+            let pCount = 0;
+
+            rawData.forEach(row => {
+                // Hledání správných klíčů bez ohledu na přesný název sloupce/diakritiku
+                const keys = Object.keys(row);
+
+                const getVal = (possibleNames) => {
+                    for (let name of possibleNames) {
+                        const foundKey = keys.find(k => k.trim().toLowerCase().includes(name.toLowerCase()));
+                        if (foundKey && row[foundKey]) return String(row[foundKey]).trim();
+                    }
+                    return '';
+                };
+
+                // Získání hodnot z řádku
+                let code = getVal(['Číslo přejezdu', 'Cislo prejezdu', 'Označení', 'Oznaceni', 'Číslo']);
+                let name = getVal(['Název', 'Nazev', 'Komunikace', 'Popis']);
+                let line = getVal(['Trať', 'Trat', 'Název trati']);
+                let km = getVal(['km', 'staničení', 'staniceni', 'Poloha']);
+                let safety = getVal(['Zabezpečení', 'Zabezpeceni', 'Typ']);
+                let gpsLat = getVal(['GPS N', 'Lat', 'Zeměpisná šířka', 'Sířka', 'N']);
+                let gpsLng = getVal(['GPS E', 'Lng', 'Lon', 'Zeměpisná délka', 'Délka', 'E']);
+                
+                // Pokud jsou souřadnice spojené v jednom poli
+                let singleGps = getVal(['GPS', 'Souřadnice', 'Souradnice']);
+
+                if (!code && keys.length > 0) {
+                    // Fallback na první sloupec
+                    code = String(row[keys[0]]).trim();
+                }
+
+                if (!code) return; // Přeskočit prázdné záznamy
+
+                // Normalizace kódů (např. 'p1024' -> 'P1024')
+                let normalizedCode = code.toUpperCase().trim();
+
+                // Parsování GPS souřadnic
+                let lat = null;
+                let lng = null;
+
+                if (gpsLat && gpsLng) {
+                    lat = parseCoordinate(gpsLat);
+                    lng = parseCoordinate(gpsLng);
+                } else if (singleGps) {
+                    let parts = singleGps.split(/[,;\s]+/);
+                    if (parts.length >= 2) {
+                        lat = parseCoordinate(parts[0]);
+                        lng = parseCoordinate(parts[1]);
+                    }
+                }
+
+                const item = {
+                    code: normalizedCode,
+                    originalCode: code,
+                    name: name || 'Bez názvu',
+                    line: line || 'Neuvedeno',
+                    km: km || 'Neuvedeno',
+                    safety: safety || 'Neuvedeno',
+                    lat: lat,
+                    lng: lng,
+                    hasGps: (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng))
+                };
+
+                crossingsData.push(item);
+                crossingsMap.set(normalizedCode, item);
+
+                if (normalizedCode.startsWith('P')) pCount++;
+                if (item.hasGps) validGpsCount++;
+            });
+
+            // Aktualizace statistik
+            statTotal.textContent = crossingsData.length.toLocaleString('cs-CZ');
+            statPCount.textContent = pCount.toLocaleString('cs-CZ');
+            statValidGps.textContent = validGpsCount.toLocaleString('cs-CZ');
+        }
+
+        // Pomocná funkce pro parsování různých tvarů souřadnic (Desetinná čísla, stupně atd.)
+        function parseCoordinate(coordStr) {
+            if (!coordStr) return null;
+            // Nahrazení desetinné čárky tečkou
+            let cleaned = String(coordStr).replace(',', '.').replace(/[^\d.-]/g, '');
+            let val = parseFloat(cleaned);
+            return isNaN(val) ? null : val;
+        }
+
+        // Vzhled indikátoru stavu
+        function updateStatus(type, message) {
+            if (type === 'loading') {
+                statusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                statusBadge.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i><span>${message}</span>`;
+            } else if (type === 'success') {
+                statusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                statusBadge.innerHTML = `<i class="fa-solid fa-check"></i><span>${message}</span>`;
+            } else if (type === 'error') {
+                statusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-500/20 text-rose-300 border border-rose-500/30';
+                statusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><span>${message}</span>`;
+            }
+        }
+
+        function setupEventListeners() {
+            // Našeptávač na psaní do vstupu
+            searchInput.addEventListener('input', handleAutocomplete);
+
+            // Vyhledání tlačítkem nebo Enterem
+            searchBtn.addEventListener('click', executeSearch);
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    autocompleteList.classList.add('hidden');
+                    executeSearch();
+                }
+            });
+
+            // Zavření našeptávače při kliknutí mimo
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !autocompleteList.contains(e.target)) {
+                    autocompleteList.classList.add('hidden');
+                }
+            });
+        }
+
+        // Našeptávač
+        function handleAutocomplete() {
+            let query = searchInput.value.trim().toUpperCase();
+
+            if (query.length < 1) {
+                autocompleteList.classList.add('hidden');
+                return;
+            }
+
+            // Najít max 10 odpovídajících položek
+            let matches = crossingsData.filter(item => 
+                item.code.startsWith(query) || item.code.includes(query)
+            ).slice(0, 10);
+
+            if (matches.length === 0) {
+                autocompleteList.classList.add('hidden');
+                return;
+            }
+
+            autocompleteList.innerHTML = '';
+            matches.forEach(item => {
+                let div = document.createElement('div');
+                div.className = 'px-4 py-2.5 hover:bg-slate-100 cursor-pointer text-sm flex justify-between items-center border-b border-slate-100 last:border-none';
+                div.innerHTML = `
+                    <div>
+                        <span class="font-bold text-slate-900">${item.code}</span>
+                        <span class="text-xs text-slate-500 ml-2">${item.name}</span>
+                    </div>
+                    <span class="text-xs font-mono text-slate-400">${item.line}</span>
+                `;
+                div.addEventListener('click', () => {
+                    searchInput.value = item.code;
+                    autocompleteList.classList.add('hidden');
+                    showCrossingDetail(item);
+                });
+                autocompleteList.appendChild(div);
+            });
+
+            autocompleteList.classList.remove('hidden');
+        }
+
+        function executeSearch() {
+            let query = searchInput.value.trim().toUpperCase();
+            if (!query) return;
+
+            // Pokud kód nezačíná na P a je to jen číslo, zkusíme přidat P
+            if (!query.startsWith('P') && !isNaN(query)) {
+                query = 'P' + query;
+                searchInput.value = query;
+            }
+
+            let item = crossingsMap.get(query);
+
+            if (!item) {
+                // Zkusíme částečnou shodu
+                item = crossingsData.find(d => d.code.includes(query));
+            }
+
+            if (item) {
+                showCrossingDetail(item);
+            } else {
+                alert(`Přejezd s označením "${query}" nebyl v databázi nalezen.`);
+            }
+        }
+
+        // Zobrazení detailu přejezdu a vykreslení do mapy
+        function showCrossingDetail(item) {
+            emptyState.classList.add('hidden');
+            detailCard.classList.remove('hidden');
+
+            detailCode.textContent = item.code;
+            detailName.textContent = item.name;
+            detailLine.textContent = item.line;
+            detailKm.textContent = item.km;
+            detailSafety.textContent = item.safety;
+            detailTypeBadge.textContent = item.safety.substring(0, 20) + (item.safety.length > 20 ? '...' : '');
+
+            if (item.hasGps) {
+                detailGps.textContent = `${item.lat.toFixed(6)}° N, ${item.lng.toFixed(6)}° E`;
+                mapCoordsLabel.textContent = `${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`;
+                
+                // Odkazy na externí mapy
+                btnMapyCz.href = `https://mapy.cz/zakladni?q=${item.lat},${item.lng}&z=17`;
+                btnGoogleMaps.href = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+                
+                btnMapyCz.classList.remove('opacity-50', 'pointer-events-none');
+                btnGoogleMaps.classList.remove('opacity-50', 'pointer-events-none');
+
+                // Aktualizace Leaflet mapy
+                updateMapMarker(item);
+            } else {
+                detailGps.textContent = "GPS souřadnice nejsou k dispozici";
+                mapCoordsLabel.textContent = "Poloha neznámá";
+                
+                btnMapyCz.classList.add('opacity-50', 'pointer-events-none');
+                btnGoogleMaps.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        function updateMapMarker(item) {
+            if (!map || !item.hasGps) return;
+
+            // Odstranění předchozího značkovače
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+            }
+
+            // Vytvoření nového markeru
+            currentMarker = L.marker([item.lat, item.lng]).addTo(map);
+
+            // Pop-up okno na mapě
+            let popupContent = `
+                <div class="text-slate-800 p-1">
+                    <strong class="text-base text-amber-600 block mb-1">${item.code}</strong>
+                    <p class="text-xs font-semibold mb-1">${item.name}</p>
+                    <p class="text-xs text-slate-500">Trať: ${item.line}</p>
+                    <p class="text-xs text-slate-500 mb-2">Km: ${item.km}</p>
+                    <a href="https://mapy.cz/zakladni?q=${item.lat},${item.lng}&z=17" target="_blank" class="text-xs text-emerald-600 font-bold hover:underline">Otevřít na Mapy.cz &rarr;</a>
+                </div>
+            `;
+
+            currentMarker.bindPopup(popupContent).openPopup();
+
+            // Plynulé přiblížení na přejezd
+            map.flyTo([item.lat, item.lng], 16, {
+                duration: 1.2
+            });
+        }
+    </script>
+</body>
+</html>
