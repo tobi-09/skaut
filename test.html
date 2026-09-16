@@ -1616,8 +1616,8 @@
     const communicationClass = getCsvValue(row, headers, ['třída komunikace', 'trida komunikace']) || 'Neuvedeno';
     const directorate = getCsvValue(row, headers, ['oblastní ředitelství', 'oblastni reditelstvi']) || 'Neuvedeno';
     const region = getCsvValue(row, headers, ['krajský úřad', 'krajsky urad', 'kraj', 'správa', 'sprava']) || 'Neuvedeno';
-    const latitudeValue = getCsvValue(row, headers, ['gps n', 'lat', 'zeměpisná šířka', 'šířka', 'n']);
-    const longitudeValue = getCsvValue(row, headers, ['gps e', 'lng', 'lon', 'zeměpisná délka', 'délka', 'e']);
+    const latitudeValue = getCsvValue(row, headers, ['gps n', 'latitude', 'lat', 'zeměpisná šířka', 'šířka']);
+    const longitudeValue = getCsvValue(row, headers, ['gps e', 'longitude', 'lng', 'lon', 'zeměpisná délka', 'délka']);
     const singleGps = getCsvValue(row, headers, ['gps', 'souřadnice', 'souradnice']);
     let lat = parseCoordinate(latitudeValue);
     let lon = parseCoordinate(longitudeValue);
