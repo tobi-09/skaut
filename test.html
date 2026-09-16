@@ -234,6 +234,80 @@
     }
     #rescue-autocomplete-list .autocomplete-suggestion { padding:8px 10px; }
 
+    .railway-crossing-card {
+      border: 1px solid #E5E7EB;
+      background: #FAFAFA;
+      border-radius: 8px;
+      padding: 12px;
+      color: #111827;
+    }
+    .railway-crossing-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .railway-crossing-title {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .railway-crossing-badge {
+      flex: 0 0 auto;
+      max-width: 48%;
+      padding: 5px 8px;
+      border: 1px solid #BFDBFE;
+      border-radius: 999px;
+      background: #EFF6FF;
+      color: #1D4ED8;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.25;
+      text-align: right;
+    }
+    .railway-crossing-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .railway-crossing-field { min-width: 0; }
+    .railway-crossing-label {
+      margin-bottom: 3px;
+      color: #6B7280;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .railway-crossing-value {
+      color: #111827;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+    .railway-crossing-gps {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .railway-crossing-copy {
+      flex: 0 0 auto;
+      padding: 4px 7px;
+      border: 1px solid #D1D5DB;
+      border-radius: 4px;
+      background: #FFFFFF;
+      color: #374151;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .railway-crossing-copy:hover { background: #F3F4F6; }
+    @media (max-width: 560px) {
+      .railway-crossing-grid { grid-template-columns: 1fr; }
+      .railway-crossing-badge { max-width: 44%; }
+    }
+
     /* Mapa v panelu */
     #map {
       height: 300px; 
@@ -518,7 +592,7 @@
           <label>Bod záchrany</label>
           <input type="text" id="rescueInput" placeholder="Kód, název nebo adresa (AA 001 / P1024)" />
           <div id="rescue-autocomplete-list"></div>
-          <div id="rescue-selected-details" style="display:none; margin-top:6px; padding:8px; border-left:4px solid #1976d2; background:#f5f9ff; font-size:12px;"></div>
+          <div id="rescue-selected-details" style="display:none; margin-top:6px;"></div>
         </div>
       </div>
 
@@ -1472,6 +1546,7 @@
   }
 
   let rescuePoints = loadRescuePoints();
+  let selectedRescuePoint = null;
 
   const railwayCrossingsCsvUrl = 'https://tobi-09.github.io/skaut/Seznam%20z%CC%8Celeznic%CC%8Cni%CC%81ch%20pr%CC%8Cejezdu%CC%8A%20na%20si%CC%81ti%20Spra%CC%81vy%20z%CC%8Celeznic%20(k%209.%205.%202024).csv';
   const rescueDetails = document.getElementById('rescue-selected-details');
@@ -1538,6 +1613,9 @@
     const line = getCsvValue(row, headers, ['trať', 'trat', 'název trati']) || 'Neuvedeno';
     const km = getCsvValue(row, headers, ['km', 'staničení', 'staniceni', 'poloha']) || 'Neuvedeno';
     const safety = getCsvValue(row, headers, ['zabezpečení', 'zabezpeceni', 'typ']) || 'Neuvedeno';
+    const communicationClass = getCsvValue(row, headers, ['třída komunikace', 'trida komunikace']) || 'Neuvedeno';
+    const directorate = getCsvValue(row, headers, ['oblastní ředitelství', 'oblastni reditelstvi']) || 'Neuvedeno';
+    const region = getCsvValue(row, headers, ['krajský úřad', 'krajsky urad', 'kraj', 'správa', 'sprava']) || 'Neuvedeno';
     const latitudeValue = getCsvValue(row, headers, ['gps n', 'lat', 'zeměpisná šířka', 'šířka', 'n']);
     const longitudeValue = getCsvValue(row, headers, ['gps e', 'lng', 'lon', 'zeměpisná délka', 'délka', 'e']);
     const singleGps = getCsvValue(row, headers, ['gps', 'souřadnice', 'souradnice']);
@@ -1548,16 +1626,16 @@
       lat = parseCoordinate(parts[0]);
       lon = parseCoordinate(parts[1]);
     }
-    const details = { typ: 'Železniční přejezd' };
-    headers.forEach((header, index) => {
-      const label = (header || '').trim();
-      if (label) details[label] = row[index] || 'Neuvedeno';
-    });
-    details.kód = code;
-    details.název = name;
-    details.trať = line;
-    details.kilometráž = km;
-    details.zabezpečení = safety;
+    const details = {
+      safety,
+      line,
+      km,
+      communicationClass,
+      directorate,
+      region,
+      lat,
+      lon
+    };
     const address = `🚆 ${code} — ${name}`;
     return { code: code.toUpperCase(), name, address, lat, lon, isRailwayCrossing: true, details };
   }
@@ -1569,8 +1647,33 @@
       rescueDetails.innerHTML = '';
       return;
     }
-    rescueDetails.innerHTML = `<strong>🚆 Železniční přejezd ${point.code}</strong><br>${Object.entries(point.details).map(([key, value]) => `<span><strong>${key}:</strong> ${value || 'Neuvedeno'}</span>`).join('<br>')}`;
+    const escapeHtml = value => String(value || 'Neuvedeno').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+    const formatDms = (value, isLatitude) => {
+      if (!Number.isFinite(value)) return 'GPS není k dispozici';
+      const absolute = Math.abs(value);
+      const degrees = Math.floor(absolute);
+      const minutesValue = (absolute - degrees) * 60;
+      const minutes = Math.floor(minutesValue);
+      const seconds = ((minutesValue - minutes) * 60).toFixed(2).padStart(5, '0');
+      const direction = isLatitude ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W');
+      return `${degrees}° ${String(minutes).padStart(2, '0')}' ${seconds}" ${direction}`;
+    };
+    const gpsText = `${formatDms(point.details.lat, true)}, ${formatDms(point.details.lon, false)}`;
+    const gpsValue = Number.isFinite(point.details.lat) && Number.isFinite(point.details.lon) ? gpsText : 'GPS není k dispozici';
+    const field = (label, value, extraClass = '') => `<div class="railway-crossing-field ${extraClass}"><div class="railway-crossing-label">${label}</div><div class="railway-crossing-value">${escapeHtml(value)}</div></div>`;
+    const gpsField = `<div class="railway-crossing-field"><div class="railway-crossing-label">GPS souřadnice</div><div class="railway-crossing-value railway-crossing-gps"><span>${escapeHtml(gpsValue)}</span>${gpsValue !== 'GPS není k dispozici' ? `<button type="button" class="railway-crossing-copy" data-copy-value="${escapeHtml(gpsText)}" onclick="copyRescueCoordinates(this)">📋 Kopírovat</button>` : ''}</div></div>`;
+    rescueDetails.innerHTML = `<div class="railway-crossing-card"><div class="railway-crossing-card-header"><div class="railway-crossing-title">🚆 Železniční přejezd ${escapeHtml(point.code)}</div><div class="railway-crossing-badge">${escapeHtml(point.details.safety)}</div></div><div class="railway-crossing-grid">${field('Traťový úsek', point.details.line)}${field('Kilometráž', `${point.details.km} km`)}${gpsField}${field('Třída komunikace', point.details.communicationClass)}${field('Oblastní ředitelství', point.details.directorate)}${field('Kraj / správa', point.details.region)}</div></div>`;
     rescueDetails.style.display = 'block';
+  }
+
+  function copyRescueCoordinates(button) {
+    const value = button.getAttribute('data-copy-value');
+    if (!value || !navigator.clipboard) return;
+    navigator.clipboard.writeText(value).then(() => {
+      const originalText = button.textContent;
+      button.textContent = '✓ Zkopírováno';
+      setTimeout(() => { button.textContent = originalText; }, 1200);
+    }).catch(() => {});
   }
 
   async function loadRailwayCrossings() {
@@ -1636,6 +1739,8 @@
   rescueInput.addEventListener('input', () => {
     // editing rescue input invalidates previously chosen coords
     selectedCoords = null;
+    selectedRescuePoint = null;
+    renderRescueDetails(null);
     const q = (rescueInput.value || '').trim().toLowerCase();
     rescueContainer.innerHTML = '';
     // update address required state
@@ -1669,6 +1774,7 @@
       const code = e.target.dataset.code || '';
       const selectedPoint = e.target._rescuePoint || rescuePoints.find(point => point.code === code);
       rescueInput.value = code;
+      selectedRescuePoint = selectedPoint || null;
       selectedCoords = (Number.isFinite(lat) && Number.isFinite(lon)) ? { lat, lon } : null;
       rescueContainer.innerHTML = '';
       renderRescueDetails(selectedPoint);
@@ -1769,12 +1875,13 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
         const norm = s => (s || '').toString().toLowerCase();
         const normCode = s => norm(s).replace(/\s+/g, '');
         const qNorm = normCode(rescueVal);
-        const rp = rescuePoints.find(r => normCode(r.code) === qNorm || norm(r.name) === norm(rescueVal) || norm(r.address).includes(norm(rescueVal)) || (r.details && Object.values(r.details).some(value => norm(value).includes(norm(rescueVal)))) );
+        const rp = selectedRescuePoint || rescuePoints.find(r => normCode(r.code) === qNorm || norm(r.name) === norm(rescueVal) || norm(r.address).includes(norm(rescueVal)) || (r.details && Object.values(r.details).some(value => norm(value).includes(norm(rescueVal)))) );
         if (rp) {
           selectedCoords = Number.isFinite(rp.lat) && Number.isFinite(rp.lon) ? { lat: rp.lat, lon: rp.lon } : null;
           adresa = `${rp.isRailwayCrossing ? '🚆 ' : ''}${rp.code} — ${rp.address}`;
           document.getElementById('adresaPripadu').value = adresa;
           renderRescueDetails(rp);
+          selectedRescuePoint = rp;
         } else {
           alert('Neplatný bod záchrany. Zadejte platný kód nebo vyberte adresu.');
           return;
@@ -1785,7 +1892,7 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
       }
     }
 
-    if (!selectedCoords) {
+    if (!selectedCoords && !selectedRescuePoint) {
       alert("Prosím vyberte adresu ze seznamu návrhů nebo vyberte bod záchrany.");
       return;
     }
@@ -1900,6 +2007,7 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
       e.target.reset();
       container.innerHTML = '';
       selectedCoords = null;
+      selectedRescuePoint = null;
 
       if(marker) {
         map.removeLayer(marker);
@@ -1977,7 +2085,9 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
     div.setAttribute('data-position', JSON.stringify(selectedCoords || null));
     if (window.saveIncidentToFirebase) {
       window.saveIncidentToFirebase(incidentData).then(firebaseId => {
+        if (!firebaseId) return;
         div.setAttribute('data-firebase-id', firebaseId);
+        try { addActiveIncidentMarker(div); } catch(e) {}
         console.log('Případ uložen do Firebase:', firebaseId);
       });
     }
@@ -2179,6 +2289,7 @@ const datumText = now.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: '
     e.target.reset();
     container.innerHTML = '';
     selectedCoords = null;
+    selectedRescuePoint = null;
 
     if(marker) {
       map.removeLayer(marker);
@@ -3068,6 +3179,9 @@ if (document.readyState === 'loading') {
     element.setAttribute('data-actions', JSON.stringify(data.actions || []));
     element.setAttribute('data-remaining-seconds', remainingSeconds);
     try { element.setAttribute('data-position', JSON.stringify(data.position || null)); } catch(e) {}
+    try {
+      if (!data.archived) addActiveIncidentMarker(element);
+    } catch(e) {}
 
     // Ensure countdown is running for active items (restart with new remainingSeconds)
     try { if (!data.archived) ensureStopkyRunning(element, remainingSeconds); } catch(e) {}
