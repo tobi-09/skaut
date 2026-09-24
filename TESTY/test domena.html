@@ -42,6 +42,7 @@
       if (loginPage) loginPage.style.display = "none";
       if (app) app.style.display = "block";
       if (err) err.style.display = "none";
+      if (typeof window.refreshMapsLayout === 'function') window.refreshMapsLayout();
     } else {
       if (err) err.style.display = "block";
     }
@@ -1348,14 +1349,25 @@
     if(id === "zasahy" && typeof mapZ !== 'undefined' && mapZ) {
       setTimeout(() => { mapZ.invalidateSize(); }, 200);
     }
+    if (typeof window.refreshMapsLayout === 'function') window.refreshMapsLayout();
   }
 
   let map = null;
   let mapZ = null;
 
+  window.refreshMapsLayout = function() {
+    const refresh = () => {
+      if (map) map.invalidateSize({ pan: false, debounceMoveend: true });
+      if (mapZ) mapZ.invalidateSize({ pan: false, debounceMoveend: true });
+    };
+    requestAnimationFrame(refresh);
+    setTimeout(refresh, 250);
+    setTimeout(refresh, 800);
+  };
+
   const mapBaseLayerRegistry = {
-    map: {},
-    mapZ: {}
+    map: null,
+    mapZ: null
   };
 
   function createMapBaseLayers() {
