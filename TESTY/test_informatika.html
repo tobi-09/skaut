@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test z informatiky</title>
+<style>
+body{font:16px/1.5 Arial,sans-serif;margin:0;background:#f3f4f6;color:#111;user-select:none;-webkit-user-select:none}
+input,textarea{user-select:text;-webkit-user-select:text}
+#app{max-width:820px;margin:0 auto;padding:16px}
+.card{background:#fff;border-radius:10px;padding:18px;margin-bottom:14px;box-shadow:0 1px 4px #0002}
+h1{font-size:24px;margin:0 0 6px}h2{font-size:18px;border-bottom:2px solid #333;padding-bottom:4px;margin:18px 0 10px}
+input,select,textarea,button{font:inherit;padding:8px;border:1px solid #999;border-radius:6px;box-sizing:border-box}
+input[type=text],input[type=password],textarea{width:100%}
+button{background:#2563eb;color:#fff;border:0;cursor:pointer;padding:10px 18px}button.r{background:#dc2626}button.g{background:#6b7280}
+label{display:block;margin:6px 0}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.dev{display:inline-block;width:250px;margin:3px 0}
+#bar{position:sticky;top:0;background:#111;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;border-radius:8px;margin-bottom:12px;z-index:5}
+#warn{position:fixed;left:0;right:0;top:0;background:#dc2626;color:#fff;padding:14px;text-align:center;font-weight:bold;z-index:20;display:none}
+#fs{position:fixed;inset:0;background:#000d;color:#fff;z-index:15;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:20px}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #ccc;padding:5px 8px;text-align:left}th{background:#e5e7eb}
+tr.s{cursor:pointer}tr.s:hover{background:#eef}.bad{color:#dc2626;font-weight:bold}.big{font-size:42px;font-weight:bold;text-align:center}
+.pill{display:inline-block;background:#e5e7eb;border-radius:20px;padding:4px 12px;margin:3px}
+</style></head><body>
+<div id="warn"></div>
+<div id="fs"><div>Opustil jsi celou obrazovku. Událost byla nahlášena.</div><button onclick="goFs()">Vrátit se na celou obrazovku</button></div>
+<div id="app"></div>
+<script>
+const DB='https://projekce-0-default-rtdb.europe-west1.firebasedatabase.app';
+const PW={'4a':'albert1','4b':'brno3'};
+const TEACHER_PW='ucitel2026'; // ZMĚŇ SI
+const $=s=>document.querySelector(s),app=$('#app');
+const api=(p,m='GET',b)=>fetch(`${DB}/${p}.json`,{method:m,headers:b!==undefined?{'Content-Type':'application/json'}:{},body:b!==undefined?JSON.stringify(b):undefined,keepalive:m!=='GET'}).then(r=>r.json()).catch(()=>null);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const fmt=t=>t?new Date(t).toLocaleTimeString('cs'):'–';
+let off=0;const now=()=>Date.now()+off;
+async function sync(){const a=Date.now(),s=await api('clock/t','PUT',{'.sv':'timestamp'}),b=Date.now();if(typeof s==='number')off=s-(a+b)/2}
+
+const D=[['A','myš','i'],['B','monitor','o'],['C','tiskárna','o'],['D','mikrofon','i'],['E','reproduktory','o'],['F','klávesnice','i'],['G','skener','i'],['H','sluchátka','o'],['I','webkamera','i']];
+const K=[['USB','připojuje myš, klávesnici, flash disk'],['HDMI','přenáší obraz a zvuk do monitoru nebo televize'],['Jack (3,5 mm)','připojuje sluchátka nebo reproduktory'],['Síťový kabel (RJ-45)','připojuje počítač k internetu kabelem']];
+const sel=(n,o)=>`<select name="${n}"><option value="">–</option>${o.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
+function score(a={}){let g=0,m=0;const c=(ok)=>{m++;if(ok)g++};
+c(a.q1a==='počítače');c(a.q1b==='vstupní');c(a.q1c==='výstupní');c(a.q2==='b');
+D.forEach(d=>c(a['q4'+d[0]]===d[2]));K.forEach((k,i)=>c(a['q5_'+i]==String(i)));return{g,m}}
+const FIELDS=3+1+1+9+4+1;
+function testHTML(){const o=[['počítače','počítače'],['vstupní','vstupní'],['výstupní','výstupní']];
+return `<form id="f" onsubmit="return false">
+<h2>1. část: Obecně</h2>
+<p><b>1.</b> Vstupní zařízení posílá informace <b>do</b> ${sel('q1a',o)}. Výstupní zařízení informace z počítače ukazuje nebo přehrává. Klávesnice je zařízení ${sel('q1b',o)}, monitor je zařízení ${sel('q1c',o)}.</p>
+<p><b>2.</b> Co dělá vstupní zařízení?</p>
+<label><input type="radio" name="q2" value="a"> a) ukazuje obrázek</label><label><input type="radio" name="q2" value="b"> b) posílá informace do počítače</label><label><input type="radio" name="q2" value="c"> c) tiskne papír</label>
+<p><b>3.</b> Napiš jednou větou, k čemu je konektor.</p><textarea name="q3" rows="2"></textarea>
+<h2>2. část: Konkrétně</h2>
+<p><b>4.</b> U každého zařízení vyber, jestli je vstupní, nebo výstupní.</p>
+${D.map(d=>`<span class="dev"><b>${d[0]}</b> ${d[1]} ${sel('q4'+d[0],[['i','vstupní'],['o','výstupní']])}</span>`).join('')}
+<p><b>5.</b> Ke každému konektoru vyber, co dělá.</p>
+${K.map((k,i)=>`<div class="row"><b style="min-width:170px">${k[0]}</b>${sel('q5_'+i,[1,3,0,2].map(j=>[j,K[j][1]]))}</div>`).join('')}
+<p><b>6.</b> <i>Bonus:</i> Které zařízení je vstupní i výstupní zároveň? (např. dotykový displej)</p><input type="text" name="q6" autocomplete="off">
+<p style="margin-top:20px"><button onclick="submitTest('odevzdáno')">Odevzdat test</button></p></form>`}
+
+/* ===== STUDENT ===== */
+let S=null,cfg={},mode='',viol=0,live=false,lastV=0,saveT=0;
+function loginScreen(){mode='login';app.innerHTML=`<div class="card"><h1>Test z informatiky</h1><p>Vstupní a výstupní zařízení, konektory</p>
+<label>Jméno a příjmení<input type="text" id="n" autocomplete="off"></label>
+<label>Třída<br><select id="c"><option value="4a">4a</option><option value="4b">4b</option></select></label>
+<label>Heslo třídy<input type="password" id="p"></label>
+<p id="err" class="bad"></p><button onclick="login()">Přihlásit se</button>
+<p style="font-size:13px;color:#555">Během testu se zaznamenává opuštění stránky, klávesové zkratky (Ctrl…), pravé tlačítko myši i opuštění celé obrazovky. Vše vidí učitel.</p>
+<p style="text-align:right"><a href="#" onclick="teacherLogin();return false" style="font-size:12px;color:#888">Učitel</a></p></div>`}
+async function login(){const name=$('#n').value.trim(),cls=$('#c').value,pw=$('#p').value;
+if(name.length<3||!name.includes(' '))return $('#err').textContent='Napiš jméno i příjmení.';
+if(pw!==PW[cls])return $('#err').textContent='Špatné heslo třídy.';
+await sync();const sid=cls+'_'+slug(name),ex=await api('sessions/'+sid);
+S={sid,name,cls,status:ex?.status||'waiting',answers:ex?.answers||{}};viol=ex?.violations||0;
+await api('sessions/'+sid,'PATCH',{name,cls,status:S.status,joined:ex?.joined||now(),violations:viol});
+log(ex?'Znovu přihlášen':'Přihlášen',false);goFs();setInterval(async()=>{cfg=await api('config')||{}},3000);cfg=await api('config')||{};
+setInterval(sync,60000);setInterval(tick,500);tick()}
+function goFs(){const e=document.documentElement;(e.requestFullscreen||e.webkitRequestFullscreen||(()=>{})).call(e)}
+function tick(){if(!S)return;const t=now(),st=cfg.startAt,end=st?st+cfg.durationMin*60000:0;let m;
+if(S.status==='done')m='done';else if(!st)m='wait0';else if(cfg.stopped||t>=end)m='over';else if(t<st)m='count';else m='run';
+if(m==='over'&&S.status==='running'){return submitTest('čas vypršel')}
+if(m==='over'&&S.status!=='done'){m='late'}
+if(m!==mode){mode=m;draw(m)}
+if(m==='count')$('#cd').textContent=clock(st-t);
+if(m==='run')$('#tm').textContent='Zbývá '+clock(end-t)}
+const clock=ms=>{ms=Math.max(0,Math.round(ms/1000));const h=Math.floor(ms/3600),m=Math.floor(ms%3600/60),s=ms%60;return(h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(s).padStart(2,'0')}
+function draw(m){live=false;
+if(m==='wait0')app.innerHTML=`<div class="card"><h1>Ahoj, ${esc(S.name)}</h1><p>Učitel zatím nenastavil čas spuštění. Nech tuto stránku otevřenou.</p></div>`;
+if(m==='count')app.innerHTML=`<div class="card"><h1>Ahoj, ${esc(S.name)} (${S.cls})</h1><p>Test začne za:</p><div class="big" id="cd"></div><p>Začátek: ${new Date(cfg.startAt).toLocaleString('cs')}. Nezavírej stránku.</p></div>`;
+if(m==='late')app.innerHTML=`<div class="card"><h1>Test už skončil</h1><p>Zpráva byla uložena učiteli.</p></div>`;
+if(m==='done')app.innerHTML=`<div class="card"><h1>Hotovo, ${esc(S.name)}</h1><p>Test byl odevzdán. Můžeš zavřít stránku.</p></div>`;
+if(m==='run'){S.status='running';api('sessions/'+S.sid,'PATCH',{status:'running',started:now()});
+app.innerHTML=`<div id="bar"><span>${esc(S.name)} (${S.cls})</span><span id="tm"></span></div><div class="card">${testHTML()}</div>`;
+const f=$('#f');for(const e of f.elements){if(!e.name)continue;const v=S.answers[e.name];if(v===undefined)continue;if(e.type==='radio')e.checked=e.value===v;else e.value=v}
+f.addEventListener('input',save);f.addEventListener('change',save);live=true;goFs()}}
+function collect(){const o={};new FormData($('#f')).forEach((v,k)=>{if(String(v).trim()!=='')o[k]=v});return o}
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{const a=collect();S.answers=a;api('sessions/'+S.sid,'PATCH',{answers:a,progress:Math.round(Object.keys(a).length/FIELDS*100),saved:now()})},600)}
+async function submitTest(why){if(S.status==='done')return;const a=$('#f')?collect():S.answers;S.status='done';live=false;
+await api('sessions/'+S.sid,'PATCH',{status:'done',answers:a,progress:Math.round(Object.keys(a).length/FIELDS*100),finished:now()});
+log('Test ukončen ('+why+')',false);if(document.fullscreenElement)document.exitFullscreen();mode='done';draw('done')}
+function log(msg,bad=true){if(!S)return;const t=now();api('events/'+S.sid,'POST',{t,msg,bad});
+if(bad){viol++;api('sessions/'+S.sid,'PATCH',{violations:viol,last:msg,lastT:t});const w=$('#warn');w.textContent='⚠ Nahlášeno učiteli: '+msg;w.style.display='block';clearTimeout(w._t);w._t=setTimeout(()=>w.style.display='none',3500)}}
+function v(msg){if(!live)return;const t=Date.now();if(t-lastV<700)return;lastV=t;log(msg)}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)v('Opuštění stránky (jiná karta/okno)')});
+window.addEventListener('blur',()=>v('Okno ztratilo fokus (Alt+Tab, jiná aplikace)'));
+['copy','cut','paste'].forEach(k=>document.addEventListener(k,e=>{if(!live)return;e.preventDefault();v('Pokus o '+{copy:'kopírování',cut:'vyjmutí',paste:'vložení'}[k])}));
+document.addEventListener('contextmenu',e=>{if(!live)return;e.preventDefault();v('Pravé tlačítko myši')});
+document.addEventListener('dragstart',e=>{if(live)e.preventDefault()});
+document.addEventListener('keydown',e=>{if(!live)return;
+const k=e.key,combo=(e.ctrlKey?'Ctrl+':'')+(e.metaKey?'Win/Cmd+':'')+(e.altKey?'Alt+':'')+(e.shiftKey&&(e.ctrlKey||e.altKey)?'Shift+':'')+k.toUpperCase();
+if(e.ctrlKey||e.metaKey||e.altKey||/^F\d+$/.test(k)||k==='Meta'||k==='PrintScreen'||k==='ContextMenu'){e.preventDefault();v('Klávesová zkratka: '+combo)}});
+document.addEventListener('keyup',e=>{if(live&&e.key==='PrintScreen'){navigator.clipboard?.writeText('').catch(()=>{});v('PrintScreen')}});
+document.addEventListener('fullscreenchange',()=>{const o=$('#fs');if(!live){o.style.display='none';return}
+if(!document.fullscreenElement){o.style.display='flex';v('Opuštění celé obrazovky')}else o.style.display='none'});
+window.addEventListener('beforeunload',e=>{if(!live)return;log('Pokus o zavření / obnovení stránky');e.preventDefault();e.returnValue=''});
+
+/* ===== TEACHER ===== */
+let sel_=null,tt=0;
+function teacherLogin(){if(prompt('Heslo učitele:')!==TEACHER_PW)return;mode='t';document.body.style.userSelect='text';
+const d=new Date(Date.now()+3600000);d.setMinutes(0,0,0);const iso=new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+app.innerHTML=`<div class="card"><h1>Učitel – řízení testu</h1>
+<div class="row"><label>Začátek<br><input type="datetime-local" id="ts" value="${iso}"></label><label>Délka (min)<br><input type="number" id="td" value="30" min="1" style="width:90px"></label></div>
+<div class="row"><button onclick="tSet(false)">Naplánovat</button><button onclick="tSet(true)">Spustit hned</button><button class="r" onclick="tStop()">Ukončit test</button><button style="background:#16a34a" onclick="tExport()">Export do tabulky (CSV)</button><button class="g" onclick="tWipe()">Smazat všechna data</button></div>
+<p id="cf"></p></div><div id="st"></div><div id="dt"></div>`;
+sync().then(()=>{tPoll();tt=setInterval(tPoll,3000)})}
+async function tSet(now_){const st=now_?now():new Date($('#ts').value).getTime(),du=+$('#td').value||30;
+if(!st)return alert('Zadej čas.');await api('config','PUT',{startAt:st,durationMin:du,stopped:false});tPoll()}
+async function tStop(){if(confirm('Ukončit test všem?')){await api('config','PATCH',{stopped:true});tPoll()}}
+async function tWipe(){if(confirm('Smazat všechny studenty, události i nastavení?')){await Promise.all(['sessions','events','config'].map(p=>api(p,'DELETE')));sel_=null;tPoll()}}
+async function tExport(){const ss=await api('sessions')||{};
+const L=Object.values(ss).sort((a,b)=>(a.cls+a.name).localeCompare(b.cls+b.name,'cs'));
+const H=['Třída','Jméno','Stav','Body automaticky','Max automaticky','Body ručně (otázky 3 a 6)','Porušení','Poslední událost','Odevzdáno','1a','1b','1c','2','3 (text)',...D.map(d=>'4 '+d[0]+' '+d[1]),...K.map(k=>'5 '+k[0]),'6 (bonus)'];
+const q=v=>{v=String(v??'');if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
+const rows=L.map(s=>{const a=s.answers||{},r=score(a);
+return [s.cls,s.name,{waiting:'čeká',running:'píše',done:'hotovo'}[s.status]||s.status,r.g,r.m,'',s.violations||0,s.last||'',s.finished?new Date(s.finished).toLocaleString('cs'):'',
+a.q1a,a.q1b,a.q1c,a.q2,a.q3,...D.map(d=>({i:'vstupní',o:'výstupní'}[a['q4'+d[0]]])),...K.map((k,i)=>a['q5_'+i]!==undefined?K[a['q5_'+i]][1]:''),a.q6]});
+const csv='\ufeff'+[H,...rows].map(r=>r.map(q).join(';')).join('\r\n');
+const el=document.createElement('a');el.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+el.download='vysledky_testu_'+new Date().toISOString().slice(0,16).replace(/[T:]/g,'-')+'.csv';el.click()}
+async function tPoll(){const [s0,c]=await Promise.all([api('sessions'),api('config')]);cfg=c||{};const ss=s0||{};
+$('#cf').textContent=cfg.startAt?`Nastaveno: ${new Date(cfg.startAt).toLocaleString('cs')}, ${cfg.durationMin} min${cfg.stopped?' – UKONČENO':''}`:'Zatím nenaplánováno.';
+const L=Object.entries(ss).map(([id,s])=>({id,...s})).sort((a,b)=>(a.cls+a.name).localeCompare(b.cls+b.name,'cs'));
+const sum=['4a','4b'].map(c=>{const x=L.filter(s=>s.cls===c);return `<span class="pill"><b>${c}</b>: přihlášeno ${x.length}, píše ${x.filter(s=>s.status==='running').length}, <b>hotovo ${x.filter(s=>s.status==='done').length}</b>, porušení ${x.reduce((a,s)=>a+(s.violations||0),0)}</span>`}).join('');
+$('#st').innerHTML=`<div class="card">${sum}<table style="margin-top:10px"><tr><th>Třída</th><th>Jméno</th><th>Stav</th><th>Vyplněno</th><th>Body (auto)</th><th>Porušení</th><th>Poslední</th></tr>
+${L.map(s=>{const r=score(s.answers);return `<tr class="s" onclick="sel_='${s.id}';tDetail()"><td>${s.cls}</td><td>${esc(s.name)}</td><td>${{waiting:'čeká',running:'píše',done:'hotovo'}[s.status]||s.status}</td><td>${s.progress||0} %</td><td>${r.g}/${r.m}</td><td class="${s.violations?'bad':''}">${s.violations||0}</td><td>${esc(s.last||'')} ${s.lastT?'('+fmt(s.lastT)+')':''}</td></tr>`}).join('')}</table></div>`;
+if(sel_)tDetail(ss[sel_])}
+async function tDetail(s){const id=sel_;s=s||await api('sessions/'+id);if(!s)return;const ev=await api('events/'+id)||{};const a=s.answers||{},r=score(a);
+const E=Object.values(ev).sort((x,y)=>x.t-y.t);
+$('#dt').innerHTML=`<div class="card"><h2>${esc(s.name)} (${s.cls}) – ${r.g}/${r.m} bodů automaticky</h2>
+<p><b>Událost log:</b></p><table>${E.map(e=>`<tr><td>${fmt(e.t)}</td><td class="${e.bad?'bad':''}">${esc(e.msg)}</td></tr>`).join('')||'<tr><td>Nic.</td></tr>'}</table>
+<p><b>Odpověď 3 (hodnotit ručně):</b> ${esc(a.q3||'–')}</p><p><b>Odpověď 6 (bonus):</b> ${esc(a.q6||'–')}</p>
+<p><b>1:</b> ${esc(a.q1a)} / ${esc(a.q1b)} / ${esc(a.q1c)} &nbsp; <b>2:</b> ${esc(a.q2)}<br><b>4:</b> ${D.map(d=>d[0]+'='+(a['q4'+d[0]]||'–')).join(', ')}<br><b>5:</b> ${K.map((k,i)=>k[0]+'→'+(a['q5_'+i]!==undefined?K[a['q5_'+i]][1]:'–')).join('; ')}</p></div>`}
+
+loginScreen();
+</script></body></html>
