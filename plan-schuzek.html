@@ -57,6 +57,7 @@ input:disabled,textarea:disabled{opacity:.85}
 h2.sec{font-size:22px;margin:4px 4px 14px;color:var(--brand)}
 .copybtn{width:100%;border:0;border-radius:18px;padding:18px;background:#25a244;color:#fff;font-weight:800;font-size:18px;box-shadow:var(--shadow)}
 .copybtn:active{transform:scale(.99)}
+.copybtn.alt{background:var(--card);color:var(--text);border:2px solid var(--line);margin-top:10px;font-size:16px}
 .copyhint{text-align:center;color:var(--muted);font-size:14px;margin:8px 0 0;min-height:20px}
 .card.closed .body{display:none}
 .bar{cursor:pointer;user-select:none}
@@ -240,23 +241,33 @@ function openWeek(weekId, editable){
     card.append(bar, body); box.appendChild(card);
   });
 
-  const copyBtn = document.createElement("button");
-  copyBtn.type = "button"; copyBtn.className = "copybtn"; copyBtn.textContent = "Zkopírovat zápis z rady pro WhatsApp";
-  const copyMsg = document.createElement("p"); copyMsg.className = "copyhint";
-  copyBtn.addEventListener("click", async () => {
+  function buildReport(){
     const val = k => (fields[k] ? fields[k].value.trim() : "");
     const parts = [], notes = [];
     STRUCTURE.forEach((it, i) => {
       const garant = val(i+"/garant"), detail = val(i+"/detail"), items = val(i+"/items");
       if (it.brain){ if (detail) notes.push(detail); return; }
       if (!garant && !detail && !items) return;
-      const body = detail || it.name;
-      let text = "• " + (garant ? "*" + garant + "* - " : "") + body;
+      let text = "• " + (garant ? "*" + garant + "* - " : "") + it.name + (detail ? " - " + detail : "");
       if (items) text += "\nPomůcky: " + items;
       parts.push(text);
     });
     let out = parts.join("\n\n");
     if (notes.length) out += (out ? "\n\n\n" : "") + notes.join("\n");
+    return out;
+  }
+  const waBtn = document.createElement("button");
+  waBtn.type = "button"; waBtn.className = "copybtn"; waBtn.textContent = "Poslat do WhatsAppu";
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button"; copyBtn.className = "copybtn alt"; copyBtn.textContent = "Jen zkopírovat zápis";
+  const copyMsg = document.createElement("p"); copyMsg.className = "copyhint";
+  waBtn.addEventListener("click", () => {
+    const out = buildReport();
+    if (!out){ copyMsg.textContent = "Zatím není co poslat."; return; }
+    window.location.href = "https://wa.me/?text=" + encodeURIComponent(out);
+  });
+  copyBtn.addEventListener("click", async () => {
+    const out = buildReport();
     if (!out){ copyMsg.textContent = "Zatím není co kopírovat."; return; }
     try { await navigator.clipboard.writeText(out); }
     catch(e){
@@ -265,10 +276,10 @@ function openWeek(weekId, editable){
       try { document.execCommand("copy"); } catch(_){ }
       ta.remove();
     }
-    copyMsg.textContent = "Zkopírováno, vlož do WhatsAppu.";
+    copyMsg.textContent = "Zkopírováno.";
     setTimeout(() => { copyMsg.textContent = ""; }, 3000);
   });
-  box.append(copyBtn, copyMsg);
+  box.append(waBtn, copyMsg, copyBtn);
 
   if (!db) return;
   unsub = onValue(ref(db, `${ROOT}/${weekId}/items`), snap => {
