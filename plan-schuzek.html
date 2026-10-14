@@ -58,6 +58,13 @@ h2.sec{font-size:22px;margin:4px 4px 14px;color:var(--brand)}
 .copybtn{width:100%;border:0;border-radius:18px;padding:18px;background:#25a244;color:#fff;font-weight:800;font-size:18px;box-shadow:var(--shadow)}
 .copybtn:active{transform:scale(.99)}
 .copyhint{text-align:center;color:var(--muted);font-size:14px;margin:8px 0 0;min-height:20px}
+.card.closed .body{display:none}
+.bar{cursor:pointer;user-select:none}
+.bar .l{min-width:0;flex:1}
+.bar .sum{font-size:14px;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .sum:empty{display:none}
+.chev{font-size:22px;line-height:1;transition:transform .2s;transform:rotate(90deg)}
+.card.closed .chev{transform:rotate(0deg)}
 </style>
 </head>
 <body>
@@ -192,13 +199,18 @@ function openWeek(weekId, editable){
     const n = document.createElement("div"); n.className = "note";
     n.textContent = "Proběhlá schůzka, jen ke čtení."; box.appendChild(n);
   }
-  const fields = {};
+  const fields = {}, sums = {};
+  function refreshSums(){ STRUCTURE.forEach((it,i) => { const g = fields[i+"/garant"]; if (sums[i] && g) sums[i].textContent = g.value.trim(); }); }
   STRUCTURE.forEach((it, i) => {
-    const card = document.createElement("div"); card.className = "card";
+    const card = document.createElement("div"); card.className = "card closed";
     const bar = document.createElement("div"); bar.className = "bar"; bar.style.setProperty("--c", it.c);
     const h3 = document.createElement("h3"); h3.textContent = it.name;
     const t = document.createElement("span"); t.className = "time"; t.textContent = it.time;
-    bar.append(h3, t);
+    const sum = document.createElement("div"); sum.className = "sum"; sums[i] = sum;
+    const left = document.createElement("div"); left.className = "l"; left.append(h3, sum);
+    const chev = document.createElement("span"); chev.className = "chev"; chev.textContent = "›";
+    bar.append(left, t, chev);
+    bar.addEventListener("click", () => card.classList.toggle("closed"));
     const body = document.createElement("div"); body.className = "body";
     const hi = document.createElement("p"); hi.className = "hint"; hi.textContent = it.hint; body.appendChild(hi);
     const defs = it.brain
@@ -210,6 +222,7 @@ function openWeek(weekId, editable){
       if (tag === "input") el.type = "text";
       el.placeholder = ph; el.disabled = !editable; el.autocomplete = "off";
       fields[i+"/"+key] = el;
+      if (key === "garant") el.addEventListener("input", refreshSums);
       if (editable && db){
         let timer;
         el.addEventListener("input", () => {
@@ -265,6 +278,7 @@ function openWeek(weekId, editable){
       const v = (data[i] && data[i][key]) || "";
       if (document.activeElement !== fields[k] && fields[k].value !== v) fields[k].value = v;
     }
+    refreshSums();
     setStatus("Online","ok");
   }, err => { console.error(err); setStatus("Chyba čtení","err"); });
 }
