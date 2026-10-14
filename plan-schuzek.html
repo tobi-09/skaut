@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Harmonogram schůzky</title>
+<style>
+:root{
+  --bg:#eef3f9; --card:#ffffff; --text:#12233b; --muted:#60708a; --line:#dbe4ef; --field:#f3f7fc;
+  --brand:#123f8c; --accent:#ffc928; --focus:#1d5fc2; --shadow:0 6px 18px rgba(18,63,140,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0a1424; --card:#12223a; --text:#eaf1fb; --muted:#93a5bf; --line:#223653; --field:#0c192c; --brand:#6ea8ff; --focus:#ffc928; --shadow:0 6px 18px rgba(0,0,0,.35);}
+}
+:root[data-theme="dark"]{--bg:#0a1424; --card:#12223a; --text:#eaf1fb; --muted:#93a5bf; --line:#223653; --field:#0c192c; --brand:#6ea8ff; --focus:#ffc928; --shadow:0 6px 18px rgba(0,0,0,.35);}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transition:background .2s,color .2s}
+header{position:sticky;top:0;z-index:5;color:#fff;background:linear-gradient(135deg,#0d3478,#1d5fc2);
+  padding:calc(12px + env(safe-area-inset-top,0px)) 16px 14px;display:flex;align-items:center;gap:10px;
+  border-bottom:4px solid var(--accent);border-radius:0 0 22px 22px;box-shadow:var(--shadow)}
+header .t{flex:1;min-width:0}
+header h1{margin:0;font-size:20px;font-weight:800}
+header p{margin:2px 0 0;font-size:13px;opacity:.85}
+.pill{font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.16);color:#fff;white-space:nowrap}
+.pill.ok{background:#1f9d55}.pill.err{background:#d64545}
+button{font:inherit;cursor:pointer}
+.icon{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:18px;line-height:1}
+.back{border:0;background:var(--accent);color:#14233b;padding:8px 14px;border-radius:99px;font-weight:800;font-size:14px}
+.hidden{display:none!important}
+main{padding:16px 12px 48px;max-width:720px;margin:0 auto}
+.menu{display:grid;gap:14px}
+.menu h2{margin:6px 4px 0;font-size:26px;color:var(--brand)}
+.menu p.s{margin:0 4px 4px;color:var(--muted)}
+.big{width:100%;text-align:left;border:0;border-radius:22px;padding:20px 22px;color:#fff;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)}
+.big b{display:block;font-size:20px}
+.big span{font-size:14px;opacity:.9}
+.big::after{content:"›";font-size:34px;line-height:1;opacity:.8}
+.card{background:var(--card);border-radius:22px;overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.bar{background:var(--c);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.bar h3{margin:0;font-size:21px;font-weight:800}
+.bar .time{font-weight:700;font-size:13px;background:rgba(255,255,255,.22);padding:5px 11px;border-radius:99px;white-space:nowrap}
+.body{padding:6px 16px 18px}
+.hint{margin:10px 0 0;font-size:14px;color:var(--muted)}
+label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:14px 0 6px}
+input,textarea{width:100%;font:inherit;font-size:17px;color:var(--text);background:var(--field);
+  border:2px solid transparent;border-radius:14px;padding:13px 14px;min-height:50px;transition:border-color .15s,background .15s}
+textarea{min-height:96px;resize:vertical}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
+input:focus,textarea:focus{outline:none;border-color:var(--focus);background:var(--card)}
+input:disabled,textarea:disabled{opacity:.85}
+.weekbtn{width:100%;display:flex;justify-content:space-between;align-items:center;background:var(--card);color:var(--text);
+  border:0;border-radius:18px;padding:18px;margin:0 0 12px;font-weight:700;box-shadow:var(--shadow)}
+.weekbtn small{color:var(--brand);font-weight:700}
+.note{background:var(--card);border-left:5px solid var(--accent);border-radius:14px;padding:12px 14px;margin:0 0 14px;color:var(--muted);font-size:15px;box-shadow:var(--shadow)}
+h2.sec{font-size:22px;margin:4px 4px 14px;color:var(--brand)}
+.copybtn{width:100%;border:0;border-radius:18px;padding:18px;background:#25a244;color:#fff;font-weight:800;font-size:18px;box-shadow:var(--shadow)}
+.copybtn:active{transform:scale(.99)}
+.copyhint{text-align:center;color:var(--muted);font-size:14px;margin:8px 0 0;min-height:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="t"><h1>Harmonogram schůzky</h1><p id="weekLabel"></p></div>
+  <button class="back hidden" id="homeBtn" type="button">Menu</button>
+  <button class="icon" id="themeBtn" type="button" aria-label="Přepnout světlý a tmavý režim"></button>
+  <span class="pill" id="status">Připojuji</span>
+</header>
+
+<main>
+  <section class="menu" id="menu">
+    <h2>Co chceš otevřít?</h2>
+    <p class="s">Program se každou středu v 19:01 přepne na další schůzku.</p>
+    <button class="big" type="button" data-view="today" style="background:linear-gradient(135deg,#0d3478,#1d5fc2)"><div><b>Dnešní program</b><span>Aktuální schůzka, tady se vyplňuje</span></div></button>
+    <button class="big" type="button" data-view="future" style="background:linear-gradient(135deg,#0f6b4f,#2e9e6b)"><div><b>Budoucí program</b><span>Plánování schůzek dopředu</span></div></button>
+    <button class="big" type="button" data-view="history" style="background:linear-gradient(135deg,#4a5568,#718096)"><div><b>Historie</b><span>Proběhlé schůzky</span></div></button>
+  </section>
+  <section id="content" class="hidden"></section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAgqIX3_OHPrh27vuMJsIUpKLjVLcxMOaU",
+  authDomain: "skladatel-progrmu-a-her.firebaseapp.com",
+  databaseURL: "https://skladatel-progrmu-a-her-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "skladatel-progrmu-a-her",
+  storageBucket: "skladatel-progrmu-a-her.firebasestorage.app",
+  messagingSenderId: "1088099395066",
+  appId: "1:1088099395066:web:38863cc7963b8a8fc27043"
+};
+const ROOT = "skautsky_harmonogram";
+
+const STRUCTURE = [
+  { time:"17:00 – 17:05", name:"Zahájení",       hint:"Třeba nástup, pokřik",          c:"#1d4ed8" },
+  { time:"17:05 – 17:15", name:"Hybka",          hint:"Uklidní a zatraktivní schůzku",  c:"#0f766e" },
+  { time:"17:15 – 18:00", name:"Hlavní program", hint:"Máme cíl, 45 minut",             c:"#b45309" },
+  { time:"18:00 – 18:10", name:"Hybka",          hint:"Důležitá po sedavém programu",   c:"#0f766e" },
+  { time:"18:10 – 18:45", name:"Větší program",  hint:"Práce na cílech",                c:"#6d28d9" },
+  { time:"Záloha",        name:"Záložní hybka",  hint:"Pro případ potřeby",             c:"#be185d" },
+  { time:"18:45 – 18:50", name:"Úklid",          hint:"Prosím nezanedbávat!",           c:"#475569" },
+  { time:"18:50 – 19:00", name:"Zakončení",      hint:"Třeba nástup, zhodnocení",       c:"#0369a1" },
+  { time:"Bonus",         name:"Ohlédnutí",      hint:"Jak se schůzka povedla?",        c:"#15803d" },
+  { time:"Nápady",        name:"Brainstorming",  hint:"Místo pro nápady na příště",     c:"#7c3aed", brain:true }
+];
+
+const $ = id => document.getElementById(id);
+const statusEl = $("status");
+function setStatus(text, cls){ statusEl.textContent = text; statusEl.className = "pill " + (cls||""); }
+
+/* ---- světlý / tmavý režim ---- */
+const themeBtn = $("themeBtn");
+const sysDark = window.matchMedia("(prefers-color-scheme: dark)");
+function isDark(){ const t = document.documentElement.dataset.theme; return t ? t === "dark" : sysDark.matches; }
+function paintTheme(){ themeBtn.textContent = isDark() ? "☀" : "☾"; }
+try { const saved = localStorage.getItem("theme"); if (saved) document.documentElement.dataset.theme = saved; } catch(e){}
+themeBtn.addEventListener("click", () => {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("theme", next); } catch(e){}
+  paintTheme();
+});
+sysDark.addEventListener("change", paintTheme);
+paintTheme();
+
+/* ---- týden: schůzka je ve středu, ve středu v 19:01 se přepne na další ---- */
+const pad = n => String(n).padStart(2,"0");
+const toId = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+function currentMeeting(now = new Date()){
+  const s = new Date(now.getTime() - (19*60+1)*60000);
+  s.setHours(12,0,0,0);
+  const add = ((3 - s.getDay() + 7) % 7) || 7;
+  s.setDate(s.getDate() + add);
+  return s;
+}
+function addWeeks(d, n){ const x = new Date(d); x.setDate(x.getDate() + 7*n); return x; }
+const fmt = d => `${d.getDate()}. ${d.getMonth()+1}. ${d.getFullYear()}`;
+const parseId = id => { const [y,m,d] = id.split("-").map(Number); return new Date(y, m-1, d, 12); };
+
+let db = null;
+try { db = getDatabase(initializeApp(firebaseConfig)); setStatus("Online","ok"); }
+catch(e){ console.error(e); setStatus("Offline","err"); }
+
+let unsub = null;
+function stopSync(){ if (unsub){ unsub(); unsub = null; } }
+
+/* ---- navigace ---- */
+function show(view){
+  $("menu").classList.toggle("hidden", view !== "menu");
+  $("content").classList.toggle("hidden", view === "menu");
+  $("homeBtn").classList.toggle("hidden", view === "menu");
+}
+function goHome(){ stopSync(); show("menu"); $("weekLabel").textContent = "Schůzka ve středu " + fmt(currentMeeting()); }
+
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => {
+  const v = b.dataset.view;
+  show("content");
+  if (v === "today") openWeek(toId(currentMeeting()), true);
+  else openWeekList(v);
+}));
+$("homeBtn").addEventListener("click", goHome);
+
+/* ---- seznam týdnů ---- */
+function openWeekList(type){
+  stopSync();
+  const cur = currentMeeting(), box = $("content");
+  box.innerHTML = "";
+  const h = document.createElement("h2"); h.className = "sec";
+  h.textContent = type === "future" ? "Budoucí program" : "Historie";
+  box.appendChild(h);
+  for (let i = 1; i <= 8; i++){
+    const d = addWeeks(cur, type === "future" ? i : -i);
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "weekbtn";
+    b.innerHTML = "<span></span><small>Otevřít</small>";
+    b.firstChild.textContent = "Středa " + fmt(d);
+    b.addEventListener("click", () => openWeek(toId(d), type === "future"));
+    box.appendChild(b);
+  }
+}
+
+/* ---- editor týdne ---- */
+function openWeek(weekId, editable){
+  stopSync();
+  const box = $("content");
+  box.innerHTML = "";
+  $("weekLabel").textContent = "Schůzka ve středu " + fmt(parseId(weekId));
+  if (!editable){
+    const n = document.createElement("div"); n.className = "note";
+    n.textContent = "Proběhlá schůzka, jen ke čtení."; box.appendChild(n);
+  }
+  const fields = {};
+  STRUCTURE.forEach((it, i) => {
+    const card = document.createElement("div"); card.className = "card";
+    const bar = document.createElement("div"); bar.className = "bar"; bar.style.setProperty("--c", it.c);
+    const h3 = document.createElement("h3"); h3.textContent = it.name;
+    const t = document.createElement("span"); t.className = "time"; t.textContent = it.time;
+    bar.append(h3, t);
+    const body = document.createElement("div"); body.className = "body";
+    const hi = document.createElement("p"); hi.className = "hint"; hi.textContent = it.hint; body.appendChild(hi);
+    const defs = it.brain
+      ? [["garant","Kdo navrhuje","Jméno","input"],["detail","Nápady","Hry, témata, vylepšení…","textarea"]]
+      : [["garant","Garant","Jméno","input"],["detail","Náplň programu","Co se bude dělat","textarea"],["items","Pomůcky","Co je potřeba sehnat","input"]];
+    defs.forEach(([key,label,ph,tag]) => {
+      const l = document.createElement("label"); l.textContent = label;
+      const el = document.createElement(tag);
+      if (tag === "input") el.type = "text";
+      el.placeholder = ph; el.disabled = !editable; el.autocomplete = "off";
+      fields[i+"/"+key] = el;
+      if (editable && db){
+        let timer;
+        el.addEventListener("input", () => {
+          setStatus("Ukládám","");
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            set(ref(db, `${ROOT}/${weekId}/items/${i}/${key}`), el.value)
+              .then(() => setStatus("Uloženo","ok"))
+              .catch(e => { console.error(e); setStatus("Chyba uložení","err"); });
+          }, 400);
+        });
+      }
+      body.append(l, el);
+    });
+    card.append(bar, body); box.appendChild(card);
+  });
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button"; copyBtn.className = "copybtn"; copyBtn.textContent = "Zkopírovat zápis z rady pro WhatsApp";
+  const copyMsg = document.createElement("p"); copyMsg.className = "copyhint";
+  copyBtn.addEventListener("click", async () => {
+    const val = k => (fields[k] ? fields[k].value.trim() : "");
+    const parts = [], notes = [];
+    STRUCTURE.forEach((it, i) => {
+      const garant = val(i+"/garant"), detail = val(i+"/detail"), items = val(i+"/items");
+      if (it.brain){ if (detail) notes.push(detail); return; }
+      if (!garant && !detail && !items) return;
+      const body = detail || it.name;
+      let text = "• " + (garant ? "*" + garant + "* - " : "") + body;
+      if (items) text += "\nPomůcky: " + items;
+      parts.push(text);
+    });
+    let out = parts.join("\n\n");
+    if (notes.length) out += (out ? "\n\n\n" : "") + notes.join("\n");
+    if (!out){ copyMsg.textContent = "Zatím není co kopírovat."; return; }
+    try { await navigator.clipboard.writeText(out); }
+    catch(e){
+      const ta = document.createElement("textarea"); ta.value = out; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch(_){ }
+      ta.remove();
+    }
+    copyMsg.textContent = "Zkopírováno, vlož do WhatsAppu.";
+    setTimeout(() => { copyMsg.textContent = ""; }, 3000);
+  });
+  box.append(copyBtn, copyMsg);
+
+  if (!db) return;
+  unsub = onValue(ref(db, `${ROOT}/${weekId}/items`), snap => {
+    const data = snap.val() || {};
+    for (const k in fields){
+      const [i,key] = k.split("/");
+      const v = (data[i] && data[i][key]) || "";
+      if (document.activeElement !== fields[k] && fields[k].value !== v) fields[k].value = v;
+    }
+    setStatus("Online","ok");
+  }, err => { console.error(err); setStatus("Chyba čtení","err"); });
+}
+
+goHome();
+</script>
+</body>
+</html>
