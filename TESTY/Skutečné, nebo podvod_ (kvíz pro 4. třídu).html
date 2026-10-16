@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Skutečné, nebo podvod?</title>
+<style>
+:root{--bg:#eef2f7;--card:#fff;--tx:#202124;--mu:#5f6368;--bd:#dadce0;--bl:#1a56db;--ok:#188038;--okb:#e6f4ea;--ko:#d93025;--kob:#fce8e6;--sms:#e9e9eb;--me:#0b84fe;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181f;--card:#1f242c;--tx:#e8eaed;--mu:#9aa0a6;--bd:#3c4043;--bl:#8ab4f8;--ok:#81c995;--okb:#16301f;--ko:#f28b82;--kob:#3a1c1a;--sms:#2c2f36}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:18px}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--bd)}
+header b{font-size:20px}
+.dots{display:flex;gap:6px;margin-left:auto}
+.dots i{width:14px;height:14px;border-radius:50%;background:var(--bd)}
+.dots i.cur{outline:3px solid var(--bl)}.dots i.g{background:var(--ok)}.dots i.b{background:var(--ko)}
+main{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px;max-width:900px;width:100%;margin:0 auto}
+.q{font-size:22px;font-weight:700;text-align:center}
+.mail,.phone{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;overflow-x:auto}
+.mail h2{font-weight:400;font-size:24px;margin:0 0 12px}
+.tag{font-size:13px;background:var(--bd);border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:middle}
+.from{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+.from small{color:var(--mu);display:block}
+.box{border:1px solid var(--bd);border-radius:12px;padding:20px;text-align:center}
+.box h3{font-weight:400;font-size:24px;margin:8px 0}
+.box p{margin:10px 0}
+.btn{display:inline-block;background:#1a56db;color:#fff;border-radius:24px;padding:12px 26px;font-weight:600;cursor:pointer;margin:8px 0;border:0;font:inherit}
+.lnk{color:var(--bl);text-decoration:underline;cursor:pointer;word-break:break-all}
+.hint{font-size:14px;color:var(--mu);text-align:center}
+.sms{max-width:480px;margin:0 auto}
+.sms .top{text-align:center;font-size:14px;color:var(--mu);margin-bottom:10px}
+.bub{background:var(--sms);border-radius:18px;padding:10px 14px;margin:6px 60px 6px 0;line-height:1.35}
+.bub.me{background:var(--me);color:#fff;margin:6px 0 6px 60px}
+.phone{max-width:420px;margin:0 auto;text-align:center;background:#1c1f26;color:#fff;border-color:#1c1f26}
+.phone .num{font-size:26px;margin:6px 0}.phone .sub{color:#aab}
+.phone .circ{width:80px;height:80px;border-radius:50%;background:#555;margin:6px auto;display:grid;place-items:center;font-size:36px}
+.say{background:#2b303a;border-radius:14px;padding:10px 14px;margin:8px 0;text-align:left;font-size:17px}
+.call{display:flex;justify-content:space-around;margin-top:12px}
+.call span{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:24px}
+.answers{display:flex;gap:12px}
+.answers button{flex:1;font:inherit;font-size:20px;font-weight:700;padding:16px;border-radius:14px;border:3px solid;cursor:pointer;background:var(--card);color:var(--tx)}
+#ok{border-color:var(--ok)}#ko{border-color:var(--ko)}
+.answers button:disabled{opacity:.5;cursor:default}
+#fb{border-radius:12px;padding:14px;display:none}
+#fb.g{display:block;background:var(--okb);border:2px solid var(--ok)}
+#fb.b{display:block;background:var(--kob);border:2px solid var(--ko)}
+#fb h4{margin:0 0 6px;font-size:22px}
+#fb ul{margin:6px 0 10px;padding-left:22px}
+#nx{font:inherit;font-weight:700;background:var(--bl);color:#fff;border:0;border-radius:12px;padding:12px 24px;cursor:pointer;float:right}
+#bar{position:sticky;bottom:0;background:#202124;color:#fff;border-radius:8px;padding:8px 12px;font-size:15px;display:none;word-break:break-all}
+.end{text-align:center}.end .big{font-size:64px}
+.rules{text-align:left;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 20px;margin:12px 0}
+</style>
+</head>
+<body>
+<header><b>🕵️ Skutečné, nebo podvod?</b><div class="dots" id="dots"></div></header>
+<main id="m"></main>
+<script>
+const Q=[
+{t:'mail',av:'#d93a74',al:'T',name:'Google',addr:'no-reply@accounts.google.com',subj:'Bezpečnostní upozornění',
+ title:'Nové přihlášení na Apple iPhone',acc:'zak.4a@gmail.com',
+ body:'Zaznamenali jsme nové přihlášení k tvému účtu Google. Pokud jsi to byl ty, nemusíš nic dělat.',btn:'Zkontrolovat aktivitu',url:'https://myaccount.google.com/notifications',real:true,
+ why:['Adresa odesílatele končí přesně <b>@accounts.google.com</b>.','Odkaz vede na <b>myaccount.google.com</b> – to je opravdu Google.','Nikdo tě nehoní, nic nechce zaplatit ani poslat.']},
+{t:'mail',av:'#1e3a8a',al:'P',name:'Policie České republiky',addr:'info@policie-cr-pokuty.com',subj:'POSLEDNÍ VAROVÁNÍ – pokuta',
+ title:'Dostal jsi pokutu 2 000 Kč',acc:'zak.4a@gmail.com',
+ body:'Policie ČR eviduje tvůj přestupek. Pokud do <b>1 hodiny</b> nezaplatíš, přijdeme si pro tebe domů!',btn:'ZAPLATIT POKUTU',url:'http://policie-cr-pokuty.xyz/zaplat?karta',real:false,
+ why:['Opravdová policie má adresu končící <b>policie.gov.cz</b>, ne „.com“.','Odkaz končí <b>.xyz</b> a vede jinam než na policii.','Hrozí a spěchá („do 1 hodiny!“) – podvodníci chtějí, abys nepřemýšlel.','Policie nikdy neposílá dětem pokuty e-mailem.']},
+{t:'sms',num:'Česká pošta',txt:'Váš balíček nelze doručit. Doplaťte 25 Kč na adrese:',url:'http://ceskaposta-balik.top/zaplat',real:false,
+ why:['Česká pošta nepíše s odkazem na adresu <b>.top</b>.','Chce po tobě peníze a údaje o platební kartě.','Čekal jsi nějaký balíček? Když ne, je to ještě podezřelejší. Ukaž zprávu rodičům.']},
+{t:'call',num:'+420 7•• ••• 412',name:'Neznámé číslo',says:['„Dobrý den, tady policista. Vaší babičce se stalo neštěstí!“','„Rychle mi řekněte, kde máte doma schované peníze. Pošlu pro ně kolegu.“'],real:false,
+ why:['Policista <b>nikdy</b> po telefonu nechce peníze ani nechce vědět, kde jsou schované.','Straší a spěchá – to dělají podvodníci.','Správně: <b>zavěsit</b>, říct to rodičům a zavolat babičce na její číslo. Pravá policie je na čísle <b>158</b>.']},
+{t:'mail',av:'#188038',al:'G',name:'Google Classroom',addr:'no-reply@classroom.google.com',subj:'Nový úkol: Přírodověda',
+ title:'Paní učitelka zadala nový úkol',acc:'zak.4a@gmail.com',
+ body:'Do třídy <b>4. A</b> byl přidán úkol „Moje oblíbené zvíře“. Termín: pátek.',btn:'Otevřít úkol',url:'https://classroom.google.com/c/4a/task',real:true,
+ why:['Odesílatel je <b>@classroom.google.com</b>.','Odkaz vede na <b>classroom.google.com</b>.','Nežádá heslo ani peníze, jen ti oznamuje úkol.']},
+{t:'mail',av:'#7c3aed',al:'F',name:'Fortnite Support',addr:'gifts@fortnlte-support.com',subj:'🎁 Vyhrál jsi 10 000 V-Bucks!',
+ title:'Gratulujeme! Jsi vítěz!',acc:'zak.4a@gmail.com',
+ body:'Stačí se přihlásit a my ti dárek připíšeme. Napiš nám své <b>heslo</b> a jméno rodičů.',btn:'VYZVEDNOUT DÁREK',url:'http://fortnlte-free.com/login',real:false,
+ why:['Ve slově <b>fortnlte</b> je místo „i“ písmeno „l“ – falešná adresa!','Nikdo ti nedává dárky zadarmo, to je návnada.','Heslo nikdy nikomu nesděl, ani „podpoře“.']},
+{t:'sms',num:'Máma 💛',txt:'Ahoj, dneska tě vyzvednu v 15:00 před školou. Budu u zadního vchodu.',url:null,real:true,
+ why:['Číslo máš uložené jako <b>Máma</b>, znáš ho.','Žádný odkaz, žádné peníze, žádný spěch.','Je to běžná zpráva od někoho, koho znáš.']}
+];
+let i=0,score=0,res=[];const m=document.getElementById('m');
+function dots(){document.getElementById('dots').innerHTML=Q.map((q,k)=>`<i class="${k==i?'cur':''} ${res[k]===true?'g':res[k]===false?'b':''}"></i>`).join('')}
+function render(q){
+ if(q.t=='mail')return `<div class="mail"><h2>${q.subj}<span class="tag">Doručená pošta</span></h2>
+ <div class="from"><div class="av" style="background:${q.av}">${q.al}</div><div><b>${q.name}</b> &lt;${q.addr}&gt;<small>komu: já</small></div></div>
+ <div class="box"><h3>${q.title}</h3><p>👤 ${q.acc}</p><hr style="border:0;border-top:1px solid var(--bd)"><p>${q.body}</p>
+ <button class="btn" data-u="${q.url}">${q.btn}</button><p class="hint">Odkaz můžeš ukázat (klepnutím), ale nic se neotevře.<br><span class="lnk" data-u="${q.url}">${q.url.replace(/^https?:\/\//,'').split('/')[0]}</span></p></div></div>`;
+ if(q.t=='sms')return `<div class="phone" style="background:var(--card);color:var(--tx);border-color:var(--bd)"><div class="sms"><div class="top"><b>${q.num}</b><br>Dnes 14:07</div>
+ <div class="bub">${q.txt}${q.url?`<br><span class="lnk" data-u="${q.url}">${q.url}</span>`:''}</div></div></div>`;
+ return `<div class="phone"><div class="sub">Příchozí hovor…</div><div class="circ">👤</div><div class="num">${q.num}</div><div class="sub">${q.name}</div>
+ ${q.says.map(s=>`<div class="say">🗣️ ${s}</div>`).join('')}<div class="call"><span style="background:#d93025">📵</span><span style="background:#188038">📞</span></div></div>`}
+function show(){
+ const q=Q[i];dots();
+ m.innerHTML=`<div class="q">Otázka ${i+1} z ${Q.length}: ${q.t=='mail'?'📧 E-mail':q.t=='sms'?'💬 SMS':'📞 Hovor'}</div>${render(q)}
+ <div class="answers"><button id="ok">✅ Skutečné</button><button id="ko">🚨 Podvod</button></div><div id="fb"></div><div id="bar"></div>`;
+ m.querySelectorAll('[data-u]').forEach(e=>e.onclick=()=>{const b=document.getElementById('bar');b.style.display='block';b.textContent='🔗 Odkaz vede na: '+e.dataset.u});
+ document.getElementById('ok').onclick=()=>ans(true);document.getElementById('ko').onclick=()=>ans(false)}
+function ans(a){
+ const q=Q[i],good=a===q.real;res[i]=good;if(good)score++;dots();
+ document.getElementById('ok').disabled=document.getElementById('ko').disabled=true;
+ const f=document.getElementById('fb');f.className=good?'g':'b';
+ f.innerHTML=`<h4>${good?'👏 Správně!':'😮 Ouha!'} Tohle je ${q.real?'skutečná zpráva':'podvod'}.</h4><ul>${q.why.map(w=>`<li>${w}</li>`).join('')}</ul><button id="nx">${i<Q.length-1?'Další ➜':'Výsledek 🏁'}</button><div style="clear:both"></div>`;
+ document.getElementById('nx').onclick=()=>{i++;i<Q.length?show():end()};f.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function end(){
+ dots();const t=score>=6?'🏆 Skvělý detektiv!':score>=4?'👍 Dobrá práce!':'📚 Zkus to ještě jednou!';
+ m.innerHTML=`<div class="end"><div class="big">${score>=6?'🏆':score>=4?'👍':'📚'}</div><h1>${t}</h1><h2>Skóre: ${score} z ${Q.length}</h2>
+ <div class="rules"><b>Zapamatuj si:</b><ul><li>Podívej se na <b>adresu odesílatele</b> a na <b>odkaz</b>. Je psaný správně?</li><li>Podvodník <b>spěchá</b> a <b>straší</b>.</li><li>Nikomu nesděluj <b>heslo, kód ani údaje o kartě</b>.</li><li>Policie ti po telefonu ani e-mailem <b>nikdy nechce peníze</b>.</li><li>Máš pochybnost? <b>Zavolej rodičům</b> nebo to ukaž učitelce.</li></ul></div>
+ <button class="btn" id="re">🔄 Hrát znovu</button></div>`;
+ document.getElementById('re').onclick=()=>{i=0;score=0;res=[];show()}}
+show();
+</script>
+</body>
+</html>
