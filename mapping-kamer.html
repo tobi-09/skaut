@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kamera → projektor mapping</title>
+<style>
+:root{--bg:#000;--fg:#e9e6df;--acc:#ffb000;--line:#ffffff40}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,"Segoe UI",sans-serif;overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;cursor:crosshair;display:block}
+#ui{position:fixed;left:14px;top:14px;width:330px;background:#000d;border:1px solid var(--line);border-radius:8px;padding:12px 14px;backdrop-filter:blur(6px);z-index:5}
+#ui.hide{display:none}
+#ui h1{font-size:16px;margin:0 0 6px;font-weight:650}
+#ui p{margin:6px 0;color:#cfcbc2}
+select,button,input{font:inherit;color:var(--fg);background:#1c1c1c;border:1px solid #ffffff55;border-radius:6px;padding:6px 9px}
+select{width:100%;margin:4px 0 8px}
+button{cursor:pointer}
+button:hover{border-color:var(--acc)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button.on{background:var(--acc);color:#000;border-color:var(--acc)}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+label{display:block;margin-top:8px}
+input[type=range]{width:100%;padding:0}
+#step{color:var(--acc);font-weight:600}
+small{color:#9d998f}
+#pv{width:100%;display:block;border-radius:6px;border:1px solid #fff4;cursor:grab;touch-action:none;margin-top:6px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="ui">
+  <h1>Kamera → projektor</h1>
+  <div id="s0">
+    <p>Vyber kameru (webkamera nebo GoPro přes USB-C v režimu webkamery), potom okno přetáhni na projektor a dej celou obrazovku (F).</p>
+    <select id="cam" aria-label="Kamera"></select>
+    <div class="row"><button id="start">Spustit kameru</button><button id="fs">Celá obrazovka (F)</button></div>
+  </div>
+  <div id="s1" hidden>
+    <p id="step"></p>
+    <p id="hint"></p>
+    <div id="calbox" hidden><canvas id="pv" width="306" height="172"></canvas><p id="status"><small>Čekám na kalibraci.</small></p></div>
+    <div class="row" id="calrow" hidden><button id="auto">Najít čtverec automaticky</button><button id="rot">Otočit rohy</button><button id="mir2">Zrcadlit</button></div>
+    <div class="row"><button id="redo">Znovu</button><button id="next">Potvrdit (Enter)</button><button id="back">Zpět</button></div>
+  </div>
+  <div id="s4" hidden>
+    <p id="step4">Živý efekt</p>
+    <div class="row" id="fxrow">
+      <button data-fx="1">1 Neon</button><button data-fx="2">2 Glitch</button><button data-fx="3">3 Mozaika</button><button data-fx="4">4 Stopa</button><button data-fx="5">5 Plameny</button><button data-fx="6">6 Kaleidoskop</button><button data-fx="7">7 Matrix</button><button data-fx="8">8 Blesky</button><button data-fx="9">9 Echo</button>
+    </div>
+    <div class="row"><button id="snd">Zvuk (S)</button><button id="cyc">Auto efekty (A)</button><button id="bg">Uložit pozadí znovu (B)</button><button id="mir">Zrcadlit (M)</button><button id="guides">Okraje (G)</button><button id="recal">Kalibrace</button></div>
+    <label>Hlasitost<input id="vol" type="range" min="0" max="100" value="50"></label>
+    <label>Citlivost odstranění pozadí<input id="thr" type="range" min="10" max="150" value="45"></label>
+    <label>Světlo na snímané ploše<input id="lamp" type="range" min="0" max="255" value="255"></label>
+    <p><small>Snímaná plocha svítí bíle. Předmět v ní tvoří siluetu. Každý efekt má vlastní zvuk: větší plocha je hlasitější, poloha mění tón a jas, pohyb hraje noty. Efekty 1–9 přepínáš čísly. Pozadí se uloží samo 2 s po spuštění. Když se světlo změní, ulož ho znovu. H skryje panel.</small></p>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const video=document.createElement('video');video.muted=true;video.playsInline=true;
+let cycle=false,nextSw=0,autoBgAt=0,step=0,rects=[null,null,null],Q=null,drag=null,dragH=-1,fx=1,mirror=false,guides=true,bg=null,bgW=0,bgH=0,stream=null,detecting=false;
+const STEPS=[
+ ['1/3 Plocha na zdi','Nakresli myší bílý čtverec nebo obdélník. Projektor ho osvítí na zdi a z něj se bude snímat.'],
+ ['2/3 Kalibrace','Projektor ukazuje čtverec se čtyřmi barevnými rohy: červený vlevo nahoře, žlutý vpravo nahoře, zelený vpravo dole, modrý vlevo dole. Kamera je najde sama. Kdyby ne, přetáhni barevné body v náhledu na rohy čtverce.'],
+ ['3/3 Výstup','Nakresli třetí obdélník, do kterého se promítne to, co je ve čtverci na zdi. Nech ho mimo snímanou plochu.']
+];
+function resize(){cv.width=innerWidth;cv.height=innerHeight}
+addEventListener('resize',resize);resize();
+
+async function listCams(){
+  const d=(await navigator.mediaDevices.enumerateDevices()).filter(x=>x.kind==='videoinput');
+  const sel=$('cam'),cur=sel.value;sel.innerHTML='';
+  d.forEach((x,i)=>{const o=document.createElement('option');o.value=x.deviceId;o.textContent=x.label||('Kamera '+(i+1));sel.appendChild(o)});
+  if(cur)sel.value=cur;
+}
+async function start(){
+  try{
+    initAudio();
+    if(stream)stream.getTracks().forEach(t=>t.stop());
+    const id=$('cam').value;
+    stream=await navigator.mediaDevices.getUserMedia({video:id?{deviceId:{exact:id},width:{ideal:1280},height:{ideal:720}}:{width:{ideal:1280},height:{ideal:720}}});
+    video.srcObject=stream;await video.play();
+    await listCams();
+    if(step===0)goStep(1);
+  }catch(e){alert('Kameru se nepodařilo spustit: '+e.message+'\nOtevři soubor v Chromu a povol přístup ke kameře.')}
+}
+function defQ(){return [[.3,.3],[.7,.3],[.7,.7],[.3,.7]]}
+function goStep(n){
+  step=n;
+  if(n===2&&!Q)Q=defQ();
+  $('s0').hidden=n!==0;$('s1').hidden=!(n>=1&&n<=3);$('s4').hidden=n!==4;
+  $('calrow').hidden=n!==2;$('calbox').hidden=n!==2;
+  if(n===2)setTimeout(()=>{if(step===2)auto()},700);
+  if(n===4){bg=null;autoBgAt=performance.now()+2000}
+  if(n>=1&&n<=3){$('step').textContent=STEPS[n-1][0];$('hint').textContent=STEPS[n-1][1]}
+  updFx();
+}
+function updFx(){
+  document.querySelectorAll('[data-fx]').forEach(b=>b.classList.toggle('on',+b.dataset.fx===fx));
+  ['mir','mir2'].forEach(i=>$(i).classList.toggle('on',mirror));
+  $('guides').classList.toggle('on',guides);
+  $('snd').classList.toggle('on',!muted);
+  $('cyc').classList.toggle('on',cycle);
+}
+function ready(){return step===1?rects[0]:step===2?Q:step===3?rects[2]:false}
+function next(){if(step>=1&&step<=3&&ready())goStep(step+1)}
+function prev(){if(step>1)goStep(step-1)}
+function toggleMirror(){
+  mirror=!mirror;bg=null;if(step===4)autoBgAt=performance.now()+2000;
+  if(Q)Q=[Q[1],Q[0],Q[3],Q[2]].map(p=>[1-p[0],p[1]]);
+  updFx();
+}
+function auto(){
+  if(!video.videoWidth||!rects[0])return;
+  detecting=true;$('ui').style.visibility='hidden';
+  setTimeout(()=>{
+    const r=detect();detecting=false;$('ui').style.visibility='';
+    $('status').innerHTML='<small>'+r+'</small>';
+  },1200);
+}
+
+$('start').onclick=start;
+$('fs').onclick=toggleFs;
+$('next').onclick=next;$('back').onclick=prev;
+$('redo').onclick=()=>{if(step===1)rects[0]=null;else if(step===2)Q=defQ();else if(step===3)rects[2]=null};
+$('auto').onclick=auto;
+$('rot').onclick=()=>{if(Q)Q=[Q[1],Q[2],Q[3],Q[0]]};
+$('mir').onclick=$('mir2').onclick=toggleMirror;
+$('bg').onclick=saveBg;
+$('cyc').onclick=()=>{cycle=!cycle;nextSw=performance.now()+15000;updFx()};
+$('snd').onclick=()=>{initAudio();muted=!muted;updFx()};
+$('guides').onclick=()=>{guides=!guides;updFx()};
+$('recal').onclick=()=>goStep(2);
+document.querySelectorAll('[data-fx]').forEach(b=>b.onclick=()=>{fx=+b.dataset.fx;updFx()});
+function toggleFs(){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT')return;
+  const k=e.key.toLowerCase();
+  if(k==='f')toggleFs();
+  else if(k==='h')$('ui').classList.toggle('hide');
+  else if(k==='enter')next();
+  else if(k==='backspace'||k==='arrowleft'){if(step===4)goStep(3);else prev()}
+  else if(step===4){
+    if('123456789'.includes(k)&&k.length===1)fx=+k,updFx();
+    if(k==='a'){cycle=!cycle;nextSw=performance.now()+15000;updFx()}
+    if(k==='b')saveBg();
+    if(k==='s'){initAudio();muted=!muted;updFx()}
+    if(k==='m')toggleMirror();
+    if(k==='g'){guides=!guides;updFx()}
+  }
+});
+
+// kreslení obdélníků (1 a 3) a tažení rohů (2)
+cv.addEventListener('pointerdown',e=>{
+  const nx=e.clientX/innerWidth,ny=e.clientY/innerHeight;
+  cv.setPointerCapture(e.pointerId);
+  if(step===1||step===3){
+    const i=step===1?0:2;
+    drag={x:nx,y:ny};rects[i]={x:nx,y:ny,w:0,h:0};
+  }
+});
+cv.addEventListener('pointermove',e=>{
+  const x=Math.min(1,Math.max(0,e.clientX/innerWidth)),y=Math.min(1,Math.max(0,e.clientY/innerHeight));
+  if(drag){const i=step===1?0:2;rects[i]={x:Math.min(x,drag.x),y:Math.min(y,drag.y),w:Math.abs(x-drag.x),h:Math.abs(y-drag.y)}}
+});
+cv.addEventListener('pointerup',()=>{
+  dragH=-1;
+  if(!drag)return;drag=null;
+  const i=step===1?0:2,r=rects[i];if(r&&(r.w<.02||r.h<.02))rects[i]=null;
+});
+
+// snímek z kamery (zrcadlení zahrnuto)
+const fr=document.createElement('canvas'),fctx=fr.getContext('2d',{willReadFrequently:true});
+function frame(){
+  const vw=video.videoWidth,vh=video.videoHeight;if(!vw)return null;
+  const w=640,h=Math.round(w*vh/vw);
+  if(fr.width!==w||fr.height!==h){fr.width=w;fr.height=h}
+  fctx.save();if(mirror){fctx.translate(w,0);fctx.scale(-1,1)}
+  fctx.drawImage(video,0,0,w,h);fctx.restore();
+  return fctx.getImageData(0,0,w,h);
+}
+// kalibrační vzor: bílý čtverec s barevnými rohy (červený, žlutý, zelený, modrý)
+const MARK=['#ff1a1a','#ffe600','#18ff30','#1a50ff'];
+function markerSize(){const q=px(rects[0]);return Math.min(q.w,q.h)*.17}
+function drawPattern(){
+  const P=rects[0];if(!P)return;
+  fillRect(P,'#fff');
+  const q=px(P),s=markerSize();
+  [[q.x,q.y],[q.x+q.w-s,q.y],[q.x+q.w-s,q.y+q.h-s],[q.x,q.y+q.h-s]].forEach((p,i)=>{ctx.fillStyle=MARK[i];ctx.fillRect(p[0],p[1],s,s)});
+}
+function markerCenters(){
+  const q=px(rects[0]),s=markerSize();
+  return [[q.x+s/2,q.y+s/2],[q.x+q.w-s/2,q.y+s/2],[q.x+q.w-s/2,q.y+q.h-s/2],[q.x+s/2,q.y+q.h-s/2]].map(p=>[p[0]/cv.width,p[1]/cv.height]);
+}
+function solveH(src,dst){
+  const A=[];
+  for(let i=0;i<4;i++){
+    const [x,y]=src[i],[u,v]=dst[i];
+    A.push([x,y,1,0,0,0,-u*x,-u*y,u]);A.push([0,0,0,x,y,1,-v*x,-v*y,v]);
+  }
+  for(let c=0;c<8;c++){
+    let p=c;for(let r=c+1;r<8;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;
+    if(Math.abs(A[p][c])<1e-12)return null;
+    [A[c],A[p]]=[A[p],A[c]];
+    for(let r=0;r<8;r++){if(r===c)continue;const f=A[r][c]/A[c][c];for(let k=c;k<9;k++)A[r][k]-=f*A[c][k]}
+  }
+  return A.map((r,i)=>r[8]/r[i]);
+}
+function applyH(h,x,y){const k=h[6]*x+h[7]*y+1;return [(h[0]*x+h[1]*y+h[2])/k,(h[3]*x+h[4]*y+h[5])/k]}
+// najde čtyři barevné rohy; z každé barvy bere největší souvislou skvrnu, takže odrazy a drobné zbytky nevadí
+function detect(){
+  const f=frame();if(!f||!rects[0])return 'Kamera neběží.';
+  const {width:w,height:h,data:d}=f,n=w*h,cls=new Int8Array(n).fill(-1);
+  for(let i=0,p=0;i<n;i++,p+=4){
+    const r=d[p],g=d[p+1],b=d[p+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+    if(mx<100||(mx-mn)/mx<.5)continue;
+    const dl=mx-mn;let hh;
+    if(mx===r)hh=((g-b)/dl+6)%6;else if(mx===g)hh=(b-r)/dl+2;else hh=(r-g)/dl+4;
+    hh*=60;
+    cls[i]=(hh<20||hh>335)?0:(hh>35&&hh<75)?1:(hh>85&&hh<165)?2:(hh>190&&hh<265)?3:-1;
+  }
+  const seen=new Uint8Array(n),stack=new Int32Array(n),best=[null,null,null,null];
+  for(let s0=0;s0<n;s0++){
+    const c=cls[s0];if(c<0||seen[s0])continue;
+    let sp=0,cnt=0,sx=0,sy=0;stack[sp++]=s0;seen[s0]=1;
+    while(sp){
+      const i=stack[--sp],x=i%w,y=(i/w)|0;cnt++;sx+=x;sy+=y;
+      if(x>0&&!seen[i-1]&&cls[i-1]===c){seen[i-1]=1;stack[sp++]=i-1}
+      if(x<w-1&&!seen[i+1]&&cls[i+1]===c){seen[i+1]=1;stack[sp++]=i+1}
+      if(y>0&&!seen[i-w]&&cls[i-w]===c){seen[i-w]=1;stack[sp++]=i-w}
+      if(y<h-1&&!seen[i+w]&&cls[i+w]===c){seen[i+w]=1;stack[sp++]=i+w}
+    }
+    if(!best[c]||cnt>best[c].cnt)best[c]={cnt,x:sx/cnt/w,y:sy/cnt/h};
+  }
+  const names=['červený','žlutý','zelený','modrý'],miss=names.filter((_,i)=>!best[i]||best[i].cnt<15);
+  if(miss.length)return 'Nenašel jsem: '+miss.join(', ')+'. Zatemni místnost a zkontroluj, že kamera vidí celý čtverec. Nebo přetáhni body ručně.';
+  const H=solveH(markerCenters(),best.map(b=>[b.x,b.y]));
+  if(!H)return 'Rohy leží na jedné přímce, zkus kameru natočit jinak.';
+  const P=rects[0];
+  Q=[[P.x,P.y],[P.x+P.w,P.y],[P.x+P.w,P.y+P.h],[P.x,P.y+P.h]].map(c=>applyH(H,c[0],c[1]));
+  return 'Nalezeno všech 4 rohů. Zkontroluj náhled a Enter potvrdí.';
+}
+// náhled kamery v panelu (nepromítá se přes celou plochu, takže se nevytváří nekonečné zrcadlo)
+const pv=$('pv'),pvx=pv.getContext('2d');
+function updatePreview(){
+  if(!video.videoWidth)return;
+  const hh=Math.round(pv.width*video.videoHeight/video.videoWidth);
+  if(pv.height!==hh)pv.height=hh;
+  frame();
+  pvx.drawImage(fr,0,0,pv.width,pv.height);
+  if(!Q)return;
+  pvx.lineWidth=2;pvx.strokeStyle='#ffb000';pvx.beginPath();
+  Q.forEach((p,i)=>{const x=p[0]*pv.width,y=p[1]*pv.height;i?pvx.lineTo(x,y):pvx.moveTo(x,y)});
+  pvx.closePath();pvx.stroke();
+  Q.forEach((p,i)=>{pvx.fillStyle=MARK[i];pvx.beginPath();pvx.arc(p[0]*pv.width,p[1]*pv.height,7,0,7);pvx.fill();pvx.strokeStyle='#000';pvx.lineWidth=1;pvx.stroke()});
+}
+pv.addEventListener('pointerdown',e=>{
+  if(!Q)return;
+  pv.setPointerCapture(e.pointerId);
+  const r=pv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+  let b=-1,bd=.08;
+  Q.forEach((p,i)=>{const dd=Math.hypot(p[0]-x,(p[1]-y)*r.height/r.width);if(dd<bd){bd=dd;b=i}});
+  dragH=b;
+});
+pv.addEventListener('pointermove',e=>{
+  if(dragH<0)return;
+  const r=pv.getBoundingClientRect();
+  Q[dragH]=[Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))];
+});
+pv.addEventListener('pointerup',()=>{dragH=-1});
+// čtverec (0–1) → čtyřúhelník v kameře
+function quadMap(q){
+  const [x0,y0]=q[0],[x1,y1]=q[1],[x2,y2]=q[2],[x3,y3]=q[3];
+  const dx1=x1-x2,dx2=x3-x2,dx3=x0-x1+x2-x3,dy1=y1-y2,dy2=y3-y2,dy3=y0-y1+y2-y3;
+  let a,b,c,d,e,f,g=0,h=0;
+  const det=dx1*dy2-dx2*dy1;
+  if(Math.abs(dx3)<1e-9&&Math.abs(dy3)<1e-9||Math.abs(det)<1e-12){a=x1-x0;b=x3-x0;d=y1-y0;e=y3-y0}
+  else{g=(dx3*dy2-dx2*dy3)/det;h=(dx1*dy3-dx3*dy1)/det;a=x1-x0+g*x1;b=x3-x0+h*x3;d=y1-y0+g*y1;e=y3-y0+h*y3}
+  c=x0;f=y0;
+  return (u,v)=>{const k=g*u+h*v+1;return [(a*u+b*v+c)/k,(d*u+e*v+f)/k]};
+}
+// vzorkování plochy na zdi do obdélníku
+const off=document.createElement('canvas'),octx=off.getContext('2d');
+const tmp=document.createElement('canvas'),tctx=tmp.getContext('2d');
+const ch=[0,1,2].map(()=>document.createElement('canvas'));
+const pc=document.createElement('canvas'),pctx=pc.getContext('2d');
+function sample(){
+  const P=rects[0];if(!P||!Q)return null;
+  const f=frame();if(!f)return null;
+  const w=240,h=Math.max(8,Math.round(w*(P.h*cv.height)/(P.w*cv.width)));
+  if(off.width!==w||off.height!==h){off.width=tmp.width=w;off.height=tmp.height=h;ch.forEach(x=>{x.width=w;x.height=h});pc.width=w;pc.height=h}
+  const out=octx.createImageData(w,h),od=out.data,fd=f.data,fw=f.width,fh=f.height,T=quadMap(Q);
+  for(let j=0;j<h;j++)for(let i=0;i<w;i++){
+    const [X,Y]=T((i+.5)/w,(j+.5)/h);
+    const x=Math.min(fw-1,Math.max(0,X*fw|0)),y=Math.min(fh-1,Math.max(0,Y*fh|0));
+    const s=(y*fw+x)*4,p=(j*w+i)*4;
+    od[p]=fd[s];od[p+1]=fd[s+1];od[p+2]=fd[s+2];od[p+3]=255;
+  }
+  return out;
+}
+function saveBg(){
+  autoBgAt=0;
+  const img=sample();if(!img)return;
+  bg=new Uint8ClampedArray(img.data);bgW=img.width;bgH=img.height;
+}
+let acc=null;
+function mask(img){
+  const {width:w,height:h,data:d}=img,thr=+$('thr').value*3;
+  const n=w*h,ok=bg&&bgW===w&&bgH===h;
+  if(!acc||acc.length!==n)acc=new Float32Array(n);
+  for(let i=0,p=0;i<n;i++,p+=4){
+    const raw=ok?(Math.abs(d[p]-bg[p])+Math.abs(d[p+1]-bg[p+1])+Math.abs(d[p+2]-bg[p+2])>thr?1:0):0;
+    acc[i]=acc[i]*.55+raw*.45;
+  }
+  const m=new Uint8Array(n);
+  for(let i=0;i<n;i++)m[i]=acc[i]>.5?1:0;
+  const o=new Uint8Array(n);
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const i=y*w+x;
+    const q=m[i-w-1]+m[i-w]+m[i-w+1]+m[i-1]+m[i]+m[i+1]+m[i+w-1]+m[i+w]+m[i+w+1];
+    o[i]=q>=5?1:0;
+  }
+  return o;
+}
+function hue(h){
+  const f=n=>{const k=(n+h/30)%12;return 255*(.5-.5*Math.max(-1,Math.min(k-3,9-k,1)))};
+  return [f(0),f(8),f(4)];
+}
+function px(r){return {x:r.x*cv.width,y:r.y*cv.height,w:r.w*cv.width,h:r.h*cv.height}}
+
+// zvuk: každý efekt má vlastní nástroj. Velikost plochy = hlasitost, poloha = tón a jas, pohyb = noty
+let AC=null,master=null,lpf=null,fbk=null,oscs=[],oscG=[],rumG=null,rumF=null,noiseBuf=null,muted=false,prevM=null,lt=0,arp=0;
+const SCALE=[0,3,5,7,10];
+function noteFreq(i){return 110*Math.pow(2,(SCALE[((i%5)+5)%5]+12*Math.floor(i/5))/12)}
+function initAudio(){
+  if(AC){AC.resume();return}
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain();master.gain.value=0;
+  lpf=AC.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=800;lpf.Q.value=4;
+  const dl=AC.createDelay(1),wet=AC.createGain();fbk=AC.createGain();
+  dl.delayTime.value=.38;fbk.gain.value=.45;wet.gain.value=.5;
+  lpf.connect(master);master.connect(AC.destination);
+  master.connect(dl);dl.connect(fbk);fbk.connect(dl);dl.connect(wet);wet.connect(AC.destination);
+  noiseBuf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);
+  const nd=noiseBuf.getChannelData(0);for(let k=0;k<nd.length;k++)nd[k]=Math.random()*2-1;
+  const rs=AC.createBufferSource();rs.buffer=noiseBuf;rs.loop=true;
+  rumF=AC.createBiquadFilter();rumF.type='bandpass';rumF.frequency.value=180;rumF.Q.value=1;
+  rumG=AC.createGain();rumG.gain.value=0;rs.connect(rumF);rumF.connect(rumG);rumG.connect(master);rs.start();
+  for(let k=0;k<3;k++){
+    const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.detune.value=(Math.random()-.5)*10;
+    g.gain.value=0;o.connect(g);g.connect(lpf);o.start();oscs.push(o);oscG.push(g);
+  }
+}
+function every(ms){const n=AC.currentTime*1000;if(n-lt>=ms){lt=n;return true}return false}
+function tone(freq,type,vol,dur){
+  const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
+  o.type=type;o.frequency.value=freq;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.008);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g);g.connect(lpf);o.start(t);o.stop(t+dur+.05);
+}
+function noiseBurst(vol,dur,f,q){
+  const t=AC.currentTime,s=AC.createBufferSource(),b=AC.createBiquadFilter(),g=AC.createGain();
+  s.buffer=noiseBuf;b.type='bandpass';b.frequency.value=f;b.Q.value=q;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  s.connect(b);b.connect(g);g.connect(master);s.start(t,Math.random()*.8,dur+.02);
+}
+function zap(vol){
+  const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
+  o.type='sawtooth';o.frequency.setValueAtTime(1800+Math.random()*800,t);o.frequency.exponentialRampToValueAtTime(90,t+.16);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);
+  o.connect(g);g.connect(lpf);o.start(t);o.stop(t+.2);
+}
+function audioFrame(m,w,h){
+  if(!AC||!master)return;
+  const t=AC.currentTime,on=!muted,vol=+$('vol').value/100;
+  let n=0,sx=0,sy=0,chg=0;
+  const pm=prevM&&prevM.length===m.length?prevM:null;
+  for(let i=0;i<m.length;i++){
+    if(m[i]){n++;sx+=i%w;sy+=(i/w)|0}
+    if(pm&&m[i]!==pm[i])chg++;
+  }
+  prevM=m;
+  const area=n/m.length,motion=chg/m.length,cx=n?sx/n/w:.5,cy=n?sy/n/h:.5,alive=n>20&&on;
+  master.gain.setTargetAtTime(alive?Math.min(.45,Math.max(.14,area*1.8))*vol*2:0,t,.08);
+  const padOn=alive&&(fx===4||fx===6),mul=fx===6?[2,3,4.5]:[1,1.5,2],f=noteFreq(Math.round(cx*9)+5);
+  oscs.forEach((o,k)=>{const ty=fx===6||k!==1?'sine':'triangle';if(o.type!==ty)o.type=ty;o.frequency.setTargetAtTime(f*mul[k],t,.12)});
+  oscG[0].gain.setTargetAtTime(padOn?.6:0,t,.1);
+  oscG[1].gain.setTargetAtTime(padOn?Math.min(.5,area*2.2):0,t,.1);
+  oscG[2].gain.setTargetAtTime(padOn?Math.min(.4,area*1.4):0,t,.1);
+  rumG.gain.setTargetAtTime(alive&&fx===5?Math.min(.8,.2+area*1.5+motion*4):(alive&&fx===8?.12:0),t,.1);
+  rumF.frequency.setTargetAtTime(fx===8?70:150+(1-cy)*500,t,.1);
+  lpf.frequency.setTargetAtTime(padOn?250+(1-cy)*3200:500+(1-cy)*6000,t,.08);
+  fbk.gain.setTargetAtTime(fx===9?.72:.45,t,.1);
+  if(!alive)return;
+  const ni=Math.round(cx*9)+5;
+  switch(fx){
+    case 1: // syntetický arpeggiátor, rychlejší s větší plochou
+      if(every(Math.max(70,230-area*450))){arp=(arp+1)%4;tone(noteFreq(ni+[0,2,4,7][arp]),'sawtooth',.13,.2)}
+      break;
+    case 2: // glitch: šum a ostré pípnutí při pohybu
+      if(motion>.02&&every(90)){noiseBurst(.3,.06,1500+Math.random()*4000,3);tone(noteFreq(ni+(Math.random()*6|0))*2,'square',.07,.06)}
+      break;
+    case 3: // zvonkohra, hustější s větší plochou
+      if(every(Math.max(60,270-area*700))){const k=(Math.random()*10|0)+7;tone(noteFreq(k),'sine',.2,.6);tone(noteFreq(k)*2.76,'sine',.05,.25)}
+      break;
+    case 4: // pad + drnknutí při pohybu
+      if(motion>.012&&every(150))tone(noteFreq(ni+(Math.random()<.4?5:0)),'triangle',Math.min(.3,.08+motion*4),.7);
+      break;
+    case 5: // praskání ohně nad hukotem
+      if(Math.random()<motion*6+area*.25)noiseBurst(.2,.03,2000+Math.random()*3000,1);
+      break;
+    case 6: // zvonivý pad a pomalý arpeggio akord
+      if(every(420)){arp++;tone(noteFreq(ni+[0,4,7][arp%3]+5),'sine',.2,1.3)}
+      break;
+    case 7: // basa a hi-hat
+      if(every(125)){arp++;tone(noteFreq(Math.round(cy*4)),'square',.16,.11);if(arp%2)noiseBurst(.12,.02,8000,1)}
+      break;
+    case 8: // elektrické výboje
+      if(motion>.015&&every(110)){zap(.12);noiseBurst(.1,.05,3000,2)}
+      break;
+    case 9: // dlouhá ozvěna, tóny se vracejí
+      if(motion>.012&&every(150))tone(noteFreq(ni+(Math.random()<.5?2:0)),'triangle',Math.min(.3,.1+motion*4),.5);
+      break;
+  }
+}
+const parts=[];let hist=[],hpos=0,fcount=0,heads=[],hsp=[];
+const MX='01アイウエオカキクケコサシスセソ<>+*';
+function effect(img,m,O,t){
+  const {width:w,height:h,data:d}=img;
+  audioFrame(m,w,h);fcount++;
+  ctx.save();
+  ctx.beginPath();ctx.rect(O.x,O.y,O.w,O.h);ctx.clip();
+  ctx.imageSmoothingEnabled=true;
+  if(fx===1){
+    const o=tctx.createImageData(w,h),od=o.data;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const i=y*w+x;if(!m[i])continue;
+      const edge=x===0||y===0||x===w-1||y===h-1||!m[i-1]||!m[i+1]||!m[i-w]||!m[i+w];
+      const p=i*4;
+      if(edge){const c=hue((t*60+x*1.2+y*.8)%360);od[p]=c[0];od[p+1]=c[1];od[p+2]=c[2];od[p+3]=255}
+      else{od[p]=d[p]*.25;od[p+1]=d[p+1]*.25;od[p+2]=d[p+2]*.25;od[p+3]=170}
+    }
+    tctx.putImageData(o,0,0);
+    ctx.globalCompositeOperation='lighter';
+    ctx.filter='blur(10px)';ctx.drawImage(tmp,O.x,O.y,O.w,O.h);
+    ctx.filter='blur(3px)';ctx.drawImage(tmp,O.x,O.y,O.w,O.h);
+    ctx.filter='none';ctx.drawImage(tmp,O.x,O.y,O.w,O.h);
+  }else if(fx===2){
+    const cs=ch.map(c=>c.getContext('2d')),ds=cs.map(c=>c.createImageData(w,h));
+    for(let i=0;i<m.length;i++){if(!m[i])continue;const p=i*4;for(let k=0;k<3;k++){ds[k].data[p+k]=d[p+k]*1.2;ds[k].data[p+3]=255}}
+    cs.forEach((c,k)=>c.putImageData(ds[k],0,0));
+    ctx.globalCompositeOperation='lighter';
+    const n=14,sh=h/n,spike=Math.sin(t*3)>.6;
+    for(let s=0;s<n;s++){
+      const jump=(Math.random()<(spike?.5:.12))?(Math.random()-.5)*w*.25:0;
+      const split=4+(spike?10:0)+Math.sin(t*5+s)*3;
+      for(let k=0;k<3;k++){
+        const dx=(k-1)*split+jump;
+        ctx.drawImage(ch[k],0,s*sh,w,sh,O.x+dx*O.w/w,O.y+s*O.h/n,O.w,O.h/n+1);
+      }
+    }
+  }else if(fx===3){
+    const b=6,sx=O.w/w,sy=O.h/h;
+    ctx.globalCompositeOperation='lighter';
+    for(let by=0;by<h-b;by+=b)for(let bx=0;bx<w-b;bx+=b){
+      let n=0,r=0,g=0,bl=0;
+      for(let y=0;y<b;y++)for(let x=0;x<b;x++){const i=(by+y)*w+bx+x;if(m[i]){n++;const p=i*4;r+=d[p];g+=d[p+1];bl+=d[p+2]}}
+      if(n<b*b*.5)continue;
+      const lum=(r+g+bl)/(3*n)/255,c=hue((t*40+bx*2+by)%360);
+      ctx.fillStyle=`rgb(${c[0]*lum|0},${c[1]*lum|0},${c[2]*lum|0})`;
+      ctx.beginPath();
+      ctx.arc(O.x+(bx+b/2)*sx,O.y+(by+b/2)*sy,(.25+.45*lum+.1*Math.sin(t*4+bx))*b*Math.min(sx,sy),0,7);
+      ctx.fill();
+    }
+  }else if(fx===4){
+    const o=tctx.createImageData(w,h),od=o.data,c=hue((t*50)%360);
+    for(let i=0;i<m.length;i++){if(!m[i])continue;const p=i*4,l=(d[p]+d[p+1]+d[p+2])/765+.2;od[p]=c[0]*l;od[p+1]=c[1]*l;od[p+2]=c[2]*l;od[p+3]=255}
+    tctx.putImageData(o,0,0);
+    pctx.globalCompositeOperation='destination-out';
+    pctx.fillStyle='rgba(0,0,0,.10)';pctx.fillRect(0,0,w,h);
+    pctx.globalCompositeOperation='source-over';
+    pctx.drawImage(pc,0,-2);
+    pctx.globalCompositeOperation='lighter';
+    pctx.drawImage(tmp,0,0);
+    ctx.globalCompositeOperation='lighter';
+    ctx.filter='blur(8px)';ctx.drawImage(pc,O.x,O.y,O.w,O.h);
+    ctx.filter='none';ctx.drawImage(pc,O.x,O.y,O.w,O.h);
+  }else if(fx===5){
+    const sx=O.w/w,sy=O.h/h,o=tctx.createImageData(w,h),od=o.data,edges=[];
+    for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+      const i=y*w+x;if(!m[i])continue;
+      const p=i*4,edge=!m[i-1]||!m[i+1]||!m[i-w]||!m[i+w];
+      if(edge){od[p]=255;od[p+1]=170;od[p+2]=40;od[p+3]=255;edges.push(i)}
+      else{od[p]=90;od[p+1]=25;od[p+2]=0;od[p+3]=200}
+    }
+    tctx.putImageData(o,0,0);
+    ctx.globalCompositeOperation='lighter';
+    ctx.filter='blur(6px)';ctx.drawImage(tmp,O.x,O.y,O.w,O.h);
+    ctx.filter='none';ctx.drawImage(tmp,O.x,O.y,O.w,O.h);
+    if(edges.length)for(let k=0;k<35&&parts.length<900;k++){
+      const i=edges[Math.random()*edges.length|0];
+      parts.push({x:i%w,y:(i/w)|0,vx:(Math.random()-.5)*.5,vy:-(.5+Math.random()*1.5),life:1,h:Math.random()*45});
+    }
+    for(let k=parts.length-1;k>=0;k--){
+      const q=parts[k];
+      q.x+=q.vx+Math.sin(t*3+q.y*.15)*.25;q.y+=q.vy;q.life-=.022;
+      if(q.life<=0||q.y<-4){parts.splice(k,1);continue}
+      ctx.fillStyle=`hsla(${q.h+q.life*20},100%,${45+q.life*25}%,${q.life})`;
+      ctx.beginPath();ctx.arc(O.x+q.x*sx,O.y+q.y*sy,(1+q.life*2.2)*Math.min(sx,sy),0,7);ctx.fill();
+    }
+  }else if(fx===6){ // kaleidoskop
+    const o=tctx.createImageData(w,h),od=o.data;
+    for(let i=0;i<m.length;i++){if(!m[i])continue;const p=i*4,c=hue((t*40+(i%w)*1.5+((i/w)|0))%360),l=(d[p]+d[p+1]+d[p+2])/765*.7+.4;od[p]=c[0]*l;od[p+1]=c[1]*l;od[p+2]=c[2]*l;od[p+3]=255}
+    tctx.putImageData(o,0,0);
+    ctx.globalCompositeOperation='lighter';
+    const hw=O.w/2,hh=O.h/2;
+    for(let pass=0;pass<2;pass++){
+      ctx.filter=pass?'none':'blur(8px)';
+      for(let qx=0;qx<2;qx++)for(let qy=0;qy<2;qy++){
+        ctx.save();ctx.translate(O.x+hw,O.y+hh);ctx.scale(qx?-1:1,qy?-1:1);
+        ctx.drawImage(tmp,0,0,w,h,0,0,hw,hh);ctx.restore();
+      }
+    }
+    ctx.filter='none';
+  }else if(fx===7){ // matrix déšť jen uvnitř ruky
+    const b=6,cols=Math.floor(w/b),rows=Math.floor(h/b),sx=O.w/w,sy=O.h/h;
+    if(heads.length!==cols){heads=Array.from({length:cols},()=>Math.random()*rows);hsp=Array.from({length:cols},()=>.25+Math.random()*.6)}
+    for(let c=0;c<cols;c++)heads[c]=(heads[c]+hsp[c])%rows;
+    ctx.globalCompositeOperation='lighter';
+    ctx.font=`${b*sy*1.5}px monospace`;ctx.textAlign='center';ctx.textBaseline='middle';
+    for(let cy=0;cy<rows;cy++)for(let cx=0;cx<cols;cx++){
+      let n=0;
+      for(let y=0;y<b;y++)for(let x=0;x<b;x++)n+=m[(cy*b+y)*w+cx*b+x];
+      if(n<b*b*.5)continue;
+      const dist=(heads[cx]-cy+rows)%rows,br=Math.max(0,1-dist/12);
+      const chr=MX[(cx*7+cy*13+(dist<3?(t*12|0):(t*2|0)))%MX.length];
+      ctx.fillStyle=dist<1.5?'#eaffea':`rgba(60,255,110,${.18+.82*br})`;
+      ctx.fillText(chr,O.x+(cx+.5)*b*sx,O.y+(cy+.5)*b*sy);
+    }
+  }else if(fx===8){ // blesky po obrysu
+    const sx=O.w/w,sy=O.h/h,o=tctx.createImageData(w,h),od=o.data,edges=[];
+    for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+      const i=y*w+x;if(!m[i])continue;
+      const p=i*4,edge=!m[i-1]||!m[i+1]||!m[i-w]||!m[i+w];
+      if(edge){od[p]=150;od[p+1]=200;od[p+2]=255;od[p+3]=140+Math.random()*115;edges.push(i)}
+      else{od[p]=10;od[p+1]=25;od[p+2]=60;od[p+3]=200}
+    }
+    tctx.putImageData(o,0,0);
+    ctx.globalCompositeOperation='lighter';
+    ctx.filter='blur(5px)';ctx.drawImage(tmp,O.x,O.y,O.w,O.h);
+    ctx.filter='none';ctx.drawImage(tmp,O.x,O.y,O.w,O.h);
+    if(edges.length>10){
+      ctx.lineCap='round';ctx.lineJoin='round';
+      for(let k=0;k<4;k++){
+        const a=edges[Math.random()*edges.length|0],b2=edges[Math.random()*edges.length|0];
+        const ax=a%w,ay=(a/w)|0,bx=b2%w,by=(b2/w)|0,L=Math.hypot(bx-ax,by-ay);
+        if(L<8||L>w*.6)continue;
+        const segs=9;ctx.beginPath();
+        for(let q=0;q<=segs;q++){
+          const f=q/segs,jt=(q===0||q===segs)?0:(Math.random()-.5)*L*.25;
+          const X=O.x+(ax+(bx-ax)*f-(by-ay)/L*jt)*sx,Y=O.y+(ay+(by-ay)*f+(bx-ax)/L*jt)*sy;
+          q?ctx.lineTo(X,Y):ctx.moveTo(X,Y);
+        }
+        ctx.strokeStyle='rgba(90,150,255,.35)';ctx.lineWidth=7*sx;ctx.stroke();
+        ctx.strokeStyle='rgba(235,245,255,.95)';ctx.lineWidth=1.6*sx;ctx.stroke();
+      }
+    }
+  }else if(fx===9){ // echo: rozšiřující se duchové ruky
+    const o=tctx.createImageData(w,h),od=o.data;
+    for(let i=0;i<m.length;i++){if(!m[i])continue;const p=i*4,c=hue((t*70+(i%w))%360),l=(d[p]+d[p+1]+d[p+2])/765*.8+.3;od[p]=c[0]*l;od[p+1]=c[1]*l;od[p+2]=c[2]*l;od[p+3]=255}
+    tctx.putImageData(o,0,0);
+    if(hist.length!==7||hist[0].width!==w||hist[0].height!==h){
+      hist=Array.from({length:7},()=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c});hpos=0;
+    }
+    if(fcount%4===0){const c=hist[hpos%7],cc=c.getContext('2d');cc.clearRect(0,0,w,h);cc.drawImage(tmp,0,0);hpos++}
+    ctx.globalCompositeOperation='lighter';
+    const mx=O.x+O.w/2,my=O.y+O.h/2;
+    for(let a=6;a>=1;a--){
+      const c=hist[(((hpos-1-a)%7)+7)%7],sc=1+a*.07;
+      ctx.globalAlpha=.45/(a+.5);
+      ctx.drawImage(c,mx-O.w*sc/2,my-O.h*sc/2,O.w*sc,O.h*sc);
+    }
+    ctx.globalAlpha=1;ctx.drawImage(tmp,O.x,O.y,O.w,O.h);
+  }
+  ctx.restore();
+}
+
+function outline(r,color,dash,label){
+  const q=px(r);
+  ctx.save();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash(dash?[8,6]:[]);
+  ctx.strokeRect(q.x,q.y,q.w,q.h);
+  if(label){ctx.fillStyle=color;ctx.font='13px system-ui';ctx.fillText(label,q.x+4,q.y+q.h+16)}
+  ctx.restore();
+}
+function fillRect(r,color){const q=px(r);ctx.fillStyle=color;ctx.fillRect(q.x,q.y,q.w,q.h)}
+function drawQuad(color){
+  ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;
+  ctx.beginPath();Q.forEach((p,i)=>{const x=p[0]*cv.width,y=p[1]*cv.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.closePath();ctx.stroke();
+  Q.forEach((p,i)=>{ctx.beginPath();ctx.arc(p[0]*cv.width,p[1]*cv.height,9,0,7);ctx.fill();ctx.fillStyle='#000';ctx.font='11px system-ui';ctx.fillText(i+1,p[0]*cv.width-3,p[1]*cv.height+4);ctx.fillStyle=color});
+  ctx.restore();
+}
+function drawVideo(alpha){
+  if(!video.videoWidth)return;
+  ctx.save();ctx.globalAlpha=alpha;
+  if(mirror){ctx.translate(cv.width,0);ctx.scale(-1,1)}
+  ctx.drawImage(video,0,0,cv.width,cv.height);
+  ctx.restore();
+}
+function loop(ms){
+  const t=ms/1000;
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);
+  const [P,,O]=rects;
+  if(master&&step!==4)master.gain.setTargetAtTime(0,AC.currentTime,.1);
+  if(step===4&&cycle&&ms>nextSw){fx=fx%9+1;nextSw=ms+15000;updFx()}
+  if(detecting){
+    drawPattern();
+  }else if(step===1){
+    if(P)fillRect(P,'#fff');
+  }else if(step===2){
+    drawPattern();
+    updatePreview();
+  }else if(step===3){
+    if(P)fillRect(P,'#fff');
+    if(O){fillRect(O,'#1d6fff55');outline(O,'#4da3ff',false,'výstup')}
+  }else if(step===4){
+    const L=+$('lamp').value;
+    if(!bg&&autoBgAt&&ms>autoBgAt)saveBg();
+    if(P&&L>0)fillRect(P,`rgb(${L},${L},${L})`);
+    const img=sample();
+    if(img&&O&&O.w>0){effect(img,mask(img),px(O),t)}
+    if(guides){
+      if(P)outline(P,'#ffb00060',true);
+      if(O)outline(O,'#4da3ff40',false);
+    }
+    if(!bg){ctx.fillStyle='#ffb000';ctx.font='15px system-ui';ctx.fillText('Uvolni snímanou plochu, za chvíli se uloží pozadí.',20,cv.height-20)}
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices&&listCams();
+</script>
+</body>
+</html>
