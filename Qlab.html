@@ -1,188 +1,125 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QLab Firebase Ovladač</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #121212; color: #ffffff;
-            display: flex; flex-direction: column; align-items: center;
-            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
-        }
-        #loginScreen {
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; width: 100%; max-width: 320px;
-            background: #1e1e1e; padding: 30px; border-radius: 16px;
-            border: 1px solid #333; margin-top: 50px;
-        }
-        #loginScreen input {
-            width: 100%; padding: 15px; font-size: 24px; text-align: center;
-            letter-spacing: 8px; border-radius: 10px; border: 1px solid #444;
-            background: #121212; color: white; margin: 15px 0; box-sizing: border-box;
-        }
-        .btn-login {
-            width: 100%; padding: 15px; font-size: 18px; font-weight: bold;
-            background: #2e7d32; color: white; border: none; border-radius: 10px; cursor: pointer;
-        }
-        #appScreen { display: none; flex-direction: column; align-items: center; width: 100%; }
-        .top-bar {
-            display: flex; justify-content: space-between; align-items: center;
-            width: 100%; max-width: 400px; margin-bottom: 15px;
-        }
-        .status {
-            padding: 6px 14px; border-radius: 20px;
-            font-size: 13px; font-weight: bold; background-color: #1b5e20; color: #a5d6a7;
-        }
-        .btn-logout {
-            background: #333; color: #ccc; border: none; padding: 6px 12px;
-            border-radius: 8px; font-size: 12px; cursor: pointer;
-        }
-        .display-box {
-            width: 100%; max-width: 400px; background: #1e1e1e;
-            border: 1px solid #333; border-radius: 12px; padding: 15px;
-            margin-bottom: 20px; box-sizing: border-box;
-        }
-        .label { font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: 1px; margin-bottom: 4px; }
-        .running-list { margin-bottom: 15px; min-height: 28px; }
-        .running-item {
-            background: #1b5e20; color: #fff; padding: 8px 12px;
-            border-radius: 6px; font-weight: bold; margin-bottom: 5px;
-            display: flex; justify-content: space-between;
-        }
-        .running-item.paused { background: #f9a825; color: #121212; }
-        .empty-msg { color: #555; font-style: italic; font-size: 14px; }
-        .next-cue {
-            background: #2a2a2a; padding: 12px; border-radius: 8px;
-            border-left: 4px solid #4caf50; font-size: 18px; font-weight: bold;
-        }
-        .cue-num { color: #81c784; margin-right: 8px; }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 400px; }
-        .grid button { padding: 20px; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; color: white; }
-        .grid button:active { transform: scale(0.96); }
-        .btn-go { grid-column: span 2; background-color: #2e7d32; font-size: 28px; padding: 30px; }
-        .btn-resume { background-color: #0277bd; }
-        .btn-pause { background-color: #f9a825; color: #121212 !important; }
-        .btn-stop { background-color: #d84315; }
-        .btn-reset { background-color: #455a64; }
-        .btn-nav { background-color: #2c2c2c; }
-        .btn-panic { background-color: #c62828; grid-column: span 2; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6f8">
+  <title>Stage Remote · QLab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f4f5f7;--card:#fff;--ink:#15171b;--muted:#858a95;--line:#e9eaee;--blue:#2764e8;--blue2:#eaf0ff;--green:#24a36a;--yellow:#d99b19;--red:#e34e53;--shadow:0 12px 35px #18233a0b}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;letter-spacing:-.015em}button,input{font:inherit}button{cursor:pointer} .shell{max-width:1440px;margin:0 auto;padding:30px 42px 52px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}.brand{display:flex;align-items:center;gap:13px}.brand-icon{height:42px;width:42px;border-radius:14px;background:#17191f;color:#fff;display:grid;place-items:center;font-size:18px;box-shadow:0 5px 12px #17191f20}.brand-name{font:800 17px Manrope,sans-serif;letter-spacing:-.04em}.brand-sub{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:.03em}.head-right{display:flex;align-items:center;gap:15px}.pill{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);background:#fff;border-radius:999px;font-size:12px;color:#626873}.dot{width:8px;height:8px;border-radius:50%;background:#c1c5cc}.dot.live{background:var(--green);box-shadow:0 0 0 4px #24a36a18}.dot.warn{background:var(--yellow)}.avatar{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:#e8eaf0;font-size:12px;font-weight:700;color:#606674}
+    .intro{display:flex;justify-content:space-between;align-items:end;margin:36px 0 22px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--blue);font-weight:700;margin-bottom:8px}.intro h1{font:700 30px Manrope,sans-serif;letter-spacing:-.055em;margin:0}.intro p{margin:7px 0 0;color:var(--muted);font-size:13px}.show-name{font-size:12px;color:var(--muted);text-align:right}.show-name strong{display:block;color:#343840;font-size:14px;margin-top:5px}
+    .top-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}.card{background:var(--card);border:1px solid #eceef2;border-radius:20px;box-shadow:var(--shadow)}.control-card{padding:22px 24px 24px}.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.card-title{font:700 14px Manrope,sans-serif;letter-spacing:-.02em}.tiny-label{font-size:11px;color:var(--muted)}.control-main{display:grid;grid-template-columns:1.1fr 1fr;gap:16px}.go-button{border:0;color:#fff;background:var(--blue);border-radius:16px;min-height:111px;display:flex;align-items:center;justify-content:center;gap:14px;box-shadow:0 8px 18px #2764e82e;transition:.15s}.go-button:hover{background:#1f58d0;transform:translateY(-1px)}.go-button:active{transform:scale(.99)}.play-icon{font-size:24px}.go-copy{text-align:left}.go-copy b{font:800 21px Manrope,sans-serif;display:block;letter-spacing:-.04em}.go-copy span{font-size:11px;opacity:.8}.side-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}.action{border:1px solid var(--line);background:#fff;border-radius:13px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:12px;color:#343840;transition:.15s}.action:hover{background:#f7f8fa;border-color:#d9dce3}.action span:first-child{font-size:15px}.action.stop{color:#555}.control-foot{display:flex;gap:10px;margin-top:14px}.action.panic{border-color:#f3d8d9;color:#d73f45;background:#fffafa;padding:10px 15px}.action.panic:hover{background:#fff0f0}.stepper{display:flex;gap:8px;margin-left:auto}.action.step{padding:0 13px}.action.reset{padding:0 14px}
+    .now-card{padding:22px 24px;position:relative;overflow:hidden}.now-card:after{content:'';position:absolute;right:-35px;top:-58px;width:155px;height:155px;border-radius:50%;background:radial-gradient(circle,#e8efff 0,transparent 70%);pointer-events:none}.now-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}.live-status{display:flex;align-items:center;gap:8px;border-radius:999px;padding:6px 9px;background:#f1f3f5;color:#737984;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.live-status.active{background:#e9f7f0;color:#168151}.live-status.paused{background:#fff6df;color:#ad7710}.now-content{min-height:74px;display:flex;align-items:center;gap:14px}.now-symbol{width:43px;height:43px;border-radius:14px;background:#f3f5f9;display:grid;place-items:center;font-size:17px;color:#646c79}.now-copy{min-width:0}.now-copy small{font-size:11px;color:var(--muted)}.now-copy strong{display:block;font:700 15px Manrope,sans-serif;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.now-empty{color:var(--muted);font-size:13px}.now-bottom{border-top:1px solid var(--line);margin-top:15px;padding-top:13px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}.now-bottom strong{color:#424751;font-weight:600}
+    .lower{display:grid;grid-template-columns:1fr 330px;gap:18px;margin-top:18px}.list-card{overflow:hidden}.list-head{padding:21px 23px 15px;display:flex;align-items:center;justify-content:space-between}.list-title{font:700 15px Manrope,sans-serif}.count{font-size:11px;color:#777e89;background:#f2f3f5;padding:5px 8px;border-radius:8px;margin-left:8px}.search{width:210px;border:1px solid var(--line);outline:0;background:#fafbfc;border-radius:10px;padding:9px 12px 9px 32px;font-size:12px;color:var(--ink);background-image:radial-gradient(circle at 14px 14px,transparent 4px,#949aa4 4.5px,#949aa4 5.5px,transparent 6px);background-repeat:no-repeat}.search:focus{border-color:#b8c9f8;background-color:#fff}.list-labels{display:grid;grid-template-columns:76px 1fr 86px 72px;align-items:center;padding:0 23px 10px;color:#a1a5ad;text-transform:uppercase;letter-spacing:.1em;font-size:9px;font-weight:700}.cue-list{max-height:486px;overflow:auto}.cue-row{display:grid;grid-template-columns:76px 1fr 86px 72px;align-items:center;padding:11px 23px;min-height:56px;border-top:1px solid #f1f2f5;cursor:pointer;transition:background .12s}.cue-row:hover{background:#f8f9fb}.cue-row.selected{background:#f0f4ff}.cue-number{font-size:11px;color:#858b96;font-variant-numeric:tabular-nums}.cue-name{font-size:12px;font-weight:600;color:#30343b;display:flex;align-items:center;gap:9px;min-width:0}.cue-name .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cue-kind{font-size:10px;color:#8c929c}.kind-icon{width:22px;height:22px;flex:0 0 22px;border-radius:7px;background:#f1f3f6;display:grid;place-items:center;color:#727a88;font-size:11px}.kind-icon.group{color:#95701b;background:#fff7e4}.cue-row.group{background:#fcfcfd}.cue-row.group .cue-name{font-weight:700}.cue-row.child .cue-name{padding-left:21px}.cue-row.child .cue-number{padding-left:14px}.cue-type{color:#979ca5;font-size:10px}.row-play{justify-self:end;width:30px;height:30px;border:0;background:#f2f5fb;border-radius:9px;color:#596577;font-size:11px}.row-play:hover{background:var(--blue);color:white}.list-foot{padding:12px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:#9a9fa8;font-size:10px}
+    .side-stack{display:flex;flex-direction:column;gap:18px}.queue-card,.active-card{padding:20px 20px 17px}.section-title{font:700 14px Manrope,sans-serif}.section-sub{font-size:11px;color:var(--muted);margin-top:4px}.queue-item{display:flex;gap:11px;align-items:center;padding:13px 0;border-bottom:1px solid #f0f1f4}.queue-item:last-child{border-bottom:0;padding-bottom:1px}.queue-num{font-size:10px;color:#a0a5af;width:38px}.queue-copy{min-width:0}.queue-copy strong{font-size:11px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.queue-copy span{font-size:10px;color:#9a9fa8}.queue-mark{margin-left:auto;color:#b2b7bf;font-size:13px}.active-placeholder{margin-top:15px;padding:15px;border-radius:13px;background:#f8f9fb;color:#9197a1;font-size:11px;line-height:1.6}.playing-list{margin-top:12px}.playing-item{display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid #f0f1f4}.playing-item:last-child{border:0}.playing-item .p-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}.playing-item.paused .p-dot{background:var(--yellow)}.playing-item b{font-size:11px;flex:1}.playing-item small{font-size:10px;color:#9297a0}.notice{margin-top:19px;padding:12px 14px;border-radius:12px;background:#edf2ff;color:#49629b;font-size:10px;line-height:1.55}.notice strong{color:#355398}.hidden{display:none!important}
+    @media(max-width:900px){.shell{padding:22px 20px 40px}.lower{grid-template-columns:1fr}.side-stack{display:grid;grid-template-columns:1fr 1fr}.top-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:650px){.shell{padding:16px 14px 30px}header{margin-bottom:20px}.brand-sub{display:none}.head-right{gap:8px}.pill{font-size:10px;padding:8px}.intro{margin:25px 0 18px;align-items:start;flex-direction:column;gap:12px}.intro h1{font-size:25px}.show-name{text-align:left}.top-grid{grid-template-columns:1fr}.control-card,.now-card{padding:18px}.lower{margin-top:14px}.side-stack{grid-template-columns:1fr}.list-head{padding:17px 15px 13px;gap:8px}.search{width:145px}.list-labels,.cue-row{grid-template-columns:54px 1fr 54px 35px;padding-left:14px;padding-right:14px}.cue-type{font-size:9px}.list-labels{font-size:8px}.cue-row.child .cue-name{padding-left:12px}.cue-row.child .cue-number{padding-left:8px}.list-foot{padding:11px 14px}.control-main{grid-template-columns:1fr 1fr}.go-button{min-height:102px}.side-buttons{grid-template-columns:1fr 1fr}.action{font-size:11px}}
+  </style>
 </head>
 <body>
-
-    <form id="loginScreen" onsubmit="event.preventDefault(); savePin();">
-        <div style="font-size: 18px; font-weight: bold;">Zadej PIN pro QLab</div>
-        <input type="password" id="pinInput" maxlength="4" inputmode="numeric" placeholder="••••" autocomplete="off">
-        <button type="submit" class="btn-login">Odemknout</button>
-    </form>
-
-    <div id="appScreen">
-        <div class="top-bar">
-            <div class="status">Firebase Cloud (Zabezpečeno)</div>
-            <button class="btn-logout" onclick="logout()">Zamknout</button>
+  <div class="shell">
+    <header>
+      <div class="brand"><div class="brand-icon">◉</div><div><div class="brand-name">Stage Remote</div><div class="brand-sub">OVLÁDÁNÍ QLABU</div></div></div>
+      <div class="head-right"><div class="pill"><span id="connectionDot" class="dot"></span><span id="connectionText">Připojuji Firebase…</span></div><div class="avatar">OV</div></div>
+    </header>
+    <section class="intro">
+      <div><div class="eyebrow">Dálkové ovládání</div><h1>Dobré představení.</h1><p>Vše důležité pro režii na jednom místě.</p></div>
+      <div class="show-name">PROJEKT<strong id="projectName">QLab · čekám na data</strong></div>
+    </section>
+    <section class="top-grid">
+      <article class="card control-card">
+        <div class="card-head"><div class="card-title">Ovládání přehrávání</div><div class="tiny-label">Příkazy se posílají do QLabu</div></div>
+        <div class="control-main">
+          <button class="go-button" data-command="go" title="Spustit připravený cue"><span class="play-icon">▶</span><span class="go-copy"><b>GO</b><span>Spustit připravený cue</span></span></button>
+          <div class="side-buttons"><button class="action" data-command="pause"><span>Ⅱ</span> Pauza</button><button class="action" data-command="resume"><span>▶</span> Pokračovat</button><button class="action stop" data-command="stop"><span>■</span> Stop</button><button class="action" data-command="reset"><span>↺</span> Reset</button></div>
         </div>
+        <div class="control-foot"><button class="action panic" data-command="panic"><span>✳</span> PANIC · Ztlumit vše</button><div class="stepper"><button class="action step" data-command="previous">↑ Předchozí</button><button class="action step" data-command="next">↓ Další</button></div></div>
+      </article>
+      <article class="card now-card">
+        <div class="now-top"><div class="card-title">Aktuální stav</div><div id="playState" class="live-status"><span class="dot"></span><span>Čekám na QLab</span></div></div>
+        <div id="nowPlaying" class="now-content"><div class="now-symbol">♫</div><div class="now-copy"><small>Právě hraje</small><strong class="now-empty">Zatím žádný aktivní cue</strong></div></div>
+        <div class="now-bottom"><span>Aktivní položky</span><strong id="activeCount">0 cue</strong></div>
+      </article>
+    </section>
+    <section class="lower">
+      <article class="card list-card">
+        <div class="list-head"><div class="list-title">Cue list <span id="cueCount" class="count">0</span></div><input id="search" class="search" type="search" placeholder="Hledat cue…" aria-label="Hledat cue"></div>
+        <div class="list-labels"><span>ČÍSLO</span><span>NÁZEV</span><span>TYP</span><span></span></div>
+        <div id="cueList" class="cue-list"></div>
+        <div class="list-foot"><span id="listHint">Čekám na seznam z QLabu</span><span>Kliknutím označíš · ▶ spustí cue</span></div>
+      </article>
+      <aside class="side-stack">
+        <article class="card queue-card"><div class="section-title">Co bude dál</div><div class="section-sub">Následující cue v seznamu</div><div id="upNext" class="active-placeholder">Další položky se zobrazí po připojení k QLabu.</div></article>
+        <article class="card active-card"><div class="section-title">Právě hraje</div><div class="section-sub">Živý přehled aktivních cue</div><div id="activeList" class="active-placeholder">Čekám na živý stav z QLabu.</div></article>
+      </aside>
+    </section>
+    <div class="notice"><strong>Propojení s QLabem:</strong> Stránka komunikuje přes Firebase Realtime Database. Na Macu musí běžet QLab můstek, který čte příkazy a zapisuje stav a seznam cue. <span id="firebaseMessage">Připojuji databázi…</span></div>
+  </div>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+    import { getDatabase, ref, onValue, push, set, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 
-        <div class="display-box">
-            <div class="label">Právě hraje / Pozastaveno:</div>
-            <div id="runningList" class="running-list">
-                <div class="empty-msg">Nic nehraje</div>
-            </div>
-
-            <div class="label">Připraveno na GO (Další):</div>
-            <div class="next-cue">
-                <span id="nextNum" class="cue-num"></span>
-                <span id="nextName">Čekám na data...</span>
-            </div>
-        </div>
-
-        <div class="grid">
-            <button class="btn-go" onclick="sendOSC('/go')">GO</button>
-            <button class="btn-pause" onclick="sendOSC('/pause')">⏸ PAUSE</button>
-            <button class="btn-resume" onclick="sendOSC('/resume')">▶ RESUME</button>
-            <button class="btn-stop" onclick="sendOSC('/stop')">⏹ STOP</button>
-            <button class="btn-reset" onclick="sendOSC('/reset')">⏮ RESET</button>
-            <button class="btn-nav" onclick="sendOSC('/playhead/previous')">▲ Předchozí</button>
-            <button class="btn-nav" onclick="sendOSC('/playhead/next')">▼ Další</button>
-            <button class="btn-panic" onclick="sendOSC('/panic')">PANIC (Fade Out)</button>
-        </div>
-    </div>
-
-    <script>
-        const DB_URL = "https://firebasedatabase.app";
-        let userPin = localStorage.getItem("qlab_pin") || "";
-
-        function checkAuth() {
-            if (userPin.length === 4) {
-                document.getElementById("loginScreen").style.display = "none";
-                document.getElementById("appScreen").style.display = "flex";
-            } else {
-                document.getElementById("loginScreen").style.display = "flex";
-                document.getElementById("appScreen").style.display = "none";
-            }
-        }
-
-        function savePin() {
-            const val = document.getElementById("pinInput").value.trim();
-            if (val.length === 4) {
-                userPin = val;
-                localStorage.setItem("qlab_pin", val);
-                checkAuth();
-            } else {
-                alert("Zadej 4 číslice.");
-            }
-        }
-
-        function logout() {
-            userPin = "";
-            localStorage.removeItem("qlab_pin");
-            document.getElementById("pinInput").value = "";
-            checkAuth();
-        }
-
-        checkAuth();
-
-        const runningListEl = document.getElementById('runningList');
-        const nextNumEl = document.getElementById('nextNum');
-        const nextNameEl = document.getElementById('nextName');
-
-        setInterval(async () => {
-            if (userPin.length !== 4) return;
-            try {
-                const res = await fetch(`${DB_URL}/qlab_status.json`);
-                const status = await res.json();
-                if (!status) return;
-
-                nextNameEl.textContent = status.nextName || "---";
-                nextNumEl.textContent = status.nextNum ? `[${status.nextNum}]` : "";
-
-                const running = status.running || [];
-                if (running.length === 0) {
-                    runningListEl.innerHTML = '<div class="empty-msg">Nic nehraje</div>';
-                } else {
-                    runningListEl.innerHTML = running.map(c => `
-                        <div class="running-item ${c.isPaused ? 'paused' : ''}">
-                            <span>${c.number ? '[' + c.number + '] ' : ''}${c.name}</span>
-                            <span>${c.isPaused ? '⏸ PAUZA' : '▶ HRAJE'}</span>
-                        </div>
-                    `).join('');
-                }
-            } catch (e) {}
-        }, 600);
-
-        async function sendOSC(address, args = []) {
-            await fetch(`${DB_URL}/qlab_command.json`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    address: address,
-                    args: args,
-                    pin: userPin,
-                    timestamp: Date.now()
-                })
-            });
-        }
-    </script>
+    // Firebase project URL supplied for this show. Keep config public; secure writes with RTDB rules/auth.
+    const firebaseConfig = { databaseURL: 'https://projekce-0-default-rtdb.europe-west1.firebasedatabase.app' };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const $ = (id) => document.getElementById(id);
+    let cues = [], active = [], selectedCue = null;
+    const typeIcon = (type='audio') => ({audio:'♫',video:'▣',group:'▱',light:'☼',midi:'⌁',memo:'≡',fade:'◒'}[String(type).toLowerCase()] || '♫');
+    const cueLabel = c => c.name || c.title || c.number || c.id || 'Cue';
+    const normalize = value => Array.isArray(value) ? value : value ? Object.entries(value).map(([id,v])=>({id,...v})) : [];
+    function renderCues(){
+      const q=$('search').value.toLocaleLowerCase('cs');
+      const filtered=cues.filter(c=>`${c.number||''} ${cueLabel(c)} ${c.type||''}`.toLocaleLowerCase('cs').includes(q));
+      $('cueCount').textContent=cues.length;
+      $('listHint').textContent=cues.length ? `${filtered.length} z ${cues.length} cue` : 'Čekám na seznam z QLabu';
+      $('cueList').innerHTML=filtered.map(c=>{
+        const type=String(c.type||'audio').toLowerCase(), group=type==='group'||c.isGroup;
+        const indent=Number(c.depth??c.indent??0), cls=[group?'group':'',indent?'child':'',selectedCue===c.id?'selected':''].filter(Boolean).join(' ');
+        const id=String(c.id||c.number||cueLabel(c)).replaceAll('"','&quot;');
+        return `<div class="cue-row ${cls}" data-id="${id}" data-kind="${type}"><div class="cue-number">${c.number??'—'}</div><div class="cue-name"><span class="kind-icon ${group?'group':''}">${typeIcon(type)}</span><span class="label">${cueLabel(c)}</span></div><div class="cue-type">${group?'Group':type}</div><button class="row-play" title="Cue spustit" aria-label="Spustit ${cueLabel(c)}">▶</button></div>`;
+      }).join('') || `<div class="active-placeholder">${cues.length?'Žádný cue neodpovídá hledání.':'Seznam cue zatím není dostupný.'}</div>`;
+      $('cueList').querySelectorAll('.cue-row').forEach(row=>{
+        row.addEventListener('click',e=>{selectedCue=row.dataset.id; renderCues(); if(!e.target.closest('.row-play')) send('select',row.dataset.id);});
+        row.querySelector('.row-play').addEventListener('click',e=>{e.stopPropagation();send('fire',row.dataset.id);});
+      }); renderNext();
+    }
+    function renderNext(){
+      let idx=cues.findIndex(c=>String(c.id||c.number||cueLabel(c))===String(selectedCue)); if(idx<0) idx=-1;
+      const next=cues.slice(idx+1).filter(c=>!c.isGroup&&String(c.type).toLowerCase()!=='group').slice(0,3);
+      $('upNext').className=next.length?'':'active-placeholder';
+      $('upNext').innerHTML=next.length?next.map(c=>`<div class="queue-item"><span class="queue-num">${c.number??''}</span><div class="queue-copy"><strong>${cueLabel(c)}</strong><span>${c.type||'Audio'}</span></div><span class="queue-mark">↳</span></div>`).join(''):'Další cue se zobrazí po načtení seznamu.';
+    }
+    function renderActive(){
+      const primary=active[0]; const state=primary?(primary.paused||primary.status==='paused'?'paused':'active'):'';
+      const status=$('playState'); status.className=`live-status ${state}`; status.innerHTML=primary?`<span class="dot ${state==='paused'?'warn':'live'}"></span><span>${state==='paused'?'Pozastaveno':'Přehrává'}</span>`:'<span class="dot"></span><span>Připraveno</span>';
+      $('activeCount').textContent=`${active.length} ${active.length===1?'cue':'cue'}`;
+      $('nowPlaying').innerHTML=primary?`<div class="now-symbol">${typeIcon(primary.type)}</div><div class="now-copy"><small>${state==='paused'?'Pozastaveno':'Právě hraje'} · ${primary.number||''}</small><strong>${cueLabel(primary)}</strong></div>`:`<div class="now-symbol">♫</div><div class="now-copy"><small>Právě hraje</small><strong class="now-empty">Zatím žádný aktivní cue</strong></div>`;
+      $('activeList').className=active.length?'playing-list':'active-placeholder';
+      $('activeList').innerHTML=active.length?active.map(c=>`<div class="playing-item ${(c.paused||c.status==='paused')?'paused':''}"><span class="p-dot"></span><b>${cueLabel(c)}</b><small>${(c.paused||c.status==='paused')?'Pauza':'Hraje'}</small></div>`).join(''):'V QLabu právě nic nehraje.';
+    }
+    async function send(action,cueId=null){
+      const payload={action, cueId, source:'stage-remote', createdAt:serverTimestamp()};
+      try { await set(push(ref(db,'remote/commands')),payload); $('firebaseMessage').textContent='Příkaz odeslán.'; }
+      catch(e){ $('firebaseMessage').textContent=`Příkaz se nepodařilo odeslat: ${e.message}`; }
+    }
+    document.querySelectorAll('[data-command]').forEach(b=>b.addEventListener('click',()=>send(b.dataset.command)));
+    $('search').addEventListener('input',renderCues);
+    onValue(ref(db,'remote'), snap=>{
+      const data=snap.val()||{}; const bridgeOnline=Boolean(data.state?.bridgeOnline); $('connectionDot').className=`dot ${bridgeOnline?'live':'warn'}`; $('connectionText').textContent=bridgeOnline?'QLab připojeno':'Čekám na můstek QLab'; $('firebaseMessage').textContent=bridgeOnline?'Firebase i QLab můstek jsou připojené.':'Firebase běží; spusťte můstek na Macu.';
+      const state=data.state||{}; cues=normalize(data.cues||state.cues);
+      active=normalize(state.activeCues||state.playing||[]);
+      if(state.projectName) $('projectName').textContent=state.projectName;
+      if(state.selectedCue!=null) selectedCue=String(state.selectedCue);
+      renderCues(); renderActive();
+    },error=>{
+      $('connectionDot').className='dot'; $('connectionText').textContent='Firebase nedostupné'; $('firebaseMessage').textContent=error.message;
+    });
+  </script>
 </body>
 </html>
