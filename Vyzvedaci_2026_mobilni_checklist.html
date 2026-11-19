@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#173b57">
+<title>Vyzvědači 2026 – checklist</title>
+<style>
+:root{color-scheme:light;--ink:#183247;--muted:#607181;--line:#d8e0e6;--blue:#173b57;--bg:#f3f6f8;--green:#16754a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:var(--blue);color:white;padding:20px 16px 16px;position:sticky;top:0;z-index:2;box-shadow:0 2px 8px #102a3b30}
+.wrap{max-width:700px;margin:auto}h1{font-size:21px;margin:0 0 5px}.hint{margin:0;color:#d5e3ec;font-size:13px}.stats{display:flex;gap:9px;margin-top:13px}.stat{background:#ffffff18;border:1px solid #ffffff30;border-radius:10px;padding:7px 10px;font-size:13px;flex:1;text-align:center}
+main{max-width:700px;margin:auto;padding:14px 12px 34px}.section{margin:0 0 19px}.section h2{font-size:16px;margin:0 0 8px;padding:0 3px}.person{background:white;border:1px solid var(--line);border-radius:13px;margin:0 0 8px;padding:11px 12px;box-shadow:0 1px 2px #18324708}.name{font-weight:650;font-size:16px}.role{font-size:12px;color:var(--muted);margin-top:1px}.note{font-size:12px;color:#80520a;background:#fff5dc;border-radius:7px;padding:5px 7px;margin-top:7px}.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.checks.single{grid-template-columns:1fr}.check{min-height:46px;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;gap:9px;padding:7px 10px;font-size:14px;cursor:pointer;user-select:none}.check:has(input:checked){background:#eaf6ef;border-color:#a9d8bb;color:#145d3d}.check input{width:22px;height:22px;accent-color:var(--green);margin:0;flex:none}.clear{display:block;margin:2px auto 0;padding:10px 14px;border:1px solid #bdc9d2;background:white;color:#445766;border-radius:9px;font:inherit;font-size:13px}.saved{text-align:center;color:var(--muted);font-size:12px;margin:10px 0 0}
+@media(min-width:600px){main{padding:20px 16px 40px}.person{display:grid;grid-template-columns:1fr 1.1fr;align-items:center;column-gap:12px}.checks{margin-top:0}.note{grid-column:1/-1}.role{margin-top:3px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Vyzvědači 2026 – checklist</h1><p class="hint">Označte příchod; hotovost se eviduje jen u účastníků.</p><div class="stats"><div class="stat" id="arrivals">Příchod 0/27</div><div class="stat" id="payments">Hotově 0/20</div></div></div></header>
+<main>
+<div id="list"></div>
+<button class="clear" id="clear">Vynulovat označení</button>
+<p class="saved">Označení se ukládá v tomto zařízení a prohlížeči.</p>
+</main>
+<script>
+const groups=[
+ {title:'Účastníci',people:[
+  ['Mikuláš'],['Lojza'],['Matthias'],['Albert'],['Jonáš B.','Dvojice s Matyášem'],['David'],['Adam H.'],['Dan F.','Mladší účastník – domluvit dvojici'],['Robert'],['Matyáš','Možný spolušéf; ověřit dvojici s Pepou'],['Hvězdice'],['Pepa','Možný spolušéf; chce být s Matyášem'],['Sirka'],['Borko'],['Kuba T.','Výstup/nástup v Benešově u Prahy'],['Sekyrka'],['Honza'],['Šimon K.'],['Oliver'],['Oskar','Dvojice s někým zodpovědným']
+ ]},
+ {title:'Vedoucí',people:[
+  ['Makro'],['Mašty'],['Kuba V'],['Matouš L'],['Tobi'],['Vlk'],['Mychal','Účast potvrdit']
+ ]}
+];
+const key='vyzvedaci2026-checklist-v1';
+let state={};try{state=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){state={}}
+function saveState(){try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
+const root=document.getElementById('list');
+function safeId(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}
+function render(){root.innerHTML='';let arrivals=[];let payers=[];for(const group of groups){const section=document.createElement('section');section.className='section';const heading=document.createElement('h2');heading.textContent=group.title;section.append(heading);for(const p of group.people){const id=safeId(group.title+'-'+p[0]);arrivals.push(id);if(group.title==='Účastníci')payers.push(id);const card=document.createElement('article');card.className='person';const info=document.createElement('div');const name=document.createElement('div');name.className='name';name.textContent=p[0];info.append(name);if(group.title==='Vedoucí'){const role=document.createElement('div');role.className='role';role.textContent='Vedoucí';info.append(role)}card.append(info);const checks=document.createElement('div');checks.className='checks'+(group.title==='Vedoucí'?' single':'');const options=group.title==='Vedoucí'?[['arrived','Dorazil']]:[['arrived','Dorazil'],['paid','Zaplatil hotově']];for(const [field,label] of options){const lab=document.createElement('label');lab.className='check';const input=document.createElement('input');input.type='checkbox';input.checked=!!(state[id]&&state[id][field]);input.setAttribute('aria-label',p[0]+': '+label);input.addEventListener('change',()=>{state[id]=state[id]||{};state[id][field]=input.checked;saveState();updateStats(arrivals,payers)});const span=document.createElement('span');span.textContent=label;lab.append(input,span);checks.append(lab)}card.append(checks);if(p[1]){const note=document.createElement('div');note.className='note';note.textContent=p[1];card.append(note)}section.append(card)}root.append(section)}updateStats(arrivals,payers)}
+function updateStats(arrivals,payers){let a=0,p=0;for(const id of arrivals){if(state[id]?.arrived)a++}for(const id of payers){if(state[id]?.paid)p++}document.getElementById('arrivals').textContent=`Příchod ${a}/${arrivals.length}`;document.getElementById('payments').textContent=`Hotově ${p}/${payers.length}`}
+document.getElementById('clear').addEventListener('click',()=>{if(confirm('Opravdu vynulovat všechna označení?')){state={};try{localStorage.removeItem(key)}catch(e){}render()}});
+render();
+</script>
+</body>
+</html>
