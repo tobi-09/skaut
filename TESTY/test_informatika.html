@@ -1,153 +1,949 @@
 <!DOCTYPE html>
-<html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Test z informatiky</title>
-<style>
-body{font:16px/1.5 Arial,sans-serif;margin:0;background:#f3f4f6;color:#111;user-select:none;-webkit-user-select:none}
-input,textarea{user-select:text;-webkit-user-select:text}
-#app{max-width:820px;margin:0 auto;padding:16px}
-.card{background:#fff;border-radius:10px;padding:18px;margin-bottom:14px;box-shadow:0 1px 4px #0002}
-h1{font-size:24px;margin:0 0 6px}h2{font-size:18px;border-bottom:2px solid #333;padding-bottom:4px;margin:18px 0 10px}
-input,select,textarea,button{font:inherit;padding:8px;border:1px solid #999;border-radius:6px;box-sizing:border-box}
-input[type=text],input[type=password],textarea{width:100%}
-button{background:#2563eb;color:#fff;border:0;cursor:pointer;padding:10px 18px}button.r{background:#dc2626}button.g{background:#6b7280}
-label{display:block;margin:6px 0}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0}
-.dev{display:inline-block;width:250px;margin:3px 0}
-#bar{position:sticky;top:0;background:#111;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;border-radius:8px;margin-bottom:12px;z-index:5}
-#warn{position:fixed;left:0;right:0;top:0;background:#dc2626;color:#fff;padding:14px;text-align:center;font-weight:bold;z-index:20;display:none}
-#fs{position:fixed;inset:0;background:#000d;color:#fff;z-index:15;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:20px}
-table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #ccc;padding:5px 8px;text-align:left}th{background:#e5e7eb}
-tr.s{cursor:pointer}tr.s:hover{background:#eef}.bad{color:#dc2626;font-weight:bold}.big{font-size:42px;font-weight:bold;text-align:center}
-.pill{display:inline-block;background:#e5e7eb;border-radius:20px;padding:4px 12px;margin:3px}
-</style></head><body>
-<div id="warn"></div>
-<div id="fs"><div>Opustil jsi celou obrazovku. Událost byla nahlášena.</div><button onclick="goFs()">Vrátit se na celou obrazovku</button></div>
-<div id="app"></div>
-<script>
-const DB='https://projekce-0-default-rtdb.europe-west1.firebasedatabase.app';
-const PW={'4a':'albert1','4b':'brno3'};
-const TEACHER_PW='ucitel2026'; // ZMĚŇ SI
-const $=s=>document.querySelector(s),app=$('#app');
-const api=(p,m='GET',b)=>fetch(`${DB}/${p}.json`,{method:m,headers:b!==undefined?{'Content-Type':'application/json'}:{},body:b!==undefined?JSON.stringify(b):undefined,keepalive:m!=='GET'}).then(r=>r.json()).catch(()=>null);
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const slug=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-const fmt=t=>t?new Date(t).toLocaleTimeString('cs'):'–';
-let off=0;const now=()=>Date.now()+off;
-async function sync(){const a=Date.now(),s=await api('clock/t','PUT',{'.sv':'timestamp'}),b=Date.now();if(typeof s==='number')off=s-(a+b)/2}
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klávesový Majstr - Test pro 4. třídu</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .key-badge {
+            box-shadow: 0 4px 0 #cbd5e1;
+            transition: all 0.1s ease;
+        }
+        .key-badge.active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #94a3b8;
+            background-color: #38bdf8 !important;
+            color: white !important;
+            border-color: #0284c7 !important;
+        }
+        /* Zajistí plnou vybratelnost a označitelnost textu myší */
+        .selectable-text {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            cursor: text;
+        }
+        /* Shake animation for incorrect attempts */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen font-sans flex flex-col justify-between selection:bg-sky-200">
 
-const D=[['A','myš','i'],['B','monitor','o'],['C','tiskárna','o'],['D','mikrofon','i'],['E','reproduktory','o'],['F','klávesnice','i'],['G','skener','i'],['H','sluchátka','o'],['I','webkamera','i']];
-const K=[['USB','připojuje myš, klávesnici, flash disk'],['HDMI','přenáší obraz a zvuk do monitoru nebo televize'],['Jack (3,5 mm)','připojuje sluchátka nebo reproduktory'],['Síťový kabel (RJ-45)','připojuje počítač k internetu kabelem']];
-const sel=(n,o)=>`<select name="${n}"><option value="">–</option>${o.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
-function score(a={}){let g=0,m=0;const c=(ok)=>{m++;if(ok)g++};
-c(a.q1a==='počítače');c(a.q1b==='vstupní');c(a.q1c==='výstupní');c(a.q2==='b');
-D.forEach(d=>c(a['q4'+d[0]]===d[2]));K.forEach((k,i)=>c(a['q5_'+i]==String(i)));return{g,m}}
-const FIELDS=3+1+1+9+4+1;
-function testHTML(){const o=[['počítače','počítače'],['vstupní','vstupní'],['výstupní','výstupní']];
-return `<form id="f" onsubmit="return false">
-<h2>1. část: Obecně</h2>
-<p><b>1.</b> Vstupní zařízení posílá informace <b>do</b> ${sel('q1a',o)}. Výstupní zařízení informace z počítače ukazuje nebo přehrává. Klávesnice je zařízení ${sel('q1b',o)}, monitor je zařízení ${sel('q1c',o)}.</p>
-<p><b>2.</b> Co dělá vstupní zařízení?</p>
-<label><input type="radio" name="q2" value="a"> a) ukazuje obrázek</label><label><input type="radio" name="q2" value="b"> b) posílá informace do počítače</label><label><input type="radio" name="q2" value="c"> c) tiskne papír</label>
-<p><b>3.</b> Napiš jednou větou, k čemu je konektor.</p><textarea name="q3" rows="2"></textarea>
-<h2>2. část: Konkrétně</h2>
-<p><b>4.</b> U každého zařízení vyber, jestli je vstupní, nebo výstupní.</p>
-${D.map(d=>`<span class="dev"><b>${d[0]}</b> ${d[1]} ${sel('q4'+d[0],[['i','vstupní'],['o','výstupní']])}</span>`).join('')}
-<p><b>5.</b> Ke každému konektoru vyber, co dělá.</p>
-${K.map((k,i)=>`<div class="row"><b style="min-width:170px">${k[0]}</b>${sel('q5_'+i,[1,3,0,2].map(j=>[j,K[j][1]]))}</div>`).join('')}
-<p><b>6.</b> <i>Bonus:</i> Které zařízení je vstupní i výstupní zároveň? (např. dotykový displej)</p><input type="text" name="q6" autocomplete="off">
-<p style="margin-top:20px"><button onclick="submitTest('odevzdáno')">Odevzdat test</button></p></form>`}
+    <!-- Header / Nav -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-sky-500 text-white p-2.5 rounded-2xl shadow-md">
+                    <i class="fa-solid fa-keyboard text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-display font-extrabold text-xl text-slate-900 leading-tight">Klávesový Majstr</h1>
+                    <p class="text-xs font-semibold text-sky-600 uppercase tracking-wider">Test pro 4. třídu ZŠ</p>
+                </div>
+            </div>
 
-/* ===== STUDENT ===== */
-let S=null,cfg={},mode='',viol=0,live=false,lastV=0,saveT=0;
-function loginScreen(){mode='login';app.innerHTML=`<div class="card"><h1>Test z informatiky</h1><p>Vstupní a výstupní zařízení, konektory</p>
-<label>Jméno a příjmení<input type="text" id="n" autocomplete="off"></label>
-<label>Třída<br><select id="c"><option value="4a">4a</option><option value="4b">4b</option></select></label>
-<label>Heslo třídy<input type="password" id="p"></label>
-<p id="err" class="bad"></p><button onclick="login()">Přihlásit se</button>
-<p style="font-size:13px;color:#555">Během testu se zaznamenává opuštění stránky, klávesové zkratky (Ctrl…), pravé tlačítko myši i opuštění celé obrazovky. Vše vidí učitel.</p>
-<p style="text-align:right"><a href="#" onclick="teacherLogin();return false" style="font-size:12px;color:#888">Učitel</a></p></div>`}
-async function login(){const name=$('#n').value.trim(),cls=$('#c').value,pw=$('#p').value;
-if(name.length<3||!name.includes(' '))return $('#err').textContent='Napiš jméno i příjmení.';
-if(pw!==PW[cls])return $('#err').textContent='Špatné heslo třídy.';
-await sync();const sid=cls+'_'+slug(name),ex=await api('sessions/'+sid);
-S={sid,name,cls,status:ex?.status||'waiting',answers:ex?.answers||{}};viol=ex?.violations||0;
-await api('sessions/'+sid,'PATCH',{name,cls,status:S.status,joined:ex?.joined||now(),violations:viol});
-log(ex?'Znovu přihlášen':'Přihlášen',false);goFs();setInterval(async()=>{cfg=await api('config')||{}},3000);cfg=await api('config')||{};
-setInterval(sync,60000);setInterval(tick,500);tick()}
-function goFs(){const e=document.documentElement;(e.requestFullscreen||e.webkitRequestFullscreen||(()=>{})).call(e)}
-function tick(){if(!S)return;const t=now(),st=cfg.startAt,end=st?st+cfg.durationMin*60000:0;let m;
-if(S.status==='done')m='done';else if(!st)m='wait0';else if(cfg.stopped||t>=end)m='over';else if(t<st)m='count';else m='run';
-if(m==='over'&&S.status==='running'){return submitTest('čas vypršel')}
-if(m==='over'&&S.status!=='done'){m='late'}
-if(m!==mode){mode=m;draw(m)}
-if(m==='count')$('#cd').textContent=clock(st-t);
-if(m==='run')$('#tm').textContent='Zbývá '+clock(end-t)}
-const clock=ms=>{ms=Math.max(0,Math.round(ms/1000));const h=Math.floor(ms/3600),m=Math.floor(ms%3600/60),s=ms%60;return(h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(s).padStart(2,'0')}
-function draw(m){live=false;
-if(m==='wait0')app.innerHTML=`<div class="card"><h1>Ahoj, ${esc(S.name)}</h1><p>Učitel zatím nenastavil čas spuštění. Nech tuto stránku otevřenou.</p></div>`;
-if(m==='count')app.innerHTML=`<div class="card"><h1>Ahoj, ${esc(S.name)} (${S.cls})</h1><p>Test začne za:</p><div class="big" id="cd"></div><p>Začátek: ${new Date(cfg.startAt).toLocaleString('cs')}. Nezavírej stránku.</p></div>`;
-if(m==='late')app.innerHTML=`<div class="card"><h1>Test už skončil</h1><p>Zpráva byla uložena učiteli.</p></div>`;
-if(m==='done')app.innerHTML=`<div class="card"><h1>Hotovo, ${esc(S.name)}</h1><p>Test byl odevzdán. Můžeš zavřít stránku.</p></div>`;
-if(m==='run'){S.status='running';api('sessions/'+S.sid,'PATCH',{status:'running',started:now()});
-app.innerHTML=`<div id="bar"><span>${esc(S.name)} (${S.cls})</span><span id="tm"></span></div><div class="card">${testHTML()}</div>`;
-const f=$('#f');for(const e of f.elements){if(!e.name)continue;const v=S.answers[e.name];if(v===undefined)continue;if(e.type==='radio')e.checked=e.value===v;else e.value=v}
-f.addEventListener('input',save);f.addEventListener('change',save);live=true;goFs()}}
-function collect(){const o={};new FormData($('#f')).forEach((v,k)=>{if(String(v).trim()!=='')o[k]=v});return o}
-function save(){clearTimeout(saveT);saveT=setTimeout(()=>{const a=collect();S.answers=a;api('sessions/'+S.sid,'PATCH',{answers:a,progress:Math.round(Object.keys(a).length/FIELDS*100),saved:now()})},600)}
-async function submitTest(why){if(S.status==='done')return;const a=$('#f')?collect():S.answers;S.status='done';live=false;
-await api('sessions/'+S.sid,'PATCH',{status:'done',answers:a,progress:Math.round(Object.keys(a).length/FIELDS*100),finished:now()});
-log('Test ukončen ('+why+')',false);if(document.fullscreenElement)document.exitFullscreen();mode='done';draw('done')}
-function log(msg,bad=true){if(!S)return;const t=now();api('events/'+S.sid,'POST',{t,msg,bad});
-if(bad){viol++;api('sessions/'+S.sid,'PATCH',{violations:viol,last:msg,lastT:t});const w=$('#warn');w.textContent='⚠ Nahlášeno učiteli: '+msg;w.style.display='block';clearTimeout(w._t);w._t=setTimeout(()=>w.style.display='none',3500)}}
-function v(msg){if(!live)return;const t=Date.now();if(t-lastV<700)return;lastV=t;log(msg)}
-document.addEventListener('visibilitychange',()=>{if(document.hidden)v('Opuštění stránky (jiná karta/okno)')});
-window.addEventListener('blur',()=>v('Okno ztratilo fokus (Alt+Tab, jiná aplikace)'));
-['copy','cut','paste'].forEach(k=>document.addEventListener(k,e=>{if(!live)return;e.preventDefault();v('Pokus o '+{copy:'kopírování',cut:'vyjmutí',paste:'vložení'}[k])}));
-document.addEventListener('contextmenu',e=>{if(!live)return;e.preventDefault();v('Pravé tlačítko myši')});
-document.addEventListener('dragstart',e=>{if(live)e.preventDefault()});
-document.addEventListener('keydown',e=>{if(!live)return;
-const k=e.key,combo=(e.ctrlKey?'Ctrl+':'')+(e.metaKey?'Win/Cmd+':'')+(e.altKey?'Alt+':'')+(e.shiftKey&&(e.ctrlKey||e.altKey)?'Shift+':'')+k.toUpperCase();
-if(e.ctrlKey||e.metaKey||e.altKey||/^F\d+$/.test(k)||k==='Meta'||k==='PrintScreen'||k==='ContextMenu'){e.preventDefault();v('Klávesová zkratka: '+combo)}});
-document.addEventListener('keyup',e=>{if(live&&e.key==='PrintScreen'){navigator.clipboard?.writeText('').catch(()=>{});v('PrintScreen')}});
-document.addEventListener('fullscreenchange',()=>{const o=$('#fs');if(!live){o.style.display='none';return}
-if(!document.fullscreenElement){o.style.display='flex';v('Opuštění celé obrazovky')}else o.style.display='none'});
-window.addEventListener('beforeunload',e=>{if(!live)return;log('Pokus o zavření / obnovení stránky');e.preventDefault();e.returnValue=''});
+            <!-- Global Test Stats Header Bar -->
+            <div class="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                <div class="flex items-center gap-2">
+                    <i class="fa-regular fa-clock text-sky-500 font-bold"></i>
+                    <span class="font-mono font-bold text-slate-700" id="timer-display">00:00</span>
+                </div>
+                <div class="h-4 w-px bg-slate-300"></div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-star text-amber-400"></i>
+                    <span class="font-bold text-slate-700"><span id="completed-count">0</span> / <span id="total-count">8</span></span>
+                </div>
+                <div class="h-4 w-px bg-slate-300"></div>
+                <div class="flex items-center gap-2" title="Varování při opuštění testu">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+                    <span class="font-bold text-slate-700" id="cheat-warning-count">0</span>
+                </div>
+            </div>
 
-/* ===== TEACHER ===== */
-let sel_=null,tt=0;
-function teacherLogin(){if(prompt('Heslo učitele:')!==TEACHER_PW)return;mode='t';document.body.style.userSelect='text';
-const d=new Date(Date.now()+3600000);d.setMinutes(0,0,0);const iso=new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
-app.innerHTML=`<div class="card"><h1>Učitel – řízení testu</h1>
-<div class="row"><label>Začátek<br><input type="datetime-local" id="ts" value="${iso}"></label><label>Délka (min)<br><input type="number" id="td" value="30" min="1" style="width:90px"></label></div>
-<div class="row"><button onclick="tSet(false)">Naplánovat</button><button onclick="tSet(true)">Spustit hned</button><button class="r" onclick="tStop()">Ukončit test</button><button style="background:#16a34a" onclick="tExport()">Export do tabulky (CSV)</button><button class="g" onclick="tWipe()">Smazat všechna data</button></div>
-<p id="cf"></p></div><div id="st"></div><div id="dt"></div>`;
-sync().then(()=>{tPoll();tt=setInterval(tPoll,3000)})}
-async function tSet(now_){const st=now_?now():new Date($('#ts').value).getTime(),du=+$('#td').value||30;
-if(!st)return alert('Zadej čas.');await api('config','PUT',{startAt:st,durationMin:du,stopped:false});tPoll()}
-async function tStop(){if(confirm('Ukončit test všem?')){await api('config','PATCH',{stopped:true});tPoll()}}
-async function tWipe(){if(confirm('Smazat všechny studenty, události i nastavení?')){await Promise.all(['sessions','events','config'].map(p=>api(p,'DELETE')));sel_=null;tPoll()}}
-async function tExport(){const ss=await api('sessions')||{};
-const L=Object.values(ss).sort((a,b)=>(a.cls+a.name).localeCompare(b.cls+b.name,'cs'));
-const H=['Třída','Jméno','Stav','Body automaticky','Max automaticky','Body ručně (otázky 3 a 6)','Porušení','Poslední událost','Odevzdáno','1a','1b','1c','2','3 (text)',...D.map(d=>'4 '+d[0]+' '+d[1]),...K.map(k=>'5 '+k[0]),'6 (bonus)'];
-const q=v=>{v=String(v??'');if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
-const rows=L.map(s=>{const a=s.answers||{},r=score(a);
-return [s.cls,s.name,{waiting:'čeká',running:'píše',done:'hotovo'}[s.status]||s.status,r.g,r.m,'',s.violations||0,s.last||'',s.finished?new Date(s.finished).toLocaleString('cs'):'',
-a.q1a,a.q1b,a.q1c,a.q2,a.q3,...D.map(d=>({i:'vstupní',o:'výstupní'}[a['q4'+d[0]]])),...K.map((k,i)=>a['q5_'+i]!==undefined?K[a['q5_'+i]][1]:''),a.q6]});
-const csv='\ufeff'+[H,...rows].map(r=>r.map(q).join(';')).join('\r\n');
-const el=document.createElement('a');el.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-el.download='vysledky_testu_'+new Date().toISOString().slice(0,16).replace(/[T:]/g,'-')+'.csv';el.click()}
-async function tPoll(){const [s0,c]=await Promise.all([api('sessions'),api('config')]);cfg=c||{};const ss=s0||{};
-$('#cf').textContent=cfg.startAt?`Nastaveno: ${new Date(cfg.startAt).toLocaleString('cs')}, ${cfg.durationMin} min${cfg.stopped?' – UKONČENO':''}`:'Zatím nenaplánováno.';
-const L=Object.entries(ss).map(([id,s])=>({id,...s})).sort((a,b)=>(a.cls+a.name).localeCompare(b.cls+b.name,'cs'));
-const sum=['4a','4b'].map(c=>{const x=L.filter(s=>s.cls===c);return `<span class="pill"><b>${c}</b>: přihlášeno ${x.length}, píše ${x.filter(s=>s.status==='running').length}, <b>hotovo ${x.filter(s=>s.status==='done').length}</b>, porušení ${x.reduce((a,s)=>a+(s.violations||0),0)}</span>`}).join('');
-$('#st').innerHTML=`<div class="card">${sum}<table style="margin-top:10px"><tr><th>Třída</th><th>Jméno</th><th>Stav</th><th>Vyplněno</th><th>Body (auto)</th><th>Porušení</th><th>Poslední</th></tr>
-${L.map(s=>{const r=score(s.answers);return `<tr class="s" onclick="sel_='${s.id}';tDetail()"><td>${s.cls}</td><td>${esc(s.name)}</td><td>${{waiting:'čeká',running:'píše',done:'hotovo'}[s.status]||s.status}</td><td>${s.progress||0} %</td><td>${r.g}/${r.m}</td><td class="${s.violations?'bad':''}">${s.violations||0}</td><td>${esc(s.last||'')} ${s.lastT?'('+fmt(s.lastT)+')':''}</td></tr>`}).join('')}</table></div>`;
-if(sel_)tDetail(ss[sel_])}
-async function tDetail(s){const id=sel_;s=s||await api('sessions/'+id);if(!s)return;const ev=await api('events/'+id)||{};const a=s.answers||{},r=score(a);
-const E=Object.values(ev).sort((x,y)=>x.t-y.t);
-$('#dt').innerHTML=`<div class="card"><h2>${esc(s.name)} (${s.cls}) – ${r.g}/${r.m} bodů automaticky</h2>
-<p><b>Událost log:</b></p><table>${E.map(e=>`<tr><td>${fmt(e.t)}</td><td class="${e.bad?'bad':''}">${esc(e.msg)}</td></tr>`).join('')||'<tr><td>Nic.</td></tr>'}</table>
-<p><b>Odpověď 3 (hodnotit ručně):</b> ${esc(a.q3||'–')}</p><p><b>Odpověď 6 (bonus):</b> ${esc(a.q6||'–')}</p>
-<p><b>1:</b> ${esc(a.q1a)} / ${esc(a.q1b)} / ${esc(a.q1c)} &nbsp; <b>2:</b> ${esc(a.q2)}<br><b>4:</b> ${D.map(d=>d[0]+'='+(a['q4'+d[0]]||'–')).join(', ')}<br><b>5:</b> ${K.map((k,i)=>k[0]+'→'+(a['q5_'+i]!==undefined?K[a['q5_'+i]][1]:'–')).join('; ')}</p></div>`}
+            <!-- Mode Switcher & Teacher Button -->
+            <div class="flex items-center gap-2">
+                <button id="mode-practice-btn" onclick="setMode('practice')" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition bg-sky-100 text-sky-700 border border-sky-300">
+                    <i class="fa-solid fa-graduation-cap mr-1"></i> Procvičování
+                </button>
+                <button id="mode-test-btn" onclick="setMode('test')" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition bg-slate-200 text-slate-600 hover:bg-slate-300">
+                    <i class="fa-solid fa-stopwatch mr-1"></i> Ostrý Test
+                </button>
+                <button onclick="resetAllTasks()" class="px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 text-xs font-medium border border-slate-200" title="Restartovat test">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
 
-loginScreen();
-</script></body></html>
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto w-full px-4 py-6 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left / Center Column: Main Task Interface -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Anti-cheat Alert Banner (Hidden by default) -->
+            <div id="cheat-alert" class="hidden bg-amber-50 border-2 border-amber-400 text-amber-900 p-4 rounded-2xl flex items-start gap-3 shadow-sm animate-bounce">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl mt-0.5"></i>
+                <div class="text-sm">
+                    <strong class="font-bold block text-base">Pozor! Opuštění okna testu!</strong>
+                    <span>Detekovali jsme přepnutí okna nebo ztrátu pozornosti. V ostrém testu se toto zaznamenává učiteli.</span>
+                </div>
+            </div>
+
+            <!-- Active Keyboard Monitor Box -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-bolt text-amber-500"></i> Detektor stisknutých kláves v reálném čase
+                    </span>
+                    <span id="last-event-badge" class="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600">Čekám na stisk...</span>
+                </div>
+                <div class="flex flex-wrap gap-2 items-center min-h-[44px]" id="live-keys-container">
+                    <span class="text-xs text-slate-400 italic">Stiskni libovolné klávesy pro vyzkoušení...</span>
+                </div>
+            </div>
+
+            <!-- Task Card Container -->
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-md overflow-hidden transition-all" id="task-card">
+                
+                <!-- Task Header -->
+                <div class="bg-gradient-to-r font-display from-sky-500 to-indigo-600 text-white p-6 relative">
+                    <div class="flex justify-between items-start gap-4">
+                        <div>
+                            <span class="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm">
+                                Úkol <span id="current-task-num">1</span> z <span id="total-task-num">8</span>
+                            </span>
+                            <h2 class="text-2xl font-bold mt-2" id="task-title">Kopírování textu (Ctrl + C)</h2>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-sky-100 block font-medium">Úspěšnost</span>
+                            <span id="task-stars" class="text-amber-300 text-xl"><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task Body -->
+                <div class="p-6 space-y-6">
+
+                    <!-- Instructions -->
+                    <div class="bg-sky-50/70 border border-sky-100 p-4 rounded-2xl flex items-start gap-3">
+                        <i class="fa-solid fa-circle-info text-sky-500 text-xl mt-0.5"></i>
+                        <div class="text-sm text-sky-950 leading-relaxed" id="task-instructions">
+                            Zkopíruj slovo z modrého rámečku pomocí klávesové zkratky <kbd class="px-1.5 py-0.5 bg-white border border-sky-200 rounded font-mono font-bold text-sky-700 shadow-sm">Ctrl + C</kbd> a vlož ho do zeleného políčka pomocí <kbd class="px-1.5 py-0.5 bg-white border border-sky-200 rounded font-mono font-bold text-sky-700 shadow-sm">Ctrl + V</kbd>.
+                        </div>
+                    </div>
+
+                    <!-- Keyboard Shortcut Hint Visualizer -->
+                    <div class="flex items-center justify-center gap-2 py-2" id="shortcut-hint-box">
+                        <!-- Dynamic Key Badges Rendered Here -->
+                    </div>
+
+                    <!-- Interactive Task Sandbox Zone -->
+                    <div class="space-y-4 pt-2" id="task-sandbox">
+                        <!-- Dynamic input HTML injected by JS per task -->
+                    </div>
+
+                    <!-- Task Action & Feedback Footer -->
+                    <div class="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+                        <button onclick="prevTask()" id="prev-btn" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-sm transition disabled:opacity-40 disabled:hover:bg-transparent">
+                            <i class="fa-solid fa-arrow-left mr-1.5"></i> Předchozí
+                        </button>
+
+                        <div id="feedback-msg" class="text-sm font-bold min-h-[24px] flex items-center gap-2"></div>
+
+                        <button onclick="nextTask()" id="next-btn" class="px-6 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm shadow-md hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50">
+                            Další úkol <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Helper / Virtual Keyboard & Anti-Cheat Log -->
+        <div class="space-y-6">
+
+            <!-- Virtual Czech Keyboard Helper Guide -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 class="font-display font-bold text-slate-800 text-base mb-3 flex items-center justify-between">
+                    <span><i class="fa-regular fa-keyboard text-sky-500 mr-2"></i>Nápověda pro Česky AltGr</span>
+                    <span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-normal">Windows QWERTZ</span>
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">
+                    Na české klávesnici píšeme speciální znaky pomocí <strong class="text-slate-700">Pravého Alt (AltGr)</strong>:
+                </p>
+
+                <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <span class="text-slate-500">AltGr + V</span>
+                        <span class="font-bold text-sky-600 bg-white px-2 py-0.5 rounded border border-slate-200">@</span>
+                    </div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <span class="text-slate-500">AltGr + X</span>
+                        <span class="font-bold text-sky-600 bg-white px-2 py-0.5 rounded border border-slate-200">#</span>
+                    </div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <span class="text-slate-500">AltGr + Ů</span>
+                        <span class="font-bold text-sky-600 bg-white px-2 py-0.5 rounded border border-slate-200">$</span>
+                    </div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <span class="text-slate-500">AltGr + Q</span>
+                        <span class="font-bold text-sky-600 bg-white px-2 py-0.5 rounded border border-slate-200">\</span>
+                    </div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <span class="text-slate-500">AltGr + C</span>
+                        <span class="font-bold text-sky-600 bg-white px-2 py-0.5 rounded border border-slate-200">&</span>
+                    </div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <span class="text-slate-500">AltGr + E</span>
+                        <span class="font-bold text-sky-600 bg-white px-2 py-0.5 rounded border border-slate-200">€</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task List Navigation & Overview -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 class="font-display font-bold text-slate-800 text-base mb-3">
+                    <i class="fa-solid fa-list-check text-sky-500 mr-2"></i>Seznam úkolů
+                </h3>
+                <div class="space-y-2" id="task-list-nav">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <!-- Teacher / Security Audit Panel (Anti-Cheat Log) -->
+            <div class="bg-slate-900 text-slate-100 p-5 rounded-3xl shadow-sm border border-slate-800">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-display font-bold text-sm text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-user-shield text-amber-400"></i> Protokol učitele (Anti-Cheat)
+                    </h3>
+                    <button onclick="toggleTeacherDetails()" class="text-[11px] text-slate-400 hover:text-white underline">Zobrazit detail</button>
+                </div>
+                <div class="text-xs space-y-1.5 text-slate-300">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Pravá tlačítka myši (zákaz):</span>
+                        <span class="font-mono font-bold text-red-400" id="log-contextmenu-count">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Ztráta fokusu (přepnutí):</span>
+                        <span class="font-mono font-bold text-amber-400" id="log-blur-count">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Ruční vložení bez Ctrl+V:</span>
+                        <span class="font-mono font-bold text-sky-400" id="log-manualpaste-count">0</span>
+                    </div>
+                </div>
+
+                <div id="teacher-detail-box" class="hidden mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono max-h-32 overflow-y-auto space-y-1 text-slate-400">
+                    <div class="text-slate-500">// Záznam událostí testu:</div>
+                    <div id="audit-logs-list">Žádné podezřelé události.</div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-8">
+        <div class="max-w-6xl mx-auto px-4 flex flex-wrap justify-between items-center text-xs text-slate-500">
+            <div>© Výukový modul informatiky pro 4. třídu ZŠ • Procvičování klávesových zkratek</div>
+            <div class="flex gap-4">
+                <button onclick="openFinalModal()" class="hover:text-sky-600 font-semibold">Zobrazit vyhodnocení</button>
+                <button onclick="resetAllTasks()" class="hover:text-sky-600 font-semibold">Vynulovat test</button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- FINAL EVALUATION MODAL -->
+    <div id="final-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 transform transition-all space-y-6">
+            
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <h3 class="text-2xl font-display font-extrabold text-slate-900">Výsledek testu klávesnice</h3>
+                <p class="text-sm text-slate-500">Skvělý výkon! Zde je přehledné vyhodnocení.</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                    <span class="text-xs text-slate-400 font-medium block">Splněné úkoly</span>
+                    <strong class="text-xl font-extrabold text-sky-600" id="modal-score">0 / 8</strong>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                    <span class="text-xs text-slate-400 font-medium block">Celkový čas</span>
+                    <strong class="text-xl font-extrabold text-slate-700" id="modal-time">00:00</strong>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                    <span class="text-xs text-slate-400 font-medium block">Počet pokusů / chyb</span>
+                    <strong class="text-xl font-extrabold text-indigo-600" id="modal-attempts">0</strong>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                    <span class="text-xs text-slate-400 font-medium block">Ztráty fokusu (Přepnutí)</span>
+                    <strong class="text-xl font-extrabold text-amber-600" id="modal-cheats">0</strong>
+                </div>
+            </div>
+
+            <!-- Teacher Summary Box -->
+            <div class="p-4 bg-sky-50 border border-sky-200 rounded-2xl text-xs space-y-2">
+                <div class="font-bold text-sky-900 uppercase tracking-wider text-[10px]">Poznámka pro vyučujícího:</div>
+                <p class="text-sky-800 leading-relaxed" id="modal-teacher-verdict">
+                    Žák splnil test bez zásadních bezpečnostních porušení. Všechny klávesové zkratky byly správně detekovány.
+                </p>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-3">
+                <button onclick="printReport()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-print"></i> Vytisknout / Uložit PDF
+                </button>
+                <button onclick="closeFinalModal()" class="flex-1 py-3 bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm rounded-xl shadow-md transition">
+                    Zavřít
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /* ==========================================================================
+           1. DATA STRUCTURE & TASKS CONFIGURATION
+           ========================================================================== */
+        const TASKS = [
+            {
+                id: 1,
+                title: "Kopírování a vkládání (Ctrl + C & Ctrl + V)",
+                instructions: "Označ myší slovo <strong class='text-sky-700'>ŠKOLA</strong> (přetažením nebo dvojklikem), zkopíruj ho pomocí <kbd class='px-1 bg-white border border-slate-300 rounded'>Ctrl+C</kbd> a vlož ho do zeleného políčka pomocí <kbd class='px-1 bg-white border border-slate-300 rounded'>Ctrl+V</kbd>.",
+                shortcut: ["Ctrl", "C", "Ctrl", "V"],
+                renderSandbox: () => `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-sky-100 border-2 border-dashed border-sky-300 rounded-2xl text-center">
+                            <span class="text-xs text-sky-600 font-bold uppercase block mb-1">Zdrojový text (označ myší):</span>
+                            <span id="src-text-1" class="text-2xl font-extrabold text-sky-900 tracking-wider selectable-text inline-block px-4 py-1.5 bg-white rounded-xl border border-sky-200 shadow-sm my-1">ŠKOLA</span>
+                            <p class="text-[11px] text-sky-600 mt-1"><i class="fa-solid fa-hand-pointer mr-1"></i>Dvojklikni na slovo nebo přes něj přetáhni myš pro označení.</p>
+                        </div>
+                        <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2">
+                            <label class="text-xs font-bold text-emerald-700 uppercase block">Cílové políčko:</label>
+                            <input type="text" id="target-input-1" placeholder="Sem vlož text (Ctrl+V)..." 
+                                class="w-full px-3 py-2 bg-white border-2 border-emerald-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                autocomplete="off" oncontextmenu="return preventContextMenu(event)">
+                        </div>
+                    </div>
+                `,
+                validate: () => {
+                    const val = document.getElementById('target-input-1')?.value.trim();
+                    return val === "ŠKOLA";
+                }
+            },
+            {
+                id: 2,
+                title: "Vyjmutí a vložení (Ctrl + X & Ctrl + V)",
+                instructions: "Označ myší slovo <strong class='text-indigo-700'>TAJEMSTVÍ</strong> v prvním políčku, vyjmi ho zkratkou <kbd class='px-1 bg-white border border-slate-300 rounded'>Ctrl+X</kbd> (slovo zmizí) a vlož ho do druhého políčka (<kbd class='px-1 bg-white border border-slate-300 rounded'>Ctrl+V</kbd>).",
+                shortcut: ["Ctrl", "X", "Ctrl", "V"],
+                renderSandbox: () => `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-2">
+                            <label class="text-xs font-bold text-amber-800 uppercase block">1. Označ a vyjmi (Ctrl+X):</label>
+                            <input type="text" id="src-input-2" value="TAJEMSTVÍ" 
+                                class="w-full px-3 py-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                oncontextmenu="return preventContextMenu(event)">
+                            <p class="text-[11px] text-amber-700"><i class="fa-solid fa-scissors mr-1"></i>Po stisku Ctrl+X text z tohoto pole zmizí!</p>
+                        </div>
+                        <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2">
+                            <label class="text-xs font-bold text-emerald-700 uppercase block">2. Vlož sem (Ctrl+V):</label>
+                            <input type="text" id="target-input-2" placeholder="Sem vlož přes Ctrl+V..."
+                                class="w-full px-3 py-2 bg-white border-2 border-emerald-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                autocomplete="off" oncontextmenu="return preventContextMenu(event)">
+                        </div>
+                    </div>
+                `,
+                validate: () => {
+                    const target = document.getElementById('target-input-2')?.value.trim();
+                    return target === "TAJEMSTVÍ";
+                }
+            },
+            {
+                id: 3,
+                title: "Zpět (Ctrl + Z)",
+                instructions: "V políčku níže je chyba. Smaž slovo kliknutím na tlačítko a následně ho stiskem <kbd class='px-1 bg-white border border-slate-300 rounded'>Ctrl+Z</kbd> neboli akcí Zpět obnov!",
+                shortcut: ["Ctrl", "Z"],
+                renderSandbox: () => `
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                        <label class="text-xs font-bold text-slate-600 uppercase block">Testovací textové pole:</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="target-input-3" value="POČÍTAČ" 
+                                class="flex-1 px-3 py-2 bg-white border-2 border-sky-300 rounded-xl font-bold text-slate-800 focus:outline-none"
+                                oncontextmenu="return preventContextMenu(event)">
+                            <button onclick="document.getElementById('target-input-3').value=''; triggerInputCheck();" class="px-3 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl font-bold text-xs">
+                                <i class="fa-solid fa-eraser"></i> Vymazat
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400">Jakmile pole vymažeš tlačítkem, stiskni <strong>Ctrl+Z</strong> (zatímco je kurzor v poli), abys text vrátil zpět!</p>
+                    </div>
+                `,
+                validate: () => {
+                    const val = document.getElementById('target-input-3')?.value.trim();
+                    return val === "POČÍTAČ" && taskState[3]?.wasErased;
+                }
+            },
+            {
+                id: 4,
+                title: "Napsání Zavináče (@)",
+                instructions: "Napiš do políčka znak <strong class='text-sky-600 text-lg'>@</strong>. Na české klávesnici ho napíšeš kombinací <kbd class='px-1 bg-white border border-slate-300 rounded'>Pravý Alt (AltGr) + V</kbd>.",
+                shortcut: ["AltGr", "V"],
+                renderSandbox: () => `
+                    <div class="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-2">
+                        <label class="text-xs font-bold text-sky-800 uppercase block">Napiš zavináč (@):</label>
+                        <input type="text" id="target-input-4" placeholder="Stiskni Pravý Alt + V..." 
+                            class="w-full px-4 py-3 bg-white border-2 border-sky-400 rounded-xl font-mono text-2xl text-center text-sky-900 focus:outline-none"
+                            autocomplete="off" oncontextmenu="return preventContextMenu(event)">
+                    </div>
+                `,
+                validate: () => {
+                    const val = document.getElementById('target-input-4')?.value;
+                    return val && val.includes('@');
+                }
+            },
+            {
+                id: 5,
+                title: "Napsání Hashtagu (#)",
+                instructions: "Napiš do políčka znak <strong class='text-sky-600 text-lg'>#</strong>. Použij zkratku <kbd class='px-1 bg-white border border-slate-300 rounded'>Pravý Alt (AltGr) + X</kbd>.",
+                shortcut: ["AltGr", "X"],
+                renderSandbox: () => `
+                    <div class="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-2">
+                        <label class="text-xs font-bold text-sky-800 uppercase block">Napiš hashtag (#):</label>
+                        <input type="text" id="target-input-5" placeholder="Stiskni Pravý Alt + X..." 
+                            class="w-full px-4 py-3 bg-white border-2 border-sky-400 rounded-xl font-mono text-2xl text-center text-sky-900 focus:outline-none"
+                            autocomplete="off" oncontextmenu="return preventContextMenu(event)">
+                    </div>
+                `,
+                validate: () => {
+                    const val = document.getElementById('target-input-5')?.value;
+                    return val && val.includes('#');
+                }
+            },
+            {
+                id: 6,
+                title: "Napsání Dolaru ($)",
+                instructions: "Napiš do políčka znak <strong class='text-sky-600 text-lg'>$</strong>. Použij zkratku <kbd class='px-1 bg-white border border-slate-300 rounded'>Pravý Alt (AltGr) + Ů</kbd>.",
+                shortcut: ["AltGr", "Ů"],
+                renderSandbox: () => `
+                    <div class="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-2">
+                        <label class="text-xs font-bold text-sky-800 uppercase block">Napiš dolar ($):</label>
+                        <input type="text" id="target-input-6" placeholder="Stiskni Pravý Alt + Ů..." 
+                            class="w-full px-4 py-3 bg-white border-2 border-sky-400 rounded-xl font-mono text-2xl text-center text-sky-900 focus:outline-none"
+                            autocomplete="off" oncontextmenu="return preventContextMenu(event)">
+                    </div>
+                `,
+                validate: () => {
+                    const val = document.getElementById('target-input-6')?.value;
+                    return val && val.includes('$');
+                }
+            },
+            {
+                id: 7,
+                title: "Napsání Zpětného lomítka (\\)",
+                instructions: "Napiš do políčka zpětné lomítko <strong class='text-sky-600 text-lg'>\\</strong>. Použij zkratku <kbd class='px-1 bg-white border border-slate-300 rounded'>Pravý Alt (AltGr) + Q</kbd>.",
+                shortcut: ["AltGr", "Q"],
+                renderSandbox: () => `
+                    <div class="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-2">
+                        <label class="text-xs font-bold text-sky-800 uppercase block">Napiš zpětné lomítko (\\):</label>
+                        <input type="text" id="target-input-7" placeholder="Stiskni Pravý Alt + Q..." 
+                            class="w-full px-4 py-3 bg-white border-2 border-sky-400 rounded-xl font-mono text-2xl text-center text-sky-900 focus:outline-none"
+                            autocomplete="off" oncontextmenu="return preventContextMenu(event)">
+                    </div>
+                `,
+                validate: () => {
+                    const val = document.getElementById('target-input-7')?.value;
+                    return val && val.includes('\\');
+                }
+            },
+            {
+                id: 8,
+                title: "Mistrovský Úkol: Napsání Ampersandu (&)",
+                instructions: "Napiš do políčka znak ampersand <strong class='text-sky-600 text-lg'>&</strong> pomocí zkratky <kbd class='px-1 bg-white border border-slate-300 rounded'>Pravý Alt (AltGr) + C</kbd>.",
+                shortcut: ["AltGr", "C"],
+                renderSandbox: () => `
+                    <div class="p-4 bg-indigo-50 border border-indigo-200 rounded-2xl space-y-2">
+                        <label class="text-xs font-bold text-indigo-900 uppercase block">Zadej ampersand (&):</label>
+                        <input type="text" id="target-input-8" placeholder="Stiskni Pravý Alt + C..." 
+                            class="w-full px-4 py-3 bg-white border-2 border-indigo-400 rounded-xl font-mono text-2xl text-center text-indigo-900 focus:outline-none"
+                            autocomplete="off" oncontextmenu="return preventContextMenu(event)">
+                    </div>
+                `,
+                validate: () => {
+                    const val = document.getElementById('target-input-8')?.value;
+                    return val && val.includes('&');
+                }
+            }
+        ];
+
+        /* ==========================================================================
+           2. GLOBAL APP STATE & ANTI-CHEAT AUDIT LOGS
+           ========================================================================== */
+        let currentTaskIndex = 0;
+        let mode = 'practice'; // 'practice' or 'test'
+        let timerSeconds = 0;
+        let timerInterval = null;
+        let activeKeys = new Set();
+        
+        let taskState = {
+            3: { wasErased: false }
+        };
+
+        let userProgress = {
+            completed: new Set(),
+            attempts: 0,
+            shortcutUsed: {}
+        };
+
+        let antiCheatStats = {
+            contextMenuBlocked: 0,
+            blurEvents: 0,
+            manualPastes: 0,
+            logs: []
+        };
+
+        /* ==========================================================================
+           3. AUDIO FX (WEB AUDIO API)
+           ========================================================================== */
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            },
+            playClick() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.05);
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.05);
+                } catch (e) {}
+            },
+            playSuccess() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.4);
+                } catch (e) {}
+            }
+        };
+
+        /* ==========================================================================
+           4. INITIALIZATION & TIMER
+           ========================================================================== */
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('total-count').innerText = TASKS.length;
+            document.getElementById('total-task-num').innerText = TASKS.length;
+
+            renderTaskListNav();
+            loadTask(0);
+            startTimer();
+            setupSecurityListeners();
+        });
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+                const secs = String(timerSeconds % 60).padStart(2, '0');
+                document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        /* ==========================================================================
+           5. TASK RENDERING & NAVIGATION
+           ========================================================================== */
+        function loadTask(index) {
+            if (index < 0 || index >= TASKS.length) return;
+            currentTaskIndex = index;
+
+            const task = TASKS[currentTaskIndex];
+
+            // Update Headers
+            document.getElementById('current-task-num').innerText = task.id;
+            document.getElementById('task-title').innerText = task.title;
+            document.getElementById('task-instructions').innerHTML = task.instructions;
+
+            // Render Shortcuts Badges
+            const hintBox = document.getElementById('shortcut-hint-box');
+            hintBox.innerHTML = task.shortcut.map(key => `
+                <span class="key-badge px-3 py-1.5 bg-slate-100 border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-700 shadow-sm flex items-center gap-1">
+                    ${key}
+                </span>
+            `).join('<span class="text-slate-400 font-bold">+</span>');
+
+            // Render Sandbox HTML
+            const sandbox = document.getElementById('task-sandbox');
+            sandbox.innerHTML = task.renderSandbox();
+
+            // Clear feedback
+            document.getElementById('feedback-msg').innerHTML = '';
+
+            // Attach input event listeners for instant validation
+            const inputs = sandbox.querySelectorAll('input');
+            inputs.forEach(inp => {
+                inp.addEventListener('input', () => {
+                    triggerInputCheck();
+                });
+            });
+
+            // Specific check for Task 3 erase
+            if (task.id === 3) {
+                const target3 = document.getElementById('target-input-3');
+                if (target3) {
+                    target3.addEventListener('input', () => {
+                        if (target3.value === '') {
+                            taskState[3].wasErased = true;
+                        }
+                    });
+                }
+            }
+
+            // Update Buttons
+            document.getElementById('prev-btn').disabled = (currentTaskIndex === 0);
+            const nextBtn = document.getElementById('next-btn');
+            if (currentTaskIndex === TASKS.length - 1) {
+                nextBtn.innerHTML = `Dokončit test <i class="fa-solid fa-flag-checkered"></i>`;
+            } else {
+                nextBtn.innerHTML = `Další úkol <i class="fa-solid fa-arrow-right"></i>`;
+            }
+
+            renderTaskListNav();
+        }
+
+        function renderTaskListNav() {
+            const container = document.getElementById('task-list-nav');
+            container.innerHTML = TASKS.map((t, idx) => {
+                const isCompleted = userProgress.completed.has(t.id);
+                const isActive = idx === currentTaskIndex;
+
+                let stateClass = "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100";
+                if (isActive) stateClass = "bg-sky-500 border-sky-600 text-white shadow-sm font-bold";
+                else if (isCompleted) stateClass = "bg-emerald-50 border-emerald-200 text-emerald-800 font-medium";
+
+                return `
+                    <button onclick="loadTask(${idx})" class="w-full text-left px-3 py-2.5 rounded-xl border text-xs flex items-center justify-between transition ${stateClass}">
+                        <span class="truncate max-w-[170px]">${t.id}. ${t.title}</span>
+                        ${isCompleted ? '<i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>' : (isActive ? '<i class="fa-solid fa-chevron-right text-xs"></i>' : '')}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function prevTask() {
+            if (currentTaskIndex > 0) loadTask(currentTaskIndex - 1);
+        }
+
+        function nextTask() {
+            userProgress.attempts++;
+            const currentTask = TASKS[currentTaskIndex];
+            
+            // Check validation
+            if (currentTask.validate()) {
+                userProgress.completed.add(currentTask.id);
+                AudioFX.playSuccess();
+                showToast("Skvělé! Úkol splněn správně.", "success");
+                
+                document.getElementById('completed-count').innerText = userProgress.completed.size;
+
+                if (currentTaskIndex < TASKS.length - 1) {
+                    loadTask(currentTaskIndex + 1);
+                } else {
+                    openFinalModal();
+                }
+            } else {
+                AudioFX.playClick();
+                const card = document.getElementById('task-card');
+                card.classList.add('animate-shake');
+                setTimeout(() => card.classList.remove('animate-shake'), 400);
+
+                const msgBox = document.getElementById('feedback-msg');
+                msgBox.innerHTML = `<span class="text-red-500"><i class="fa-solid fa-circle-xmark"></i> Úkol ještě není správně splněn. Zkontroluj klávesy!</span>`;
+            }
+
+            renderTaskListNav();
+        }
+
+        function triggerInputCheck() {
+            const currentTask = TASKS[currentTaskIndex];
+            const msgBox = document.getElementById('feedback-msg');
+
+            if (currentTask.validate()) {
+                userProgress.completed.add(currentTask.id);
+                document.getElementById('completed-count').innerText = userProgress.completed.size;
+                msgBox.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> Výborně! Můžeš pokročit na další úkol.</span>`;
+                renderTaskListNav();
+            }
+        }
+
+        /* ==========================================================================
+           6. REAL-TIME KEYBOARD DETECTOR & ANTI-CHEAT SYSTEM
+           ========================================================================== */
+        function setupSecurityListeners() {
+            // Keydown Listener
+            window.addEventListener('keydown', (e) => {
+                AudioFX.init();
+                let keyName = e.key;
+
+                // Normalize AltGr & Control
+                if (e.code === 'AltRight') keyName = 'AltGr';
+                if (e.code === 'ControlLeft' || e.code === 'ControlRight') keyName = 'Ctrl';
+                if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keyName = 'Shift';
+
+                activeKeys.add(keyName);
+                updateLiveKeysUI(e);
+
+                // Detect Shortcuts
+                if (e.ctrlKey && e.key.toLowerCase() === 'c') logAuditEvent("Zkratka Ctrl+C stisknuta");
+                if (e.ctrlKey && e.key.toLowerCase() === 'v') logAuditEvent("Zkratka Ctrl+V stisknuta");
+                if (e.ctrlKey && e.key.toLowerCase() === 'x') logAuditEvent("Zkratka Ctrl+X stisknuta");
+                if (e.ctrlKey && e.key.toLowerCase() === 'z') logAuditEvent("Zkratka Ctrl+Z stisknuta");
+            });
+
+            // Keyup Listener
+            window.addEventListener('keyup', (e) => {
+                let keyName = e.key;
+                if (e.code === 'AltRight') keyName = 'AltGr';
+                if (e.code === 'ControlLeft' || e.code === 'ControlRight') keyName = 'Ctrl';
+                if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keyName = 'Shift';
+
+                activeKeys.delete(keyName);
+                updateLiveKeysUI(e);
+            });
+
+            // Focus / Blur Anti-cheat
+            window.addEventListener('blur', () => {
+                antiCheatStats.blurEvents++;
+                document.getElementById('cheat-warning-count').innerText = antiCheatStats.blurEvents;
+                document.getElementById('log-blur-count').innerText = antiCheatStats.blurEvents;
+                
+                logAuditEvent(`Ztráta fokusu okna (#${antiCheatStats.blurEvents})`);
+                
+                if (mode === 'test') {
+                    document.getElementById('cheat-alert').classList.remove('hidden');
+                    setTimeout(() => {
+                        document.getElementById('cheat-alert').classList.add('hidden');
+                    }, 6000);
+                }
+            });
+
+            // Paste detection integrity
+            document.addEventListener('paste', (e) => {
+                logAuditEvent("Detekována událost Vložení (paste)");
+            });
+        }
+
+        function preventContextMenu(e) {
+            e.preventDefault();
+            antiCheatStats.contextMenuBlocked++;
+            document.getElementById('log-contextmenu-count').innerText = antiCheatStats.contextMenuBlocked;
+            logAuditEvent("Pokus o otevření pravého tlačítka myši (zablokováno)");
+            showToast("Pravé tlačítko myši je vypnuté! Použij klávesovou zkratku.", "warning");
+            return false;
+        }
+
+        function updateLiveKeysUI(e) {
+            const container = document.getElementById('live-keys-container');
+            const badge = document.getElementById('last-event-badge');
+
+            if (activeKeys.size === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-400 italic">Čekám na stisk kláves...</span>`;
+                badge.innerText = "Připraveno";
+                badge.className = "text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600";
+                return;
+            }
+
+            badge.innerText = `Událost: ${e.type}`;
+            badge.className = "text-xs font-medium px-2 py-0.5 rounded bg-sky-100 text-sky-700 font-mono";
+
+            container.innerHTML = Array.from(activeKeys).map(k => `
+                <span class="px-2.5 py-1 bg-sky-500 text-white font-mono text-xs font-bold rounded-lg shadow-sm border border-sky-600">
+                    ${k}
+                </span>
+            `).join('');
+        }
+
+        function logAuditEvent(msg) {
+            const timestamp = new Date().toLocaleTimeString();
+            antiCheatStats.logs.push(`[${timestamp}] ${msg}`);
+            
+            const logContainer = document.getElementById('audit-logs-list');
+            if (logContainer) {
+                logContainer.innerHTML = antiCheatStats.logs.map(l => `<div>${l}</div>`).join('');
+            }
+        }
+
+        /* ==========================================================================
+           7. MODES & RESET
+           ========================================================================== */
+        function setMode(newMode) {
+            mode = newMode;
+            const practiceBtn = document.getElementById('mode-practice-btn');
+            const testBtn = document.getElementById('mode-test-btn');
+
+            if (mode === 'practice') {
+                practiceBtn.className = "px-3 py-1.5 rounded-lg font-semibold text-xs transition bg-sky-100 text-sky-700 border border-sky-300";
+                testBtn.className = "px-3 py-1.5 rounded-lg font-semibold text-xs transition bg-slate-200 text-slate-600 hover:bg-slate-300";
+                showToast("Režim Procvičování aktivován (Zobrazuje nápovědu).", "info");
+            } else {
+                testBtn.className = "px-3 py-1.5 rounded-lg font-semibold text-xs transition bg-sky-500 text-white shadow-sm";
+                practiceBtn.className = "px-3 py-1.5 rounded-lg font-semibold text-xs transition bg-slate-200 text-slate-600 hover:bg-slate-300";
+                showToast("Ostrý Test spuštěn! Zapnuta detekce opuštění okna.", "warning");
+                resetAllTasks();
+            }
+        }
+
+        function resetAllTasks() {
+            userProgress = { completed: new Set(), attempts: 0, shortcutUsed: {} };
+            antiCheatStats = { contextMenuBlocked: 0, blurEvents: 0, manualPastes: 0, logs: [] };
+            timerSeconds = 0;
+            
+            document.getElementById('completed-count').innerText = '0';
+            document.getElementById('cheat-warning-count').innerText = '0';
+            document.getElementById('log-contextmenu-count').innerText = '0';
+            document.getElementById('log-blur-count').innerText = '0';
+            document.getElementById('audit-logs-list').innerText = 'Žádné podezřelé události.';
+
+            loadTask(0);
+            showToast("Test byl kompletně vynulován.", "info");
+        }
+
+        function toggleTeacherDetails() {
+            const box = document.getElementById('teacher-detail-box');
+            box.classList.toggle('hidden');
+        }
+
+        /* ==========================================================================
+           8. FINAL EVALUATION & MODALS
+           ========================================================================== */
+        function openFinalModal() {
+            document.getElementById('modal-score').innerText = `${userProgress.completed.size} / ${TASKS.length}`;
+            document.getElementById('modal-time').innerText = document.getElementById('timer-display').innerText;
+            document.getElementById('modal-attempts').innerText = userProgress.attempts;
+            document.getElementById('modal-cheats').innerText = antiCheatStats.blurEvents;
+
+            const verdict = document.getElementById('modal-teacher-verdict');
+            if (antiCheatStats.blurEvents > 2) {
+                verdict.innerText = `Během testu došlo k opakovanému opuštění okna (${antiCheatStats.blurEvents}x). Doporučujeme ověřit samostanost práce žáka. Zablokovaných pokusů o pravé tlačítko: ${antiCheatStats.contextMenuBlocked}.`;
+            } else {
+                verdict.innerText = `Žák absolvoval test vzorně. Během plnění úkolů byly správně použity požadované klávesové zkratky bez neoprávněného opuštění okna testu.`;
+            }
+
+            document.getElementById('final-modal').classList.remove('hidden');
+        }
+
+        function closeFinalModal() {
+            document.getElementById('final-modal').classList.add('hidden');
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        /* ==========================================================================
+           9. TOAST NOTIFICATIONS
+           ========================================================================== */
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let icon = 'fa-circle-info text-sky-500';
+            let bg = 'bg-white border-slate-200';
+
+            if (type === 'success') {
+                icon = 'fa-circle-check text-emerald-500';
+                bg = 'bg-emerald-50 border-emerald-300';
+            } else if (type === 'warning') {
+                icon = 'fa-triangle-exclamation text-amber-500';
+                bg = 'bg-amber-50 border-amber-300';
+            }
+
+            toast.className = `p-3 rounded-2xl border ${bg} shadow-lg text-xs font-semibold flex items-center gap-2.5 transform transition-all duration-300 translate-y-4 opacity-0 pointer-events-auto max-w-xs`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+
+            // Remove after delay
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
